@@ -66,3 +66,78 @@ Healing games are fun when you must choose who lives. That needs:
   probably wipes, which is the real punishment.
 - Give one escape: Fade (drop all threat, 30 second cooldown).
 - Keep the hub completely safe.
+
+### 2.3 Memory: they remember you
+
+This is the feature no other healing game has, and it is cheap because the
+"players" are simulated.
+
+- **A persistent cast.** Replace throwaway random names with a saved roster
+  of about 60 characters (name, calling, guild, level, a temperament). The
+  same people turn up in town, in Greenhollow and in dungeon parties. Each
+  keeps a small record about you: times healed, times saved from near death,
+  times revived, times you let them die while standing next to them.
+- **Reactions scale with the record.** First heal: "who are you?". Tenth:
+  they wave when you walk past. After a save: a whisper. After you let them
+  die: sulking, or a rant in General chat. Temperaments make it varied:
+  grateful, suspicious, entitled ("heal me, not him"), competitive.
+- **Reputation as a second progress bar.** A fame meter from "Who?" through
+  "That healer" to "The Lantern". Fame unlocks things money cannot: people
+  ask for you by name in General ("is the ghost healer on?"), parties wait
+  for you at the dungeon door, guilds send invites (pick one for a tabard
+  and a perk), the inn gives you a room.
+- **A rival.** One simulated healer who is in a party properly and resents
+  you. Occasionally you both heal the same run and the party compares you.
+- **Rumours.** General chat should talk about what you actually did in the
+  last ten minutes. Three or four templates fed by real events is enough.
+
+### 2.4 Loot: make every drop a moment
+
+The owner said loot is key to the fun. Right now loot is a line of chat.
+
+- **A loot beam and a sound per rarity.** The item should appear in the
+  world (a glowing bundle at the giver's feet, or a chest after a boss) and
+  be picked up by walking over it. Epics get a pillar of light.
+- **Rolls.** When a boss dies the party rolls need or greed in chat. Let the
+  healer roll too, though not in the party. Winning starts an argument.
+  Losing sometimes gets you a pity gift from someone you saved.
+- **Items that change how you play**, not only bigger numbers. Examples:
+  "Renew also jumps to a second person", "Mend is instant after a Revive",
+  "your heals on people below a quarter health cost nothing". Put one such
+  effect on every Rare and above. Five or six effects is enough to start.
+- **Named uniques per boss** with a small drop chance, shown as a checklist
+  in the character panel. Collecting is a strong reason to re-run.
+- **Gear shows on the character.** Staff, hood and robe change colour and
+  shape by rarity. It is a third-person game: let people see their loot.
+- **Sets** later: three pieces from Emberdeep give a bonus.
+- Cadence to aim for: something drops every 2 to 3 minutes of active
+  healing, a real upgrade about every 10, an Epic about once a session.
+
+### 2.5 A world with a clock: always somewhere to be needed
+
+The strategic layer of the game should be "where am I needed most?".
+
+- **An events board** by the fountain (and a small tracker under the
+  minimap): what is happening now and what starts soon. For example: a party
+  forming for Emberdeep in 2 minutes, Old Tusk hunt in Greenhollow now, a
+  duelling tournament in the ring, a raid pulling the second boss, a
+  battleground at half time.
+- Events run on a schedule whether you attend or not, and report how they
+  went. "Wipe Club wiped on Cinderjaw again" is content. So is going to help
+  them next time.
+- You cannot be everywhere. That is the point: choosing is the game, and
+  the chat makes you feel the ones you skipped.
+- Sessions should work at 10 to 20 minutes: arrive in town, check the
+  board, pick an event, heal it, get paid, log off.
+
+## 3. A fixed world, not one that levels with you
+
+Today every person and monster is created near the healer's level. That kept
+the first build simple but it makes levelling invisible. Change it:
+
+- Zones have level bands: Greenhollow 1 to 6, Emberdeep 5 to 8, the next
+  zone 7 to 12, and so on. People in a zone are in its band.
+- When you out-level a zone your heals are huge there and the rewards are
+  small. That is the classic, satisfying feeling of coming back strong, and
+  it pushes you onward.
+- Gates by level or fame, shown plainly at the portal or the airship.
