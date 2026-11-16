@@ -9,6 +9,9 @@ export const colliders = [];   // {x,z,r} circles or {x,z,hw,hd,rot} boxes
 export const POI = {};         // named standing spots: {x,z}
 export const spots = [];       // places that say something when you walk up
 export const mapShapes = [];   // for the minimap
+export const ZONE = { x0: -120, x1: 120, z0: -280, z1: -64 };   // Greenhollow, north of the gate
+export const CAMPS = [];       // where monsters live: {kind,x,z,r,n}
+export const inGreen = p => p.z < -WALL_R - 1 && Math.hypot(p.x, p.z) > WALL_R;
 
 const L = (c, o = {}) => new THREE.MeshLambertMaterial({ color: c, ...o });
 const mesh = (g, m, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); return o; };
@@ -28,8 +31,14 @@ export function collide(p, r) {
       }
     }
   }
-  const d = Math.hypot(p.x, p.z), lim = WALL_R - 2.2 - r;
-  if (d > lim) { p.x *= lim / d; p.z *= lim / d; }
+  // City and Greenhollow join only through the gate passage.
+  if (Math.abs(p.x) < 3.3 && p.z < -52 && p.z > -70) return;
+  const d = Math.hypot(p.x, p.z);
+  if (d < WALL_R) { const lim = WALL_R - 2.2 - r; if (d > lim) { p.x *= lim / d; p.z *= lim / d; } return; }
+  const out = WALL_R + 2 + r;
+  if (d < out) { p.x *= out / d; p.z *= out / d; }
+  p.x = Math.max(ZONE.x0, Math.min(ZONE.x1, p.x)); p.z = Math.max(ZONE.z0, Math.min(ZONE.z1 + 8, p.z));
+  if (p.z > -WALL_R && Math.hypot(p.x, p.z) < out) p.z = -Math.sqrt(Math.max(0, out * out - p.x * p.x));
 }
 
 export function label(text, sub, size = 5) {
@@ -101,11 +110,11 @@ export function buildWorld(scene) {
     x.fillStyle = '#2a2018'; x.fillRect(0, 0, w, w); x.strokeStyle = '#6a6a70'; x.lineWidth = 7;
     for (let i = 8; i < w; i += 20) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, w); x.stroke(); x.beginPath(); x.moveTo(0, i); x.lineTo(w, i); x.stroke(); }
   });
-  scene.add(mesh(new THREE.PlaneGeometry(8, 9), new THREE.MeshLambertMaterial({ map: bars }), 0, 4.5, gz + 1));
-  colliders.push({ x: 0, z: gz, hw: 5, hd: 1.6, rot: 0 });
-  const gl = label('Greenhollow', 'Novice lands · gate sealed'); gl.position.set(0, 15, gz + 2); scene.add(gl);
-  POI.gate = { x: 0, z: gz + 6 };
-  spots.push({ x: 0, z: gz + 3, r: 5, msg: 'The gate to Greenhollow is barred. The novice lands are not open yet.' });
+  // The portcullis is raised: only its lower edge shows under the arch.
+  scene.add(mesh(new THREE.PlaneGeometry(8, 1.6), new THREE.MeshLambertMaterial({ map: bars, side: THREE.DoubleSide }), 0, 8.6, gz));
+  const gl = label('Greenhollow', 'Novice lands'); gl.position.set(0, 15, gz + 2); scene.add(gl);
+  const gl2 = label('Lanternrest', 'City gate'); gl2.position.set(0, 15, gz - 3); scene.add(gl2);
+  POI.gate = { x: 0, z: gz + 8 }; POI.gateIn = { x: 0, z: -54 }; POI.gateOut = { x: 0, z: -72 };
   mapShapes.push({ t: 'gate', x: 0, z: gz });
 
   // Fountain
@@ -235,10 +244,14 @@ export function buildWorld(scene) {
   }
   for (let i = 0; i < 40; i++) {
     const a = i * 2.4, d = 80 + (i * 41 % 130), h = 7 + (i % 5);
+    if (Math.cos(a) * d < -50 && Math.abs(Math.sin(a) * d) < 135) continue;
     scene.add(mesh(new THREE.ConeGeometry(3.4, h, 6), leaf[i % 3], Math.sin(a) * d, h / 2 + 1, Math.cos(a) * d));
   }
 
+  const zone = buildZone(scene, { L, mesh, flat, leaf, stone, stoneD });
+
   function update(dt, t) {
+    zone.update(dt, t);
     for (const s of spin) s.rotation[s.geometry.type === 'CircleGeometry' ? 'z' : 'y'] += dt * 0.8;
     const k = (t + 12) % SHIP_PERIOD;   // 0-22 arrive, 22-52 docked, 52-74 leave, then away
     let was = state.docked; state.docked = k >= 22 && k < 52;
@@ -250,4 +263,91 @@ export function buildWorld(scene) {
     state.arrived = state.docked && !was; state.left = !state.docked && was;
   }
   return { update, ship: state, blockers };
+}
+
+// Greenhollow: the novice lands outside the north gate. A road, a quest camp,
+// a pond, a farm, a wood, a bog and a ruined watchtower.
+function buildZone(scene, { L, mesh, flat, leaf, stone, stoneD }) {
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const road = [[0, -62], [0, -96], [-18, -130], [-8, -175], [24, -212], [6, -262]];
+  const dirt = L(0xb39a68);
+  for (let i = 0; i < road.length - 1; i++) {
+    const [ax, az] = road[i], [bx, bz] = road[i + 1], len = Math.hypot(bx - ax, bz - az);
+    const m = mesh(new THREE.BoxGeometry(5.5, 0.04, len + 4), dirt, (ax + bx) / 2, 0.01, (az + bz) / 2);
+    m.rotation.y = Math.atan2(bx - ax, bz - az); scene.add(m);
+  }
+  mapShapes.push({ t: 'zone' }, { t: 'road', pts: road });
+  const nearRoad = (x, z, d) => road.some(([rx, rz], i) => {
+    if (!i) return false; const [ax, az] = road[i - 1], k = Math.max(0, Math.min(1, ((x - ax) * (rx - ax) + (z - az) * (rz - az)) / ((rx - ax) ** 2 + (rz - az) ** 2)));
+    return Math.hypot(x - ax - k * (rx - ax), z - az - k * (rz - az)) < d;
+  });
+
+  // Quest camp just outside the gate
+  for (const [x, z, c] of [[14, -84, 0xc8b078], [19, -93, 0xa85a3a]]) {
+    const t = mesh(new THREE.ConeGeometry(3.4, 4.2, 4), L(c), x, 2.1, z); t.rotation.y = 0.6; scene.add(t); colliders.push({ x, z, r: 2.6 });
+  }
+  scene.add(mesh(new THREE.CylinderGeometry(0.9, 1, 0.3, 8), stoneD, 9, 0.15, -90));
+  const fire = mesh(new THREE.ConeGeometry(0.45, 1.3, 6), new THREE.MeshBasicMaterial({ color: 0xff9a30 }), 9, 0.9, -90); scene.add(fire);
+  colliders.push({ x: 9, z: -90, r: 1 });
+  scene.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 6, 5), L(0x5a4028), 6, 3, -82)); scene.add(mesh(new THREE.BoxGeometry(0.1, 1.6, 2.2), L(0x3a8a4a), 6, 5, -80.9));
+  POI.camp = { x: 6, z: -87 }; POI.warden = { x: 9.5, z: -85.5 };
+  mapShapes.push({ t: 'c', x: 9, z: -88, r: 3, c: '#ffd24a' });
+
+  // Pond
+  flat(new THREE.CircleGeometry(16, 28), new THREE.MeshLambertMaterial({ color: 0x4f9ac8, emissive: 0x0a2a44 }), 0.04, -66, -138);
+  flat(new THREE.RingGeometry(16, 17.5, 28), L(0x8a9a5a), 0.035, -66, -138);
+  colliders.push({ x: -66, z: -138, r: 15.5 }); mapShapes.push({ t: 'c', x: -66, z: -138, r: 16, c: '#4f9ac8' });
+
+  // Farm
+  { const g = new THREE.Group(); g.position.set(74, 0, -108); g.rotation.y = -0.5; scene.add(g);
+    g.add(mesh(new THREE.BoxGeometry(11, 6, 8), L(0xc8a878), 0, 3, 0));
+    const r = mesh(new THREE.ConeGeometry(0.75, 1, 4), L(0x7a4a2a), 0, 7.6, 0); r.rotation.y = Math.PI / 4; r.scale.set(12, 3.4, 9); g.add(r);
+    colliders.push({ x: 74, z: -108, hw: 5.5, hd: 4, rot: -0.5 }); mapShapes.push({ t: 'b', x: 74, z: -108, w: 11, d: 8, rot: -0.5, c: '#7a4a2a' }); }
+  for (const [x, z] of [[52, -128], [70, -146]]) {
+    flat(new THREE.PlaneGeometry(22, 16), L(0x7a5a38), 0.025, x, z);
+    for (let i = -3; i <= 3; i++) flat(new THREE.PlaneGeometry(20, 0.9), L(0x8ab04a), 0.05, x, z + i * 2.1);
+    scene.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 2.6, 5), L(0x5a4028), x, 1.3, z)); scene.add(mesh(new THREE.BoxGeometry(2, 0.9, 0.3), L(0xb8743a), x, 1.9, z)); scene.add(mesh(new THREE.SphereGeometry(0.4, 6, 5), L(0xd8c08a), x, 2.8, z));
+  }
+  // Bog
+  flat(new THREE.CircleGeometry(24, 24), L(0x4a6a3a), 0.02, 62, -224); flat(new THREE.CircleGeometry(9, 16), L(0x3a5a4a), 0.03, 68, -230); flat(new THREE.CircleGeometry(6, 14), L(0x3a5a4a), 0.03, 52, -216);
+  mapShapes.push({ t: 'c', x: 62, z: -224, r: 24, c: '#4a6a3a' });
+  // Ruined watchtower
+  { const t = mesh(new THREE.CylinderGeometry(4.5, 5.2, 9, 10, 1, true, 0, 4.4), new THREE.MeshLambertMaterial({ color: 0x8a847a, side: THREE.DoubleSide }), -22, 4.5, -258); scene.add(t);
+    for (let i = 0; i < 7; i++) { const s = mesh(new THREE.BoxGeometry(1.6, 1.1, 1.3), i % 2 ? stone : stoneD, -22 + (rnd() - 0.5) * 18, 0.5, -258 + (rnd() - 0.5) * 16); s.rotation.set(rnd(), rnd() * 3, rnd()); scene.add(s); }
+    colliders.push({ x: -22, z: -258, r: 5.4 }); mapShapes.push({ t: 'c', x: -22, z: -258, r: 5, c: '#8a847a' });
+    const lb = label('Old Watchtower', '', 3); lb.position.set(-22, 12, -258); scene.add(lb); }
+
+  CAMPS.push({ kind: 'slime', x: -30, z: -100, r: 18, n: 4 }, { kind: 'boar', x: 58, z: -138, r: 24, n: 6 }, { kind: 'wolf', x: -52, z: -200, r: 28, n: 6 },
+    { kind: 'slime', x: 62, z: -224, r: 20, n: 5 }, { kind: 'boar', x: 4, z: -150, r: 14, n: 2 }, { kind: 'tusk', x: 2, z: -246, r: 9, n: 1 });
+
+  // Trees (instanced) and the hills that close the valley in
+  const spotsT = [];
+  for (let i = 0; i < 400 && spotsT.length < 110; i++) {
+    const wood = i % 3 === 0, x = wood ? -52 + (rnd() - 0.5) * 80 : ZONE.x0 + rnd() * 240, z = wood ? -205 + (rnd() - 0.5) * 80 : ZONE.z0 + rnd() * 205;
+    if (x < ZONE.x0 + 2 || x > ZONE.x1 - 2 || z < ZONE.z0 + 2 || z > -72 || Math.hypot(x, z) < WALL_R + 8 || nearRoad(x, z, 7)) continue;
+    if (Math.hypot(x + 66, z + 138) < 19 || Math.hypot(x - 9, z + 88) < 16 || Math.hypot(x - 62, z + 136) < 26 || Math.hypot(x - 74, z + 108) < 9 || Math.hypot(x - 2, z + 246) < 10) continue;
+    if (spotsT.some(t => Math.hypot(t.x - x, t.z - z) < 4)) continue;
+    spotsT.push({ x, z, h: 5 + rnd() * 5, bog: Math.hypot(x - 62, z + 224) < 24 });
+  }
+  const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.4, 0.55, 3, 6), L(0x5a4028), spotsT.length);
+  const tops = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 7), new THREE.MeshLambertMaterial({ color: 0xffffff }), spotsT.length);
+  const M = new THREE.Matrix4(), col = new THREE.Color();
+  spotsT.forEach((t, i) => {
+    M.makeTranslation(t.x, 1.5, t.z); trunks.setMatrixAt(i, M);
+    M.makeScale(2.2 + t.h * 0.12, t.bog ? 1.5 : t.h, 2.2 + t.h * 0.12); M.setPosition(t.x, 3 + (t.bog ? 0.75 : t.h / 2), t.z); tops.setMatrixAt(i, M);
+    tops.setColorAt(i, col.set(t.bog ? 0x5a5a3a : [0x3f7a34, 0x4f8a3a, 0x2f6a34][i % 3]));
+    colliders.push({ x: t.x, z: t.z, r: 0.7 });
+  });
+  scene.add(trunks, tops);
+  const hills = [];
+  for (let x = ZONE.x0 - 10; x <= ZONE.x1 + 10; x += 26) hills.push([x, ZONE.z0 - 22]);
+  for (let z = ZONE.z0; z <= -70; z += 26) { if (z < -95) hills.push([ZONE.x0 - 22, z], [ZONE.x1 + 22, z]); else hills.push([ZONE.x0 - 26, z], [ZONE.x1 + 26, z]); }
+  const hm = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 6), L(0x5f8a48), hills.length);
+  hills.forEach(([x, z], i) => { const h = 22 + rnd() * 18; M.makeScale(24, h, 24); M.setPosition(x + (rnd() - 0.5) * 8, h / 2 - 2, z); hm.setMatrixAt(i, M); });
+  scene.add(hm);
+  for (let i = 0; i < 14; i++) {
+    const x = ZONE.x0 + rnd() * 240, z = ZONE.z0 + rnd() * 200; if (Math.hypot(x, z) < WALL_R + 6 || nearRoad(x, z, 5) || Math.hypot(x + 66, z + 138) < 18) continue;
+    const s = 0.8 + rnd() * 1.4, k = mesh(new THREE.DodecahedronGeometry(s), i % 2 ? stone : stoneD, x, s * 0.5, z); k.rotation.set(rnd() * 3, rnd() * 3, 0); scene.add(k); colliders.push({ x, z, r: s });
+  }
+  return { update(dt, t) { fire.scale.y = 1 + Math.sin(t * 13) * 0.18; fire.rotation.y += dt * 4; } };
 }

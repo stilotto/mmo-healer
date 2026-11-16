@@ -10,6 +10,7 @@ export const CLASSES = {
   Warlock: { color: '#9482c9', tunic: 0x5a2f7a, hat: 'cone', weapon: 'staff' },
   Druid:   { color: '#ff7d0a', tunic: 0x7a5a2f, hat: 'none', weapon: 'staff' },
   Brawler: { color: '#00ff96', tunic: 0xa33a2a, hat: 'none', weapon: 'none' },
+  Warden:  { color: '#ffd24a', tunic: 0x2f6a4a, hat: 'helm', weapon: 'sword' },
   Vendor:  { color: '#ffd24a', tunic: 0x8a6a2a, hat: 'none', weapon: 'none' },
   Healer:  { color: '#ffffff', tunic: 0xf2ead2, hat: 'hood', weapon: 'staff' },
 };
@@ -58,10 +59,12 @@ export function makeFigure(cls, seed = Math.random() * 1000) {
   return { group: g, body, head, legL, legR, armL, armR, hit, phase: r(100) / 10 };
 }
 
-// mode: idle | walk | attack | cast | cheer
+// mode: idle | walk | attack | cast | cheer | sit | dead
 export function animate(f, mode, t, k = 1) {
   const p = t + f.phase;
   let l = 0, aL = 0, aR = 0, y = 0, lean = 0;
+  if (mode === 'dead') { f.legL.rotation.x = f.legR.rotation.x = 0; f.armL.rotation.x = f.armR.rotation.x = -0.3; f.body.position.y = 0.22; f.body.rotation.x = -Math.PI / 2; return; }
+  if (mode === 'sit') { f.legL.rotation.x = f.legR.rotation.x = -1.5; f.armL.rotation.x = f.armR.rotation.x = -0.5; f.body.position.y = -0.48; f.body.rotation.x = 0; return; }
   if (mode === 'walk') { l = Math.sin(p * 9 * k) * 0.7; aL = l * 0.7; aR = -l * 0.7; y = Math.abs(Math.cos(p * 9 * k)) * 0.04; }
   else if (mode === 'attack') { const s = (p * 1.6) % 1; aR = s < 0.3 ? -2.4 * (s / 0.3) : -2.4 * (1 - (s - 0.3) / 0.7); aL = -0.4; lean = 0.1; l = 0.15; }
   else if (mode === 'cast') { aL = aR = -1.9 + Math.sin(p * 10) * 0.12; }
@@ -81,6 +84,7 @@ export function canvasTex(w, h, draw) {
 
 // Name and health bar over a head. draw(frac) repaints only when it changes.
 export function makePlate(name, sub, color) {
+  const color0 = color, sub0 = sub;
   const W = 256, H = 72;
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const x = c.getContext('2d');
@@ -88,16 +92,17 @@ export function makePlate(name, sub, color) {
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
   sp.scale.set(3.4, 3.4 * H / W, 1); sp.position.y = 2.75; sp.renderOrder = 5;
   let last = -1, lastSel = null;
-  const draw = (frac, sel) => {
-    const q = Math.round(frac * 50);
+  const draw = (frac, sel, dead) => {
+    const q = dead ? -2 : Math.round(frac * 50);
     if (q === last && sel === lastSel) return;
     last = q; lastSel = sel;
+    if (dead) { color = '#9a9a9a'; sub = 'Dead'; } else { color = color0; sub = sub0; }
     x.clearRect(0, 0, W, H);
     x.textAlign = 'center'; x.lineJoin = 'round';
     x.font = 'bold 24px sans-serif'; x.lineWidth = 5; x.strokeStyle = '#000';
     x.strokeText(name, W / 2, 24); x.fillStyle = sel ? '#fff' : color; x.fillText(name, W / 2, 24);
     if (sub) { x.font = '16px sans-serif'; x.lineWidth = 4; x.strokeText(sub, W / 2, 44); x.fillStyle = '#b8e0b0'; x.fillText(sub, W / 2, 44); }
-    if (frac < 0.995 || sel) {
+    if (!dead && (frac < 0.995 || sel)) {
       x.fillStyle = '#000'; x.fillRect(48, 52, 160, 16);
       x.fillStyle = frac < 0.35 ? '#d83a2a' : frac < 0.7 ? '#d8b52a' : '#3fbf4a'; x.fillRect(50, 54, 156 * frac, 12);
       if (sel) { x.strokeStyle = '#fff'; x.lineWidth = 2; x.strokeRect(47, 51, 162, 18); }
@@ -106,4 +111,43 @@ export function makePlate(name, sub, color) {
   };
   draw(1, false);
   return { sprite: sp, draw };
+}
+
+// Monsters of Greenhollow. Each faces +z like the people do.
+export const MOBS = {
+  slime: { name: 'Bog Slime', hp: 0.8, dmg: 0.7, speed: 2.2 },
+  boar: { name: 'Bristle Boar', hp: 1, dmg: 1, speed: 3.6 },
+  wolf: { name: 'Hollow Wolf', hp: 0.9, dmg: 1.25, speed: 4.6 },
+  tusk: { name: 'Old Tusk', hp: 5, dmg: 2.1, speed: 3.4, elite: true },
+};
+export function makeMob(kind) {
+  const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+  const add = (geo, m, x, y, z, parent = body) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); parent.add(o); return o; };
+  const legs = [];
+  if (kind === 'slime') {
+    const b = add(new THREE.SphereGeometry(0.7, 10, 8), new THREE.MeshLambertMaterial({ color: 0x5fd06a, transparent: true, opacity: 0.85 }), 0, 0.5, 0); b.scale.y = 0.75;
+    add(G.orb, mat(0x111111), -0.22, 0.65, 0.55).scale.setScalar(0.6); add(G.orb, mat(0x111111), 0.22, 0.65, 0.55).scale.setScalar(0.6);
+  } else {
+    const wolf = kind === 'wolf', c = mat(wolf ? 0x777c86 : kind === 'tusk' ? 0x3a2a22 : 0x7a5438), d = mat(wolf ? 0x55585f : 0x4a3222);
+    add(box(wolf ? 0.5 : 0.75, wolf ? 0.5 : 0.65, 1.3), c, 0, 0.75, 0);
+    add(box(wolf ? 0.4 : 0.55, 0.42, 0.5), c, 0, wolf ? 0.95 : 0.78, 0.85);
+    add(box(0.22, 0.2, 0.3), d, 0, wolf ? 0.88 : 0.7, 1.2);
+    if (wolf) { add(box(0.1, 0.2, 0.08), d, -0.14, 1.25, 0.8); add(box(0.1, 0.2, 0.08), d, 0.14, 1.25, 0.8); add(box(0.14, 0.14, 0.6), d, 0, 0.9, -0.9).rotation.x = 0.5; }
+    else { add(box(0.07, 0.07, 0.28), mat(0xf2ead2), -0.22, 0.66, 1.15).rotation.x = -0.6; add(box(0.07, 0.07, 0.28), mat(0xf2ead2), 0.22, 0.66, 1.15).rotation.x = -0.6; add(box(0.12, 0.2, 1), d, 0, 1.15, -0.05); }
+    for (const [x, z] of [[-0.22, 0.45], [0.22, 0.45], [-0.22, -0.45], [0.22, -0.45]]) {
+      const p = new THREE.Group(); p.position.set(x, 0.5, z); add(box(0.16, 0.5, 0.16), d, 0, -0.25, 0, p); body.add(p); legs.push(p);
+    }
+  }
+  const sh = new THREE.Mesh(G.shadow, shadowMat); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.03; sh.scale.setScalar(1.4); g.add(sh);
+  if (kind === 'tusk') body.scale.setScalar(1.9);
+  return { group: g, body, legs, kind, phase: Math.random() * 10 };
+}
+export function animateMob(f, mode, t) {
+  const p = t + f.phase, b = f.body;
+  b.rotation.z = 0; b.position.set(0, 0, 0);
+  if (mode === 'dead') { b.rotation.z = Math.PI / 2; b.position.y = f.kind === 'slime' ? -0.2 : 0.3; return; }
+  if (f.kind === 'slime') { const s = mode === 'idle' ? Math.sin(p * 2) * 0.06 : Math.abs(Math.sin(p * 6)) * 0.3; b.scale.set(1 - s * 0.5, 1 + s, 1 - s * 0.5); b.position.y = mode === 'idle' ? 0 : s * 0.6; return; }
+  const sw = mode === 'walk' ? Math.sin(p * 11) * 0.7 : 0;
+  f.legs.forEach((l, i) => { l.rotation.x = (i % 3 === 0 ? sw : -sw); });
+  if (mode === 'attack') { const k = (p * 1.4) % 1; b.position.z = k < 0.25 ? k * 2.4 : 0.6 * (1 - (k - 0.25) / 0.75); }
 }

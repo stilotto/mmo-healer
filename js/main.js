@@ -3,7 +3,8 @@
 import * as THREE from 'three';
 import * as G from './game.js';
 import * as UI from './ui.js';
-import { buildWorld, spots, mapShapes } from './world.js';
+import { buildWorld, spots, mapShapes, POI, inGreen } from './world.js';
+import { Mobs } from './mobs.js';
 import { makeFigure, animate, makePlate } from './figure.js';
 import { People } from './people.js';
 import { Player } from './player.js';
@@ -21,9 +22,15 @@ const VX = 15, VZ = -12.9, vendor = makeFigure('Vendor', 3);
 vendor.group.position.set(VX, 0, VZ); vendor.group.rotation.y = Math.atan2(-VX, -VZ); scene.add(vendor.group);
 { const pl = makePlate('Pim', '<Quartermaster>', '#ffd24a'); vendor.group.add(pl.sprite); }
 mapShapes.push({ t: 'c', x: VX, z: VZ, r: 1.6, c: '#ffd24a' });
+// Warden Hale hands out the quests at the Greenhollow camp.
+const warden = makeFigure('Warden', 5);
+warden.group.position.set(POI.warden.x, 0, POI.warden.z); warden.group.rotation.y = -2.2; scene.add(warden.group);
+{ const pl = makePlate('Warden Hale', '<Quests>', '#ffd24a'); warden.group.add(pl.sprite); }
+spots.push({ x: POI.warden.x - 1.5, z: POI.warden.z - 1.5, r: 2.4, msg: 'Warden Hale looks at your staff. "No quests for you, healer. Just keep them alive out there."' });
 spots.push({ x: 12.4, z: -10.7, r: 2.2, msg: 'Pim the Quartermaster sells gear and bigger bags. Click or tap Pim to trade.' });
 
 let S = G.load() || G.newState('');
+let mobs, zoneNow = 'hub';
 let people, target = null, casting = null, gcd = 0, gcdMax = 1, started = false, tabSeen = new Set(), tabAt = 0, lastSpot = null, saveT = 0, frame = 0;
 
 const ring = new THREE.Mesh(new THREE.RingGeometry(0.75, 0.95, 28), new THREE.MeshBasicMaterial({ color: 0x4dff5a, transparent: true, opacity: 0.9, depthWrite: false }));
@@ -50,9 +57,9 @@ const distTo = p => Math.hypot(p.x - player.x, p.z - player.z);
 function setTarget(p) { target = p; }
 const tabBack = [];
 function hurtTarget() {
-  const c = people.list.filter(p => p.grow >= 1 && !p.fading && p.hp < p.maxHp && distTo(p) < 45).sort((p, q) => p.hp / p.maxHp - q.hp / q.maxHp);
+  const c = people.list.filter(p => p.grow >= 1 && !p.fading && p.hp < p.maxHp && distTo(p) < 45).sort((p, q) => (p.dead ? 2 : p.hp / p.maxHp) - (q.dead ? 2 : q.hp / q.maxHp));
   if (!c.length) return UI.err('No one nearby is hurt');
-  setTarget(c[0]);
+  setTarget(c[0]);    // the living first; the dead only when nobody else needs you
 }
 function tabTarget(back) {
   if (back === true) { let p; while ((p = tabBack.pop()) && (p.gone || p.fading)); if (p) setTarget(p); return; }
@@ -85,6 +92,7 @@ player.onKey = e => {
   else if (e.code === 'KeyX') toggleLook();
   else if (e.code === 'Digit1' || e.code === 'Numpad1') cast(0);
   else if (e.code === 'Digit2' || e.code === 'Numpad2') cast(1);
+  else if (e.code === 'Digit3' || e.code === 'Numpad3') cast(2);
   else if (e.code === 'KeyB' || e.code === 'KeyC') UI.toggleBag();
   else if (e.code === 'Escape') { if (performance.now() - player.unlockAt < 400) return; if (casting) { casting = null; UI.err('Interrupted'); } else setTarget(null); }
 };
@@ -96,6 +104,8 @@ function cast(i) {
   const sp = G.SPELLS[i];
   if (casting || gcd > 0) return UI.err('Not ready yet');
   if (!target) return UI.err('You have no target');
+  if (sp.id === 'revive' && !target.dead) return UI.err('Target is not dead');
+  if (sp.id !== 'revive' && target.dead) return UI.err('Target is dead. Press 3 to Revive');
   if (distTo(target) > sp.range) return UI.err('Out of range');
   if (S.mana < sp.mana) return UI.err('Not enough mana');
   if (sp.cast && player.moving) return UI.err("Can't do that while moving");
@@ -104,7 +114,12 @@ function cast(i) {
   else land(sp, target);
 }
 function land(sp, t) {
+  if ((sp.id === 'revive') !== !!t.dead || t.fading) return UI.err(t.dead ? 'Target is dead' : 'Target is not dead');
   S.mana -= sp.mana;
+  if (sp.id === 'revive') {
+    people.revive(t); beam(t, 0xffd76a); UI.sfx('level'); UI.chat('c-heal', `You bring ${t.name} back to life.`);
+    UI.float(t, 'Revived', 'crit'); earn(t.maxHp, t); return;
+  }
   const h = G.healAmount(S, sp);
   if (sp.id === 'mend') { beam(t); UI.sfx('heal'); earn(people.heal(t, h.amount, h.crit), t); }
   else { t.hots = t.hots.filter(x => x.id !== sp.id); t.hots.push({ id: sp.id, tick: h.tick, left: h.ticks, every: h.every, t: h.every }); beam(t, 0x7dffa0); UI.sfx('heal'); }
@@ -129,15 +144,17 @@ function start(name) {
   if (name) S.name = name; if (!S.name) S.name = 'Healer';
   S.mana = G.stats(S).maxMana;
   people = new People(scene, {
-    S, world, chat: UI.chat, target: () => target, hit() {},
+    S, world, chat: UI.chat, target: () => target, eye: () => player, zone: () => zoneNow,
     float: (p, text, cls) => UI.float(p, text, cls),
     onHot: (p, amt) => { UI.sfx('tick'); earn(people.heal(p, amt, false, true), p); },
   });
+  mobs = new Mobs(scene, { S, people, eye: () => player, float: (p, text, cls) => UI.float(p, text, cls) });
+  people.ctx.mobs = mobs;
   UI.init(S, { cast, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
     panel: open => { if (open) player.free(); else if (S.look) player.lock(); } });
   player.look = !!S.look; UI.setLook(player.look, false);
   player.enabled = true; G.save(S);
-  window.game = { S, people, player, cast, tabTarget, hurtTarget, toggleLook, UI, G, get target() { return target; }, set target(p) { target = p; } };
+  window.game = { S, people, mobs, player, cast, tabTarget, hurtTarget, toggleLook, UI, G, get target() { return target; }, set target(p) { target = p; } };
 }
 const nameBox = document.getElementById('cname'); nameBox.value = S.name || '';
 document.getElementById('enter').onclick = () => start(nameBox.value.trim().slice(0, 12));
@@ -155,6 +172,9 @@ function tick() {
   }
   player.update(dt);
   people.update(dt, T);
+  mobs.update(dt, T);
+  const z = inGreen(player) ? 'green' : 'hub';
+  if (z !== zoneNow) { zoneNow = z; UI.zone(z === 'green' ? 'Greenhollow' : 'Lanternrest'); if (z === 'green' && !S.seenGreen) { S.seenGreen = true; UI.chat('c-sys', 'People out here can die. Press 3 to Revive the fallen (5 second cast).'); } }
   const st = G.stats(S);
   S.mana = Math.min(st.maxMana, S.mana + st.regen * dt);
   if (gcd > 0) gcd -= dt;
@@ -162,7 +182,7 @@ function tick() {
   if (casting) {
     casting.t += dt;
     if (player.moving) { casting = null; gcd = 0; UI.err('Interrupted'); }
-    else if (casting.target.gone) casting = null;
+    else if (casting.target.gone || casting.target.fading) casting = null;
     else if (casting.t >= casting.dur) { const c = casting; casting = null; land(c.spell, c.target); }
   }
   me.group.position.set(player.x, player.y, player.z); me.group.rotation.y = player.yaw; me.group.visible = !player.firstPerson;
@@ -175,15 +195,15 @@ function tick() {
     b.m.scale.set(1 + (0.7 - b.t) * 0.5, 1, 1 + (0.7 - b.t) * 0.5); if (b.t <= 0) b.m.visible = false;
   }
 
-  animate(vendor, 'idle', T);
+  animate(vendor, 'idle', T); animate(warden, 'idle', T);
   if (UI.isShopOpen() && Math.hypot(VX - player.x, VZ - player.z) > 11) UI.closeShop();
   const sp = spots.find(s => Math.hypot(s.x - player.x, s.z - player.z) < s.r + 0.6) || null;
   if (sp !== lastSpot) { lastSpot = sp; if (sp) UI.chat('c-sys', sp.msg); }
   UI.hint(sp ? sp.msg : S.healed > 150 ? '' : !target ? 'Find someone hurt and press Tab to target them' :
-    target.hp >= target.maxHp ? `${target.name} is at full health. Tab to someone hurt (red or yellow bar)` : 'Press 1 to cast Mend (stand still), or 2 for Renew');
+    target.dead ? 'Press 3 to Revive (stand still)' : target.hp >= target.maxHp ? `${target.name} is at full health. Tab to someone hurt (red or yellow bar)` : 'Press 1 to cast Mend (stand still), or 2 for Renew');
 
   UI.update(dt, { stats: st, target, dist: target ? distTo(target) : 0, casting, gcd, gcdMax, project });
-  if (frame % 4 === 0) UI.drawMap(player, player.yaw, people.list, target);
+  if (frame % 4 === 0) UI.drawMap(player, player.yaw, people.list, target, mobs.list);
   if ((saveT += dt) > 15) { saveT = 0; G.save(S); }
   renderer.render(scene, camera);
 }

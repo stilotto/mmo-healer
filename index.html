@@ -9,12 +9,13 @@
 <script type="importmap">{
  "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
-  "./js/figure.js": "./js/figure.js?v=20261116225405",
-  "./js/game.js": "./js/game.js?v=20261116225405",
-  "./js/people.js": "./js/people.js?v=20261116225405",
-  "./js/player.js": "./js/player.js?v=20261116225405",
-  "./js/ui.js": "./js/ui.js?v=20261116225405",
-  "./js/world.js": "./js/world.js?v=20261116225405"
+  "./js/figure.js": "./js/figure.js?v=20261116231338",
+  "./js/game.js": "./js/game.js?v=20261116231338",
+  "./js/mobs.js": "./js/mobs.js?v=20261116231338",
+  "./js/people.js": "./js/people.js?v=20261116231338",
+  "./js/player.js": "./js/player.js?v=20261116231338",
+  "./js/ui.js": "./js/ui.js?v=20261116231338",
+  "./js/world.js": "./js/world.js?v=20261116231338"
  }
 }</script>
 <style>
@@ -136,9 +137,9 @@ canvas#view{position:fixed;inset:0;width:100%;height:100%;display:block}
   <p>Everyone else is busy playing the game. You just heal them. No party, no invite, no permission.</p>
   <input id="cname" maxlength="12" placeholder="Character name" autocomplete="off">
   <button id="enter">Enter World</button>
-  <p class="keys"><b>WASD</b> move and turn · <b>Q/E</b> strafe · <b>right-drag</b> steer · <b>left-drag</b> or <b>arrow keys</b> look (up and down too) · <b>wheel</b> zoom (all the way in for first person, or <b>V</b>) · <b>Tab</b> next target · <b>F</b> most hurt · <b>1, 2</b> heal · <b>B</b> bag · <b>Space</b> jump · <b>X</b> mouse-look (the mouse steers, A and D strafe, Esc frees the cursor)</p>
+  <p class="keys"><b>WASD</b> move and turn · <b>Q/E</b> strafe · <b>right-drag</b> steer · <b>left-drag</b> or <b>arrow keys</b> look (up and down too) · <b>wheel</b> zoom (all the way in for first person, or <b>V</b>) · <b>Tab</b> next target · <b>F</b> most hurt · <b>1, 2</b> heal · <b>3</b> revive · <b>B</b> bag · <b>Space</b> jump · <b>X</b> mouse-look (the mouse steers, A and D strafe, Esc frees the cursor)</p>
   <a href="https://stilotto.github.io/">More games from Stilotto</a>
 </div></div>
-<script type="module" src="js/main.js?v=20261116225405"></script>
+<script type="module" src="js/main.js?v=20261116231338"></script>
 </body>
 </html>

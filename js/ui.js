@@ -2,7 +2,7 @@
 // floating numbers, the bag, and the few sounds (all made in code).
 import { SPELLS, SLOTS, SLOT_ICON, RARITY, RARITY_COLOR, bagSize, stats, xpNeed, itemScore, equipItem, sellItem, stock, price, buy, restock, restockCost, buyBag, bagCost } from './game.js';
 import { CLASSES } from './figure.js';
-import { mapShapes, WALL_R } from './world.js';
+import { mapShapes, WALL_R, ZONE } from './world.js';
 
 const $ = id => document.getElementById(id);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
@@ -42,6 +42,7 @@ export function chat(cls, text) {
 export function chatHtml(cls, html) { $('chat').append(el('div', cls, html)); }
 export function err(text) { const e = $('err'); e.textContent = text; e.style.opacity = 1; errT = 1.6; sfx('err'); }
 export function toast(text, color) { const e = $('toast'); e.textContent = text; e.style.color = color || ''; e.style.opacity = 1; toastT = 2.6; }
+export function zone(name) { $('zone').textContent = name; toast(name); }
 export function hint(text) { const h = $('hint'); if (h.textContent !== text) h.textContent = text; }
 export function itemLink(it) { return `<b style="color:${RARITY_COLOR[it.q]}">[${esc(it.name)}]</b>`; }
 
@@ -125,9 +126,9 @@ export function update(dt, v) {
   tf.style.display = t ? 'block' : 'none';
   if (t) {
     $('tname').textContent = t.name; $('tname').style.color = CLASSES[t.cls].color; $('tport').textContent = t.level;
-    setBar('thp', t.hp / t.maxHp, `${Math.ceil(t.hp)} / ${t.maxHp}`);
+    setBar('thp', t.hp / t.maxHp, t.dead ? 'Dead' : `${Math.ceil(t.hp)} / ${t.maxHp}`);
     $('thp').style.background = t.hp < t.maxHp * 0.35 ? '#d83a2a' : '';
-    $('tsub').textContent = `${t.cls}${t.duel ? ' · Duelling' : ''}${t.hots.length ? ' · ❋ Renew' : ''} · ${Math.round(v.dist)} yd`;
+    $('tsub').textContent = `${t.cls}${t.dead ? ' · Dead' : t.duel ? ' · Duelling' : t.state === 'hunt' ? ' · In combat' : t.resting ? ' · Resting' : ''}${t.hots.length ? ' · ❋ Renew' : ''} · ${Math.round(v.dist)} yd`;
   }
   const cb = $('castbar');
   if (v.casting) { cb.style.visibility = 'visible'; cb.firstElementChild.style.width = (v.casting.t / v.casting.dur * 100) + '%'; cb.lastElementChild.textContent = v.casting.spell.name; }
@@ -148,20 +149,24 @@ export function update(dt, v) {
   }
 }
 
-export function drawMap(me, yaw, people, target) {
+export function drawMap(me, yaw, people, target, mobs) {
   const c = $('map'), x = c.getContext('2d'), W = c.width, k = W / 2 / 48;
-  x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = '#4a6a38'; x.fillRect(0, 0, W, W);
+  x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = '#3f5c30'; x.fillRect(0, 0, W, W);
   x.translate(W / 2 - me.x * k, W / 2 - me.z * k); x.scale(k, k);
+  x.fillStyle = '#5f8a48'; x.fillRect(ZONE.x0, ZONE.z0, ZONE.x1 - ZONE.x0, -ZONE.z0 - 40);
   x.fillStyle = '#8a8478'; x.beginPath(); x.arc(0, 0, WALL_R, 0, 7); x.fill();
   x.strokeStyle = '#555049'; x.lineWidth = 2.5; x.stroke();
   for (const s of mapShapes) {
     x.fillStyle = s.c || '#333';
     if (s.t === 'c') { x.beginPath(); x.arc(s.x, s.z, s.r, 0, 7); x.fill(); }
+    else if (s.t === 'zone') continue;
+    else if (s.t === 'road') { x.strokeStyle = '#b39a68'; x.lineWidth = 4; x.beginPath(); s.pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.stroke(); }
     else if (s.t === 'b') { x.save(); x.translate(s.x, s.z); x.rotate(-s.rot); x.fillRect(-s.w / 2, -s.d / 2, s.w, s.d); x.restore(); }
     else { x.fillStyle = '#2a2018'; x.fillRect(s.x - 5, s.z - 1.5, 10, 3); }
   }
+  for (const m of mobs) if (m.state !== 'dead') { x.fillStyle = m.def.elite ? '#ffb040' : '#b02a20'; x.beginPath(); x.arc(m.x, m.z, m.def.elite ? 2 : 1.1, 0, 7); x.fill(); }
   for (const p of people) {
-    x.fillStyle = p.hp < p.maxHp * 0.5 ? '#ff5a4a' : p.hp < p.maxHp ? '#ffd24a' : '#7fe38a';
+    x.fillStyle = p.dead ? '#888' : p.hp < p.maxHp * 0.5 ? '#ff5a4a' : p.hp < p.maxHp ? '#ffd24a' : '#7fe38a';
     x.beginPath(); x.arc(p.x, p.z, p === target ? 2 : 1.3, 0, 7); x.fill();
     if (p === target) { x.strokeStyle = '#fff'; x.lineWidth = 0.6; x.stroke(); }
   }

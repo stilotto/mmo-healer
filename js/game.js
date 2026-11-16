@@ -6,6 +6,8 @@ export const SPELLS = [
     desc: 'A slow, strong heal.' },
   { id: 'renew', name: 'Renew', icon: '❋', key: '2', cast: 0, mana: 15, range: 40, color: '#2a6a7a',
     desc: 'Heals over 9 seconds. Instant.' },
+  { id: 'revive', name: 'Revive', icon: '☥', key: '3', cast: 5.0, mana: 45, range: 30, color: '#8a6a1a',
+    desc: 'Brings a dead player back to life.' },
 ];
 export const GCD = 1.2;
 export const SLOTS = ['Staff', 'Hood', 'Robe', 'Gloves', 'Boots', 'Ring', 'Trinket'];

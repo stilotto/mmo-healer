@@ -66,6 +66,24 @@ they toss you an item or a tip. Progress saves in localStorage (`mmoHealer1`).
 - `js/main.js`: boot, frame loop, targeting, casting, rewards.
 - `window.game` exposes state for tests. `?go` skips the title screen.
 
+## Greenhollow (sprint 2)
+
+- One continuous world: the zone is north of the wall (`ZONE` in
+  `world.js`), joined to the city only by the gate passage. `collide`
+  handles both sides; `inGreen(p)` says which side a point is on.
+- `js/mobs.js`: monsters live in `CAMPS`, fight whoever hits them, sometimes
+  jump a passer-by, and respawn in place. Models are in `figure.js`.
+- Each person has `zone` ('hub' or 'green'). Green people loop: quest from
+  the warden, hunt (`state: 'hunt'`, `p.mob`), rest (`p.resting`), hand in.
+  `people.through(p, toGreen)` walks someone through the gate on a path.
+- Death: `people.kill` and `people.revive`. Heals do nothing to the dead;
+  Revive only works on the dead (`cast` and `land` in `main.js`).
+- /say lines and duel news are only shown when the speaker is within 60
+  yards; deaths are only announced while the healer is in Greenhollow.
+- Figures further than 150 yards from the healer are hidden.
+- `tools/sprint2.mjs` walks out the gate, watches the zone and tests Revive.
+  The headless browser runs slow, so game time lags real time in tests.
+
 ## Things worth knowing
 
 - Coordinates: x east, z south, y up, one unit about a yard. The wall radius

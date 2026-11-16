@@ -31,11 +31,22 @@ The ledger of plans. Nothing under "Open" is built until the owner says go.
 - Mana regeneration raised a little. No hands-on balance pass yet: that
   needs the owner's feel for it.
 
+## Sprint 2: built
+
+- The north gate is open. Greenhollow lies beyond it: a road, the warden's
+  quest camp, a pond, a farm, a wood, a bog and a ruined watchtower.
+- Monsters: Bog Slimes, Bristle Boars, Hollow Wolves, and the elite Old Tusk
+  by the watchtower. They ignore the healer.
+- People take quests from Warden Hale, hunt monsters, sit to rest, hand in,
+  sometimes level up ("ding!"), and walk to and from town through the gate.
+- People die if nobody heals them. A body lies for 80 seconds, then the
+  player "releases" and is gone.
+- Revive on key 3: a 5 second cast on a dead player. Worth a full bar of XP.
+- Minimap shows the zone, the road and monsters. Zone name changes as you
+  cross the gate. Far-off figures are hidden to keep the frame rate up.
+
 ## Sprints (proposed, not yet agreed)
 
-2. **Greenhollow.** Open the gate to a small newbie zone: monsters, people
-   questing and fighting them, and real danger (people can die if unhealed,
-   and a resurrect spell).
 3. **First dungeon.** Emberdeep through the portal: a party working through
    pulls and a boss; find them and keep them up. Better loot from bosses.
 4. **Crowds.** A raid in progress and a battleground to drop in on, with
@@ -45,8 +56,6 @@ The ledger of plans. Nothing under "Open" is built until the owner says go.
 
 ## Open (from the original idea)
 
-- Open the gate: Greenhollow, a newbie zone with people questing and
-  fighting monsters out in the world.
 - Dungeons: walk through the portal uninvited, find the party, heal them
   through the pulls and bosses.
 - Raids in progress to drop in on.
@@ -58,7 +67,8 @@ The ledger of plans. Nothing under "Open" is built until the owner says go.
 
 - More heals unlocked by level (two locked slots are on the bar at 5 and 10).
 - Make mouse-look the default once it has been tried on a real mouse.
-- Ways for people to actually die if nobody heals them, and a resurrect.
+- Monsters noticing the healer (healing aggro), so you can die too.
+- Quests for the healer ("keep five questers alive", "revive three").
 - People reacting more to the mystery healer: whispers, guild invites, a
   reputation.
 - Hands-on balance pass: XP curve, loot pace, mana.
