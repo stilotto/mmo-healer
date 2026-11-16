@@ -15,6 +15,25 @@ The ledger of plans. Nothing under "Open" is built until the owner says go.
 - XP and levels, loot drops in four rarities, seven gear slots, bag.
 - Minimap, chat log, floating heal numbers, touch controls.
 - Save in the browser.
+- Look up and down: drag, or the up and down arrow keys. The view tips up to
+  the sky even when the camera is resting on the ground.
+- Card on stilotto.github.io.
+
+## Sprints (proposed, not yet agreed)
+
+1. **Feel of the hub.** Standard mouse-look as an option: the mouse pivots
+   the view without holding a button (pointer lock), A and D strafe, and a
+   key frees the cursor for the bag and frames. Shift+Tab and a "most hurt"
+   key. A use for coins (a vendor). Hands-on balance of XP, loot and mana.
+2. **Greenhollow.** Open the gate to a small newbie zone: monsters, people
+   questing and fighting them, and real danger (people can die if unhealed,
+   and a resurrect spell).
+3. **First dungeon.** Emberdeep through the portal: a party working through
+   pulls and a boss; find them and keep them up. Better loot from bosses.
+4. **Crowds.** A raid in progress and a battleground to drop in on, with
+   area heals unlocked at levels 5 and 10.
+5. **Town life.** Guild events, reputation as the mystery healer, working
+   airship and doors.
 
 ## Open (from the original idea)
 
@@ -35,5 +54,4 @@ The ledger of plans. Nothing under "Open" is built until the owner says go.
 - Ways for people to actually die if nobody heals them, and a resurrect.
 - People reacting more to the mystery healer: whispers, guild invites, a
   reputation.
-- A card on stilotto.github.io once GitHub Pages is on for this repo.
 - Hands-on balance pass: XP curve, loot pace, mana.

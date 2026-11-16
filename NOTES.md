@@ -20,6 +20,11 @@ Loot drops are key to the fun.
   to the newbie zone are shown but do not take the player anywhere yet.
 - Two heals to start: Mend (2 s cast) and Renew (instant heal over time).
 
+- Owner's direction on controls: the current scheme works on a Chromebook,
+  but eventually the default should be the standard one where the mouse
+  pivots the view and WASD moves (sprint 1 in `TODO.md`).
+- Arrow keys look (left and right turn, up and down tilt); WASD moves.
+
 ## How the owner likes to work
 
 - Short replies; they read on a small Chromebook (about 1366 by 600).

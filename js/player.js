@@ -38,7 +38,7 @@ export class Player {
       if (p.moved < 6) return;
       const k = p.touch ? 0.007 : 0.005;
       if (p.b === 2) { this.yaw += this.camOff - dx * k; this.camOff = 0; } else if (p.b === 0) this.camOff -= dx * k;
-      this.pitch = Math.max(-0.5, Math.min(1.45, this.pitch + dy * k));
+      this.pitch = Math.max(-1.3, Math.min(1.45, this.pitch + dy * k));
     });
     const up = e => {
       const p = ptr.get(e.pointerId); if (!p) return; ptr.delete(e.pointerId);
@@ -67,7 +67,8 @@ export class Player {
 
   update(dt) {
     const K = c => this.keys.has(c) ? 1 : 0;
-    let f = Math.max(K('KeyW'), K('ArrowUp'), this.L && this.R ? 1 : 0, this.auto ? 1 : 0) - Math.max(K('KeyS'), K('ArrowDown'));
+    let f = Math.max(K('KeyW'), this.L && this.R ? 1 : 0, this.auto ? 1 : 0) - K('KeyS');
+    this.pitch = Math.max(-1.3, Math.min(1.45, this.pitch + (K('ArrowDown') - K('ArrowUp')) * 1.4 * dt));
     const lr = Math.max(K('KeyA'), K('ArrowLeft')) - Math.max(K('KeyD'), K('ArrowRight'));
     let s = K('KeyQ') - K('KeyE');
     if (this.R) s += lr; else this.yaw += lr * 2.6 * dt;
@@ -98,8 +99,10 @@ export class Player {
       const hit = ray.intersectObjects(this.blockers, true)[0];
       if (hit) d = Math.max(0.6, hit.distance - 0.5);
       this.camera.position.copy(head).addScaledVector(dir, d);
+      // Look along the view direction, not at the head, so that when the
+      // camera rests on the ground you can still tip the view up to the sky.
       if (this.camera.position.y < 0.35) this.camera.position.y = 0.35;
-      head.y += 0.25; this.camera.lookAt(head);
+      head.copy(this.camera.position).addScaledVector(dir, -10); head.y += 0.6; this.camera.lookAt(head);
     }
   }
 }
