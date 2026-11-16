@@ -46,10 +46,10 @@ export class People {
     }
   }
 
-  spawn(x, z, frac = 1) {
+  spawn(x, z, frac = 1, kind) {
     let name; do { name = pick(NAMES); } while (this.used.has(name) && this.used.size < NAMES.length);
     this.used.add(name);
-    const cls = pick(KINDS), level = Math.max(1, this.ctx.S.level + Math.floor(rnd(-1, 3)));
+    const cls = kind || pick(KINDS), level = Math.max(1, this.ctx.S.level + Math.floor(rnd(-1, 3)));
     const guild = pick(GUILDS);
     const fig = makeFigure(cls), plate = makePlate(name, guild ? '<' + guild + '>' : '', CLASSES[cls].color);
     fig.group.add(plate.sprite);
@@ -146,6 +146,7 @@ export class People {
   // A monster hits a person.
   hurt(p, dmg, by) {
     if (p.dead || p.fading) return;
+    dmg = Math.max(1, Math.round(dmg * (p.armor || 1)));
     p.hp -= dmg; p.hurtAt = this.t; p.resting = false; this.ctx.float(p, '-' + dmg, 'dmg');
     if (p.hp <= 0) return this.kill(p, by);
     if (p.state !== 'hunt' || !p.mob || p.mob.state === 'dead') { p.mob = by; p.state = 'hunt'; p.path = null; p.stuck = 0; }
@@ -153,7 +154,8 @@ export class People {
   }
   kill(p, by) {
     p.hp = 0; p.dead = true; p.state = 'dead'; p.deadT = 80; p.hots = []; p.mob = null; p.path = null; p.cried = false;
-    if (this.ctx.zone() === 'green') this.ctx.chat('c-yell', `${p.name} has been slain by ${by.name}.`);
+    if (p.zone === 'dungeon') p.deadT = 1e9;
+    if (this.ctx.zone() === p.zone) this.ctx.chat('c-yell', `${p.name} has been slain by ${by.name}.`);
   }
   revive(p) {
     p.dead = false; p.hp = Math.round(p.maxHp * 0.35); p.state = 'idle'; p.wait = 4; p.hurtAt = this.t; p.resting = false;
@@ -167,6 +169,7 @@ export class People {
     p.hp += eff;
     this.ctx.float(p, '+' + amount, crit ? 'crit' : '');
     if (eff > 0) {
+      if (p.zone === 'dungeon') this.ctx.dungeon.noticed(p);
       if (p.duel && !p.duel.healed) { p.duel.healed = true; if (Math.random() < 0.7) this.say(p.duel.foe, pick(['hey! no outside heals!', 'who is healing ' + p.name + '??', 'that is cheating', 'ref!'])); }
       if (!p.duel && this.t > p.thankAt && (p.hp >= p.maxHp || eff > p.maxHp * 0.3) && !quiet) {
         p.thankAt = this.t + 15;
@@ -257,7 +260,7 @@ export class People {
             anim = 'attack';
             if ((p.swing -= dt) <= 0) {
               p.swing = rnd(1.3, 1.9);
-              if (ctx.mobs.hurt(m, Math.round((11 + 4.5 * p.level) * rnd(0.8, 1.25)), p)) {
+              if ((m.owner || ctx.mobs).hurt(m, Math.round((11 + 4.5 * p.level) * rnd(0.8, 1.25)), p)) {
                 for (const q of this.list) if (q.mob === m && q.quest) q.quest.done++;
                 p.cried = false;
               }
@@ -281,7 +284,8 @@ export class People {
         if (p.train) anim = 'attack';
         if (p.resting) anim = 'sit';
         if ((p.wait -= dt) <= 0) {
-          if (p.zone === 'green') { if (p.goHome) { p.goHome = false; this.through(p, false); } else this.thinkGreen(p); }
+          if (p.zone === 'dungeon') p.wait = 1e9;
+          else if (p.zone === 'green') { if (p.goHome) { p.goHome = false; this.through(p, false); } else this.thinkGreen(p); }
           else if (p.hp < p.maxHp * 0.5 && Math.random() < 0.3) { this.say(p, pick(HURT)); p.wait = rnd(5, 10); }
           else this.think(p);
         }

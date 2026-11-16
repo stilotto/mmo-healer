@@ -45,10 +45,25 @@ The ledger of plans. Nothing under "Open" is built until the owner says go.
 - Minimap shows the zone, the road and monsters. Zone name changes as you
   cross the gate. Far-off figures are hidden to keep the frame rate up.
 
+## Sprint 3: built
+
+- Emberdeep: walk into the orange portal in town. Five rooms joined by
+  corridors, three trash pulls (Cinder Slimes, Ash Hounds) and the boss,
+  Cinderjaw. Blue portals at the entrance and behind the boss lead out.
+- A party of five (tank and four damage dealers) runs it without a healer:
+  they gather, pull room by room, sit to recover, ask for a rez, and chat in
+  a [Party] channel. They notice when someone starts healing them.
+- Cinderjaw: hard hits on the tank, a telegraphed Flame Breath that takes a
+  fifth of everyone's health, and a frenzy at 25%.
+- In tests, with no healer the party loses people on trash and wipes on the
+  boss; with steady healing it wins.
+- Boss loot: a guaranteed Rare or better (sometimes a second item) and 40%
+  of a level in XP.
+- Each visit is a fresh run. A wipe brings a new party after a few seconds.
+- `?speed=N` runs the world N times faster (for tests).
+
 ## Sprints (proposed, not yet agreed)
 
-3. **First dungeon.** Emberdeep through the portal: a party working through
-   pulls and a boss; find them and keep them up. Better loot from bosses.
 4. **Crowds.** A raid in progress and a battleground to drop in on, with
    area heals unlocked at levels 5 and 10.
 5. **Town life.** Guild events, reputation as the mystery healer, working
@@ -56,8 +71,6 @@ The ledger of plans. Nothing under "Open" is built until the owner says go.
 
 ## Open (from the original idea)
 
-- Dungeons: walk through the portal uninvited, find the party, heal them
-  through the pulls and bosses.
 - Raids in progress to drop in on.
 - PvP events to heal one side of (or both).
 - Guild events in town.
@@ -67,6 +80,8 @@ The ledger of plans. Nothing under "Open" is built until the owner says go.
 
 - More heals unlocked by level (two locked slots are on the bar at 5 and 10).
 - Make mouse-look the default once it has been tried on a real mouse.
+- Emberdeep extras: a second boss, patrols, things to stand out of, a
+  party that waits for the healer's mana, a boss kill count on the frame.
 - Monsters noticing the healer (healing aggro), so you can die too.
 - Quests for the healer ("keep five questers alive", "revive three").
 - People reacting more to the mystery healer: whispers, guild invites, a

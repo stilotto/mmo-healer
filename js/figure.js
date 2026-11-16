@@ -120,15 +120,15 @@ export const MOBS = {
   wolf: { name: 'Hollow Wolf', hp: 0.9, dmg: 1.25, speed: 4.6 },
   tusk: { name: 'Old Tusk', hp: 5, dmg: 2.1, speed: 3.4, elite: true },
 };
-export function makeMob(kind) {
+export function makeMob(kind, opt = {}) {
   const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
   const add = (geo, m, x, y, z, parent = body) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); parent.add(o); return o; };
   const legs = [];
   if (kind === 'slime') {
-    const b = add(new THREE.SphereGeometry(0.7, 10, 8), new THREE.MeshLambertMaterial({ color: 0x5fd06a, transparent: true, opacity: 0.85 }), 0, 0.5, 0); b.scale.y = 0.75;
+    const b = add(new THREE.SphereGeometry(0.7, 10, 8), new THREE.MeshLambertMaterial({ color: opt.c || 0x5fd06a, emissive: opt.glow || 0, transparent: true, opacity: 0.85 }), 0, 0.5, 0); b.scale.y = 0.75;
     add(G.orb, mat(0x111111), -0.22, 0.65, 0.55).scale.setScalar(0.6); add(G.orb, mat(0x111111), 0.22, 0.65, 0.55).scale.setScalar(0.6);
   } else {
-    const wolf = kind === 'wolf', c = mat(wolf ? 0x777c86 : kind === 'tusk' ? 0x3a2a22 : 0x7a5438), d = mat(wolf ? 0x55585f : 0x4a3222);
+    const wolf = kind === 'wolf', c = mat(opt.c || (wolf ? 0x777c86 : kind === 'tusk' ? 0x3a2a22 : 0x7a5438)), d = mat(opt.d || (wolf ? 0x55585f : 0x4a3222));
     add(box(wolf ? 0.5 : 0.75, wolf ? 0.5 : 0.65, 1.3), c, 0, 0.75, 0);
     add(box(wolf ? 0.4 : 0.55, 0.42, 0.5), c, 0, wolf ? 0.95 : 0.78, 0.85);
     add(box(0.22, 0.2, 0.3), d, 0, wolf ? 0.88 : 0.7, 1.2);
@@ -140,6 +140,7 @@ export function makeMob(kind) {
   }
   const sh = new THREE.Mesh(G.shadow, shadowMat); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.03; sh.scale.setScalar(1.4); g.add(sh);
   if (kind === 'tusk') body.scale.setScalar(1.9);
+  if (opt.scale) { body.scale.setScalar(opt.scale); sh.scale.setScalar(1.4 * opt.scale); }
   return { group: g, body, legs, kind, phase: Math.random() * 10 };
 }
 export function animateMob(f, mode, t) {

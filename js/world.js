@@ -11,12 +11,31 @@ export const spots = [];       // places that say something when you walk up
 export const mapShapes = [];   // for the minimap
 export const ZONE = { x0: -120, x1: 120, z0: -280, z1: -64 };   // Greenhollow, north of the gate
 export const CAMPS = [];       // where monsters live: {kind,x,z,r,n}
+// Emberdeep, the first dungeon, is built far to the east and reached by portal.
+export const DX = 1000;
+const R = (x0, z0, x1, z1) => [DX + x0, z0, DX + x1, z1];
+export const DUN = {
+  rects: [R(-8, -8, 8, 8), R(-3, -30, 3, -6), R(-12, -52, 12, -28), R(10, -43, 36, -37), R(34, -52, 58, -28), R(43, -74, 49, -50), R(34, -96, 58, -72), R(8, -87, 36, -81), R(-28, -102, 10, -66)],
+  way: [[0, 2], [0, -25], [0, -40], [31, -40], [46, -40], [46, -69], [46, -84], [13, -84], [-10, -84]].map(([x, z]) => ({ x: DX + x, z })),
+  rooms: [{ way: 2, mobs: ['cslime', 'cslime', 'hound'] }, { way: 4, mobs: ['hound', 'hound', 'cslime', 'cslime'] }, { way: 6, mobs: ['hound', 'hound', 'hound', 'cslime'] }, { way: 8, mobs: ['boss'] }],
+  exits: [{ x: DX, z: 7.4 }, { x: DX - 27.4, z: -84 }],
+  start: { x: DX, z: -1 },
+};
+function collideDungeon(p, r) {
+  let best = null, bd = 1e9;
+  for (const [x0, z0, x1, z1] of DUN.rects) {
+    const cx = Math.max(x0 + r, Math.min(x1 - r, p.x)), cz = Math.max(z0 + r, Math.min(z1 - r, p.z)), d = (cx - p.x) ** 2 + (cz - p.z) ** 2;
+    if (d < bd) { bd = d; best = [cx, cz]; }
+  }
+  if (bd > 0) { p.x = best[0]; p.z = best[1]; }
+}
 export const inGreen = p => p.z < -WALL_R - 1 && Math.hypot(p.x, p.z) > WALL_R;
 
 const L = (c, o = {}) => new THREE.MeshLambertMaterial({ color: c, ...o });
 const mesh = (g, m, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(g, m); o.position.set(x, y, z); return o; };
 
 export function collide(p, r) {
+  if (p.x > 500) return collideDungeon(p, r);
   for (const c of colliders) {
     if (c.r) {
       const dx = p.x - c.x, dz = p.z - c.z, d = Math.hypot(dx, dz), m = c.r + r;
@@ -62,8 +81,13 @@ export function buildWorld(scene) {
     x.fillStyle = g; x.fillRect(0, 0, w, h);
   });
   scene.fog = new THREE.Fog(0xcfdbe0, 90, 420);
-  scene.add(new THREE.HemisphereLight(0xdfeaff, 0x6a5a40, 1.5));
+  const hemi = new THREE.HemisphereLight(0xdfeaff, 0x6a5a40, 1.5); scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xfff0d0, 1.9); sun.position.set(-60, 90, 40); scene.add(sun);
+  const sky = scene.background, dark = new THREE.Color(0x140a08);
+  const mood = cave => {
+    scene.background = cave ? dark : sky; scene.fog.color.set(cave ? 0x140a08 : 0xcfdbe0); scene.fog.near = cave ? 25 : 90; scene.fog.far = cave ? 120 : 420;
+    hemi.intensity = cave ? 1.0 : 1.5; hemi.color.set(cave ? 0xffc8a0 : 0xdfeaff); sun.intensity = cave ? 0.5 : 1.9;
+  };
   for (let i = 0; i < 16; i++) {
     const a = i / 16 * Math.PI * 2 + 0.2, d = 260 + (i * 37 % 70), h = 70 + (i * 53 % 80);
     const m = mesh(new THREE.ConeGeometry(h * 1.1, h, 5), L(i % 3 ? 0x6f8aa6 : 0x8298b0), Math.cos(a) * d, h / 2 - 4, Math.sin(a) * d);
@@ -171,7 +195,7 @@ export function buildWorld(scene) {
     const lb = label(name, sub, 3); lb.position.set(0, 9.4, 0); g.add(lb);
     const n = Math.hypot(x, z * 0.3), ux = -x / n, uz = -z * 0.3 / n;
     POI[key] = { x: x + ux * 3, z: z + uz * 3, px: x, pz: z };
-    spots.push({ x, z, r: 2.5, msg });
+    if (key !== 'dungeon') spots.push({ x, z, r: 2.5, msg });
     mapShapes.push({ t: 'c', x, z, r: 2.5, c: col });
   };
   portal('dungeon', 'Emberdeep', 'Dungeon', -47, -15, '#ff7a2a', 'The portal hums, but does not take you. You are not attuned to Emberdeep yet.');
@@ -262,7 +286,7 @@ export function buildWorld(scene) {
     prop.rotation.x += dt * 14;
     state.arrived = state.docked && !was; state.left = !state.docked && was;
   }
-  return { update, ship: state, blockers };
+  return { update, ship: state, blockers, mood };
 }
 
 // Greenhollow: the novice lands outside the north gate. A road, a quest camp,

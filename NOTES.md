@@ -84,6 +84,23 @@ they toss you an item or a tip. Progress saves in localStorage (`mmoHealer1`).
 - `tools/sprint2.mjs` walks out the gate, watches the zone and tests Revive.
   The headless browser runs slow, so game time lags real time in tests.
 
+## Emberdeep (sprint 3)
+
+- The dungeon is built 1000 yards east (`DX`) in the same scene. `DUN` in
+  `world.js` holds its rooms as rectangles (corridors overlap rooms by two
+  yards so the collision has no seams), the waypoints, the room contents and
+  the exits. Anything with `x > 500` is in the dungeon.
+- `js/dungeon.js`: `buildDungeon` draws it (walls are one instanced mesh, and
+  also block the camera). `Dungeon` is the run controller: phases gather,
+  move, pull, fight, rest, then done or wipe. Its monsters have `owner` set
+  so `people.js` sends their damage to the right place.
+- Party members are ordinary people with `zone: 'dungeon'`; the controller
+  steers them. The tank has `armor` 0.55 and 1.6 times the health.
+- `world.mood(true)` switches sky, fog and light for the cave.
+- Mistake already made: a translucent exit portal between the camera and the
+  healer tinted the whole view. Keep portals flat against walls.
+- `tools/sprint3.mjs` plays a run with no healer, then one with healing.
+
 ## Things worth knowing
 
 - Coordinates: x east, z south, y up, one unit about a yard. The wall radius

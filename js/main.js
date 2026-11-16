@@ -5,6 +5,8 @@ import * as G from './game.js';
 import * as UI from './ui.js';
 import { buildWorld, spots, mapShapes, POI, inGreen } from './world.js';
 import { Mobs } from './mobs.js';
+import { Dungeon } from './dungeon.js';
+import { DUN } from './world.js';
 import { makeFigure, animate, makePlate } from './figure.js';
 import { People } from './people.js';
 import { Player } from './player.js';
@@ -30,7 +32,8 @@ spots.push({ x: POI.warden.x - 1.5, z: POI.warden.z - 1.5, r: 2.4, msg: 'Warden 
 spots.push({ x: 12.4, z: -10.7, r: 2.2, msg: 'Pim the Quartermaster sells gear and bigger bags. Click or tap Pim to trade.' });
 
 let S = G.load() || G.newState('');
-let mobs, zoneNow = 'hub';
+let mobs, dungeon, zoneNow = 'hub';
+const ZONE_NAME = { hub: 'Lanternrest', green: 'Greenhollow', dungeon: 'Emberdeep' };
 let people, target = null, casting = null, gcd = 0, gcdMax = 1, started = false, tabSeen = new Set(), tabAt = 0, lastSpot = null, saveT = 0, frame = 0;
 
 const ring = new THREE.Mesh(new THREE.RingGeometry(0.75, 0.95, 28), new THREE.MeshBasicMaterial({ color: 0x4dff5a, transparent: true, opacity: 0.9, depthWrite: false }));
@@ -150,11 +153,20 @@ function start(name) {
   });
   mobs = new Mobs(scene, { S, people, eye: () => player, float: (p, text, cls) => UI.float(p, text, cls) });
   people.ctx.mobs = mobs;
+  dungeon = new Dungeon(scene, { S, people, world, chat: UI.chat, float: (p, text, cls) => UI.float(p, text, cls), warn: text => { UI.toast(text, '#ff7a2a'); UI.sfx('err'); },
+    bossLoot(helped) {
+      const xp = Math.round(G.xpNeed(S.level) * 0.4); S.xp += xp; UI.chat('c-heal', `You gain ${xp} experience for the fall of Cinderjaw.`);
+      const drops = [G.rollItem(S.level + 2, null, 2)]; if (Math.random() < 0.4) drops.push(G.rollItem(S.level + 1, null, 1));
+      for (const it of drops) { const kept = G.addItem(S, it); UI.chatHtml('c-loot', `While the party argues over loot, you pocket ${UI.itemLink(it)}${kept ? '' : ' (bag full: sold)'}`); }
+      UI.toast(drops[0].name, G.RARITY_COLOR[drops[0].q]); UI.sfx('loot');
+      S.bosses = (S.bosses || 0) + 1; earn(0.0001, { maxHp: 1e9, level: S.level, name: '' }); UI.drawBag(); G.save(S);
+    } });
+  people.ctx.dungeon = dungeon;
   UI.init(S, { cast, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
     panel: open => { if (open) player.free(); else if (S.look) player.lock(); } });
   player.look = !!S.look; UI.setLook(player.look, false);
   player.enabled = true; G.save(S);
-  window.game = { S, people, mobs, player, cast, tabTarget, hurtTarget, toggleLook, UI, G, get target() { return target; }, set target(p) { target = p; } };
+  window.game = { S, people, mobs, dungeon, player, DUN, scene, cast, tabTarget, hurtTarget, toggleLook, UI, G, get target() { return target; }, set target(p) { target = p; } };
 }
 const nameBox = document.getElementById('cname'); nameBox.value = S.name || '';
 document.getElementById('enter').onclick = () => start(nameBox.value.trim().slice(0, 12));
@@ -164,17 +176,32 @@ if (new URLSearchParams(location.search).has('go')) start('Tester');
 const clock = new THREE.Clock(); let T = 0;
 function tick() {
   requestAnimationFrame(tick);
-  const dt = Math.min(0.05, clock.getDelta()); T += dt; frame++;
-  world.update(dt, T);
+  const dt = Math.min(0.05, clock.getDelta());
   if (!started) {   // slow orbit behind the title
+    T += dt; world.update(dt, T);
     camera.position.set(Math.sin(T * 0.08) * 46, 16, Math.cos(T * 0.08) * 46); camera.lookAt(0, 4, 0);
     renderer.render(scene, camera); return;
   }
+  for (let i = 0; i < SPEED; i++) step(dt);   // ?speed=N runs the world faster, for tests
+  renderer.render(scene, camera);
+}
+const SPEED = Math.max(1, Math.min(20, +new URLSearchParams(location.search).get('speed') || 1));
+function step(dt) {
+  T += dt; frame++;
+  world.update(dt, T);
   player.update(dt);
   people.update(dt, T);
   mobs.update(dt, T);
-  const z = inGreen(player) ? 'green' : 'hub';
-  if (z !== zoneNow) { zoneNow = z; UI.zone(z === 'green' ? 'Greenhollow' : 'Lanternrest'); if (z === 'green' && !S.seenGreen) { S.seenGreen = true; UI.chat('c-sys', 'People out here can die. Press 3 to Revive the fallen (5 second cast).'); } }
+  dungeon.update(dt, T);
+  // Portals: into Emberdeep from town, and back out again.
+  if (zoneNow === 'hub' && Math.hypot(POI.dungeon.px - player.x, POI.dungeon.pz - player.z) < 2.2) {
+    player.x = DUN.start.x; player.z = DUN.start.z; player.yaw = Math.PI; player.camOff = 0; target = null; casting = null; dungeon.enter();
+    if (!S.seenDungeon) { S.seenDungeon = true; UI.chat('c-sys', 'A party is running Emberdeep without a healer. Follow them and keep them alive. Nobody will stop you.'); }
+  } else if (zoneNow === 'dungeon' && DUN.exits.some(e => Math.hypot(e.x - player.x, e.z - player.z) < 2)) {
+    player.x = POI.dungeon.x + 3; player.z = POI.dungeon.z; player.yaw = Math.PI / 2; player.camOff = 0; target = null; casting = null; dungeon.leave();
+  }
+  const z = player.x > 500 ? 'dungeon' : inGreen(player) ? 'green' : 'hub';
+  if (z !== zoneNow) { zoneNow = z; UI.zone(ZONE_NAME[z]); world.mood(z === 'dungeon'); if (z === 'green' && !S.seenGreen) { S.seenGreen = true; UI.chat('c-sys', 'People out here can die. Press 3 to Revive the fallen (5 second cast).'); } }
   const st = G.stats(S);
   S.mana = Math.min(st.maxMana, S.mana + st.regen * dt);
   if (gcd > 0) gcd -= dt;
@@ -203,8 +230,7 @@ function tick() {
     target.dead ? 'Press 3 to Revive (stand still)' : target.hp >= target.maxHp ? `${target.name} is at full health. Tab to someone hurt (red or yellow bar)` : 'Press 1 to cast Mend (stand still), or 2 for Renew');
 
   UI.update(dt, { stats: st, target, dist: target ? distTo(target) : 0, casting, gcd, gcdMax, project });
-  if (frame % 4 === 0) UI.drawMap(player, player.yaw, people.list, target, mobs.list);
+  if (frame % 4 === 0) UI.drawMap(player, player.yaw, people.list, target, zoneNow === 'dungeon' ? dungeon.mobs : mobs.list);
   if ((saveT += dt) > 15) { saveT = 0; G.save(S); }
-  renderer.render(scene, camera);
 }
 tick();

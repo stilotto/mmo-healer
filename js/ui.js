@@ -2,7 +2,7 @@
 // floating numbers, the bag, and the few sounds (all made in code).
 import { SPELLS, SLOTS, SLOT_ICON, RARITY, RARITY_COLOR, bagSize, stats, xpNeed, itemScore, equipItem, sellItem, stock, price, buy, restock, restockCost, buyBag, bagCost } from './game.js';
 import { CLASSES } from './figure.js';
-import { mapShapes, WALL_R, ZONE } from './world.js';
+import { mapShapes, WALL_R, ZONE, DUN } from './world.js';
 
 const $ = id => document.getElementById(id);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
@@ -153,6 +153,8 @@ export function drawMap(me, yaw, people, target, mobs) {
   const c = $('map'), x = c.getContext('2d'), W = c.width, k = W / 2 / 48;
   x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = '#3f5c30'; x.fillRect(0, 0, W, W);
   x.translate(W / 2 - me.x * k, W / 2 - me.z * k); x.scale(k, k);
+  if (me.x > 500) { x.fillStyle = '#120a08'; x.fillRect(me.x - 100, me.z - 100, 200, 200); x.fillStyle = '#6a5a52'; for (const [x0, z0, x1, z1] of DUN.rects) x.fillRect(x0, z0, x1 - x0, z1 - z0);
+    x.fillStyle = '#6ab8ff'; for (const e of DUN.exits) { x.beginPath(); x.arc(e.x, e.z, 2, 0, 7); x.fill(); } }
   x.fillStyle = '#5f8a48'; x.fillRect(ZONE.x0, ZONE.z0, ZONE.x1 - ZONE.x0, -ZONE.z0 - 40);
   x.fillStyle = '#8a8478'; x.beginPath(); x.arc(0, 0, WALL_R, 0, 7); x.fill();
   x.strokeStyle = '#555049'; x.lineWidth = 2.5; x.stroke();
