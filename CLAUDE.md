@@ -28,6 +28,7 @@ know from the big MMOs: unit frames, action bar, tab targeting, cast bar.
   item until the owner says go.
 - Headless check: `THREE_DIR=<node_modules/three> node tools/shot.mjs <out-dir> [phone]`
   plays a few heals and saves screenshots. Errors should be only the blocked font.
+  `tools/sprint1.mjs` checks the target keys, mouse-look and the shop the same way.
 - `js/game.js` is the rules (no DOM, no three.js).
 - Original names and art only. Follow the genre's interface conventions, but
   never use the names, characters, art or text of any published game.

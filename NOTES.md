@@ -24,6 +24,12 @@ Loot drops are key to the fun.
   but eventually the default should be the standard one where the mouse
   pivots the view and WASD moves (sprint 1 in `TODO.md`).
 - Arrow keys look (left and right turn, up and down tilt); WASD moves.
+- Mouse-look (`S.look`, key X) uses pointer lock. It is off by default
+  until the owner has tried it. While locked, a click targets whatever is
+  under the centre dot. Esc both frees the cursor and reaches our key
+  handler, so `main.js` ignores Esc for a moment after an unlock.
+- Pim the vendor is created in `main.js`; shop rules are at the end of
+  `game.js`; the shop is a section of the bag panel (`ui.js drawShop`).
 
 ## How the owner likes to work
 

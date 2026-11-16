@@ -19,12 +19,20 @@ The ledger of plans. Nothing under "Open" is built until the owner says go.
   the sky even when the camera is resting on the ground.
 - Card on stilotto.github.io.
 
+## Sprint 1: built
+
+- Mouse-look as an option (X, or the Mouse button): the mouse pivots the view
+  with no button held, A and D strafe, Esc frees the cursor, a click on the
+  world takes it back. Opening the bag frees it too. The choice is saved.
+- Shift+Tab goes back a target. F (or the Hurt button) targets the most hurt
+  person within range.
+- Pim the Quartermaster at the red stall: four pieces of gear (restocked on
+  level up or for a fee) and two bag upgrades of seven slots each.
+- Mana regeneration raised a little. No hands-on balance pass yet: that
+  needs the owner's feel for it.
+
 ## Sprints (proposed, not yet agreed)
 
-1. **Feel of the hub.** Standard mouse-look as an option: the mouse pivots
-   the view without holding a button (pointer lock), A and D strafe, and a
-   key frees the cursor for the bag and frames. Shift+Tab and a "most hurt"
-   key. A use for coins (a vendor). Hands-on balance of XP, loot and mana.
 2. **Greenhollow.** Open the gate to a small newbie zone: monsters, people
    questing and fighting them, and real danger (people can die if unhealed,
    and a resurrect spell).
@@ -49,8 +57,7 @@ The ledger of plans. Nothing under "Open" is built until the owner says go.
 ## Open (ideas from the build, not yet agreed)
 
 - More heals unlocked by level (two locked slots are on the bar at 5 and 10).
-- A use for coins: vendors, repairs, bigger bags.
-- A "target the most hurt" key, and Shift+Tab to go back.
+- Make mouse-look the default once it has been tried on a real mouse.
 - Ways for people to actually die if nobody heals them, and a resurrect.
 - People reacting more to the mystery healer: whispers, guild invites, a
   reputation.

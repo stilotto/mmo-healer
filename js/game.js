@@ -40,7 +40,7 @@ export function stats(S) {
   return {
     power: 10 + 4 * S.level + g.power,
     maxMana: 100 + 15 * S.level + g.mana,
-    regen: 3 + 0.25 * S.level + g.spirit * 0.12,   // mana per second
+    regen: 4 + 0.3 * S.level + g.spirit * 0.12,   // mana per second
     haste: Math.min(0.5, g.haste / 100),            // fraction off cast time and GCD
     spirit: g.spirit, hasteRaw: g.haste,
     maxHp: 80 + 20 * S.level,
@@ -81,9 +81,10 @@ export function reward(S, eff, target) {
   return out;
 }
 
-export function rollItem(ilvl, slot) {
+export function rollItem(ilvl, slot, minQ = 0) {
   let r = Math.random() * 100, q = 0;
   while (q < 3 && r >= R_WEIGHT[q]) { r -= R_WEIGHT[q]; q++; }
+  q = Math.max(q, minQ);
   slot = slot || pick(SLOTS);
   let budget = Math.round((3 + ilvl * 2.2) * R_MULT[q] * (slot === 'Staff' || slot === 'Robe' ? 1.3 : 1));
   const it = { slot, q, ilvl, power: 0, spirit: 0, mana: 0, haste: 0 };
@@ -100,9 +101,9 @@ export function rollItem(ilvl, slot) {
   return it;
 }
 
-export const BAG_SIZE = 14;
+export const bagSize = S => S.bagSize || 14;
 export function addItem(S, it) {
-  if (S.bag.length >= BAG_SIZE) { S.coins += it.value; return false; }
+  if (S.bag.length >= bagSize(S)) { S.coins += it.value; return false; }
   S.bag.push(it); return true;
 }
 export function equipItem(S, i) {
@@ -113,3 +114,29 @@ export function equipItem(S, i) {
 }
 export function sellItem(S, i) { const it = S.bag[i]; if (!it) return 0; S.bag.splice(i, 1); S.coins += it.value; return it.value; }
 export function itemScore(it) { return it ? it.power * 2 + it.spirit + it.mana / 4 + it.haste * 3 : 0; }
+
+// The quartermaster: four pieces of gear (restocked when you level), a
+// restock for a fee, and bigger bags.
+export const price = it => it.value * 5;
+export const restockCost = S => 10 + 5 * S.level;
+export const bagCost = S => bagSize(S) >= 28 ? 0 : bagSize(S) >= 21 ? 400 : 120;
+export function stock(S, force) {
+  if (force || !S.shop || S.shop.level !== S.level) {
+    S.shop = { level: S.level, items: [0, 1, 2, 3].map(i => rollItem(S.level + 1, null, i === 3 ? 2 : 1)) };
+  }
+  return S.shop.items;
+}
+export function buy(S, i) {
+  const it = stock(S)[i];
+  if (!it) return 'Sold out';
+  if (S.coins < price(it)) return 'Not enough copper';
+  if (S.bag.length >= bagSize(S)) return 'Your bag is full';
+  S.coins -= price(it); S.bag.push(it); S.shop.items[i] = null;
+  return '';
+}
+export function restock(S) { const c = restockCost(S); if (S.coins < c) return 'Not enough copper'; S.coins -= c; stock(S, true); return ''; }
+export function buyBag(S) {
+  const c = bagCost(S); if (!c) return 'No bigger bags';
+  if (S.coins < c) return 'Not enough copper';
+  S.coins -= c; S.bagSize = bagSize(S) + 7; return '';
+}

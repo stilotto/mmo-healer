@@ -9,7 +9,7 @@ const ray = new THREE.Raycaster(), head = new THREE.Vector3(), dir = new THREE.V
 export class Player {
   constructor(camera, dom, blockers) {
     Object.assign(this, { camera, blockers, x: 0, z: 19, y: 0, vy: 0, yaw: Math.PI, camOff: 0, pitch: 0.28, dist: 11, lastDist: 11,
-      moving: false, speed: 0, L: false, R: false, auto: false, stick: null, onClick: null, enabled: false });
+      moving: false, speed: 0, L: false, R: false, auto: false, stick: null, onClick: null, enabled: false, look: false, unlockAt: 0, dom });
     this.keys = new Set();
     const typing = e => e.target.tagName === 'INPUT';
     addEventListener('keydown', e => {
@@ -25,9 +25,19 @@ export class Player {
     addEventListener('blur', () => { this.keys.clear(); this.L = this.R = false; });
     dom.addEventListener('contextmenu', e => e.preventDefault());
 
+    // Mouse-look: the pointer is locked and the mouse steers with no button held.
+    document.addEventListener('pointerlockchange', () => { if (!this.locked) this.unlockAt = performance.now(); this.L = this.R = false; if (this.onLock) this.onLock(this.locked); });
+    document.addEventListener('mousemove', e => {
+      if (!this.locked) return;
+      this.yaw += this.camOff - e.movementX * 0.0032; this.camOff = 0;
+      this.pitch = Math.max(-1.3, Math.min(1.45, this.pitch + e.movementY * 0.0032));
+    });
+
     const ptr = new Map();
     dom.addEventListener('pointerdown', e => {
       if (!this.enabled) return;
+      if (this.locked) { if (e.button === 0 && this.onClick) this.onClick(innerWidth / 2, innerHeight / 2); return; }
+      if (this.look && e.pointerType === 'mouse') { this.lock(); return; }
       dom.setPointerCapture(e.pointerId);
       ptr.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, b: e.pointerType === 'touch' ? 2 : e.button, touch: e.pointerType === 'touch', moved: 0 });
       if (e.pointerType !== 'touch') { if (e.button === 0) this.L = true; if (e.button === 2) { this.R = true; this.yaw += this.camOff; this.camOff = 0; } }
@@ -64,14 +74,19 @@ export class Player {
   zoom(d) { this.dist = Math.max(0, Math.min(30, this.dist + d)); if (this.dist < 1.2) this.dist = d < 0 ? 0 : 1.6; if (this.dist) this.lastDist = this.dist; }
   toggleView() { this.dist = this.dist ? 0 : this.lastDist; }
   get firstPerson() { return this.dist === 0; }
+  get locked() { return document.pointerLockElement === this.dom; }
+  lock() { try { const r = this.dom.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (e) {} }
+  free() { if (this.locked) document.exitPointerLock(); }
+  setLook(on) { this.look = on; if (on) this.lock(); else this.free(); }
 
   update(dt) {
     const K = c => this.keys.has(c) ? 1 : 0;
     let f = Math.max(K('KeyW'), this.L && this.R ? 1 : 0, this.auto ? 1 : 0) - K('KeyS');
     this.pitch = Math.max(-1.3, Math.min(1.45, this.pitch + (K('ArrowDown') - K('ArrowUp')) * 1.4 * dt));
-    const lr = Math.max(K('KeyA'), K('ArrowLeft')) - Math.max(K('KeyD'), K('ArrowRight'));
-    let s = K('KeyQ') - K('KeyE');
-    if (this.R) s += lr; else this.yaw += lr * 2.6 * dt;
+    const ad = K('KeyA') - K('KeyD'), steer = this.R || this.locked;
+    let s = K('KeyQ') - K('KeyE') + (steer ? ad : 0);
+    s = Math.max(-1, Math.min(1, s));
+    this.yaw += (K('ArrowLeft') - K('ArrowRight') + (steer ? 0 : ad)) * 2.6 * dt;
     if (this.stick) { f -= this.stick.y; s -= this.stick.x; }
     const m = Math.hypot(f, s);
     this.moving = m > 0.15 || this.y > 0;

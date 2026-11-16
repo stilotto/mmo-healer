@@ -10,6 +10,7 @@ export const CLASSES = {
   Warlock: { color: '#9482c9', tunic: 0x5a2f7a, hat: 'cone', weapon: 'staff' },
   Druid:   { color: '#ff7d0a', tunic: 0x7a5a2f, hat: 'none', weapon: 'staff' },
   Brawler: { color: '#00ff96', tunic: 0xa33a2a, hat: 'none', weapon: 'none' },
+  Vendor:  { color: '#ffd24a', tunic: 0x8a6a2a, hat: 'none', weapon: 'none' },
   Healer:  { color: '#ffffff', tunic: 0xf2ead2, hat: 'hood', weapon: 'staff' },
 };
 const SKIN = [0xf1c9a5, 0xd9a577, 0xa8703f, 0x6e4526, 0x9fc98a, 0xb9a8d8];

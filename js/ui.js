@@ -1,6 +1,6 @@
 // The heads-up display: unit frames, action bar, cast bar, chat, minimap,
 // floating numbers, the bag, and the few sounds (all made in code).
-import { SPELLS, SLOTS, SLOT_ICON, RARITY, RARITY_COLOR, BAG_SIZE, stats, xpNeed, itemScore, equipItem, sellItem } from './game.js';
+import { SPELLS, SLOTS, SLOT_ICON, RARITY, RARITY_COLOR, bagSize, stats, xpNeed, itemScore, equipItem, sellItem, stock, price, buy, restock, restockCost, buyBag, bagCost } from './game.js';
 import { CLASSES } from './figure.js';
 import { mapShapes, WALL_R } from './world.js';
 
@@ -24,9 +24,12 @@ export function init(state, handlers) {
   });
   for (const lv of [5, 10]) bar.append(el('div', 'slot locked', `Level<br>${lv}`));
   const mk = (txt, fn, title) => { const b = el('div', 'slot small', txt); b.title = title; b.onclick = fn; bar.append(b); };
-  mk('Tab', () => H.tab(), 'Next target');
+  mk('Tab', () => H.tab(), 'Next target (Tab, Shift+Tab goes back)');
+  mk('Hurt', () => H.hurt(), 'Target the most hurt person nearby (F)');
   mk('Bag', toggleBag, 'Character and bag (B)');
   mk('View', () => H.view(), 'First or third person (V)');
+  mk('Mouse', () => H.look(), 'Mouse-look on or off (X). Esc frees the cursor.');
+  bar.lastChild.id = 'lookbtn';
   $('bagx').onclick = toggleBag;
   chat('c-sys', `Welcome to Lanternrest, ${esc(S.name)}.`);
   chat('c-sys', 'Tab picks a target. 1 casts Mend, 2 casts Renew.');
@@ -63,10 +66,28 @@ function itemTip(it, cmp) {
     line('power', 'Healing Power') + line('spirit', 'Spirit') + line('mana', 'Mana') + line('haste', 'Haste') + `<div class="m">Sells for ${it.value}c</div>`;
 }
 
-let bagOpen = false;
-export function toggleBag() { bagOpen = !bagOpen; $('bag').style.display = bagOpen ? 'block' : 'none'; tip(); if (bagOpen) drawBag(); }
+let bagOpen = false, shopOpen = false;
+export function toggleBag() { bagOpen = !bagOpen; if (!bagOpen) shopOpen = false; $('bag').style.display = bagOpen ? 'block' : 'none'; tip(); if (bagOpen) drawBag(); H.panel(bagOpen); }
+export function openShop() { shopOpen = true; if (!bagOpen) toggleBag(); else drawBag(); }
+export function closeShop() { if (shopOpen) { shopOpen = false; if (bagOpen) toggleBag(); } }
+export const isShopOpen = () => shopOpen;
+export function setLook(on, locked) { const b = $('lookbtn'); b.style.color = on ? '#6dff7a' : ''; $('cross').style.display = locked ? 'block' : 'none'; }
+function drawShop() {
+  const box = $('shop'); box.style.display = shopOpen ? 'block' : 'none'; if (!shopOpen) return;
+  const g = $('wares'); g.innerHTML = '';
+  const done = msg => { if (msg) err(msg); else sfx('equip'); tip(); drawBag(); H.changed(); };
+  stock(S).forEach((it, i) => {
+    const d = el('div', 'it ' + (it ? 'q' + it.q : ''), it ? SLOT_ICON[it.slot] + `<small style="color:${S.coins >= price(it) ? '#ffd24a' : '#ff5a4a'}">${price(it)}c</small>` : '');
+    if (it) { d.onpointerenter = e => tip(itemTip(it, S.equip[it.slot]) + `<div style="color:#ffd24a">Costs ${price(it)} copper</div>`, e); d.onpointerleave = () => tip(); d.onclick = () => done(buy(S, i)); }
+    g.append(d);
+  });
+  const extra = (icon, cost, text, fn) => { const d = el('div', 'it', icon + `<small style="color:#ffd24a">${cost}c</small>`); d.onpointerenter = e => tip(`<div class="n">${text}</div><div style="color:#ffd24a">Costs ${cost} copper</div>`, e); d.onpointerleave = () => tip(); d.onclick = () => done(fn(S)); g.append(d); };
+  extra('🔄', restockCost(S), 'New stock', restock);
+  if (bagCost(S)) extra('🎒', bagCost(S), 'Bigger bag (+7 slots)', buyBag);
+}
 export function drawBag() {
   if (!bagOpen) return;
+  drawShop();
   const eq = $('equip'), bg = $('items'); eq.innerHTML = ''; bg.innerHTML = '';
   for (const k of SLOTS) {
     const it = S.equip[k], d = el('div', 'it ' + (it ? 'q' + it.q : ''), (it ? SLOT_ICON[k] : `<span style="opacity:.25">${SLOT_ICON[k]}</span>`));
@@ -74,7 +95,7 @@ export function drawBag() {
     eq.append(d);
   }
   let lastTap = 0;
-  for (let i = 0; i < BAG_SIZE; i++) {
+  for (let i = 0; i < bagSize(S); i++) {
     const it = S.bag[i], d = el('div', 'it ' + (it ? 'q' + it.q : ''), it ? SLOT_ICON[it.slot] + (itemScore(it) > itemScore(S.equip[it.slot]) ? '<small style="color:#1eff00">▲</small>' : '') : '');
     if (it) {
       d.onpointerenter = e => tip(itemTip(it, S.equip[it.slot]), e); d.onpointerleave = () => tip();
