@@ -1,0 +1,69 @@
+# Handoff notes
+
+Read this, `CLAUDE.md` and `TODO.md` before changing anything.
+
+## The idea (owner's words, condensed)
+
+"MMO Healer": you run around and heal people. They go about their MMO lives:
+questing, moving through towns, attending guild events. You select and heal
+them at will. You do not have to be in their party. You can walk into
+dungeons, find the party and start healing. You can find raids and PvP events
+and be a rogue element. You gain levels and gear like any other MMO player.
+Loot drops are key to the fun.
+
+## Decisions so far
+
+- Interface follows the big-MMO standard everyone knows: third person with a
+  first-person option, activated abilities on an action bar, tab targeting.
+  Not top down. Not click-to-heal (clicking a person only targets them).
+- Start small: only the central hub. Doors, portals, the airship and the gate
+  to the newbie zone are shown but do not take the player anywhere yet.
+- Two heals to start: Mend (2 s cast) and Renew (instant heal over time).
+
+## How the owner likes to work
+
+- Short replies; they read on a small Chromebook (about 1366 by 600).
+- If they mention a screenshot or file that is not attached, ask whether they
+  forgot it before doing anything.
+- They review on the live site, so every push goes to `main`.
+- They talk a change through first. `TODO.md` is the ledger: build on a go.
+
+## Where things stand (first build)
+
+The hub city, Lanternrest, is playable. About 22 to 34 simulated players
+wander between the inn, bank, auction hall, guild hall, stalls and fountain;
+pair off to duel in the ring; train on dummies; arrive hurt from the three
+portals; and come and go by airship. Healing them gives XP, and now and then
+they toss you an item or a tip. Progress saves in localStorage (`mmoHealer1`).
+
+## How the pieces fit
+
+- `index.html`: all CSS and the HUD markup. The import map is written by
+  `bump.sh` (three.js URL and a `?v=` for every module).
+- `js/game.js`: rules. Spells, stats, XP curve, loot rolls, bag. No DOM.
+- `js/world.js`: builds the hub. Exports `colliders` (circles and rotated
+  boxes), `POI` (where people stand), `spots` (walk-up messages for things
+  that are not open yet) and `mapShapes` (minimap).
+- `js/figure.js`: blocky people per calling, the walk and cast animations,
+  and the name plate sprite (repainted only when health changes).
+- `js/people.js`: the simulated players. A small state machine each (idle,
+  walk, duel), plus timers for duels, portal parties, airship arrivals, chat.
+- `js/player.js`: input and camera. Yaw 0 faces +z (south); a bigger yaw
+  turns left. Zoom 0 is first person.
+- `js/ui.js`: frames, action bar, cast bar, chat, minimap, bag, floating
+  numbers, sounds made in code.
+- `js/main.js`: boot, frame loop, targeting, casting, rewards.
+- `window.game` exposes state for tests. `?go` skips the title screen.
+
+## Things worth knowing
+
+- Coordinates: x east, z south, y up, one unit about a yard. The wall radius
+  is 62; the north gate is at z = -62.
+- Loot is paced by "full health bars healed" (`lootMeter` in `game.js`), so
+  overhealing earns nothing.
+- Simulated players are levelled around the healer's own level so heals stay
+  meaningful. Nothing has had a human balance pass.
+- The sandbox cannot reach the CDN; `tools/shot.mjs` serves three.js from a
+  local npm copy (the whole `build/` folder, since the module imports
+  `three.core.js`).
+- Coins have no use yet. Bag is 14 slots; overflow is auto-sold.

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>MMO Healer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Nunito+Sans:wght@400;700&display=swap" rel="stylesheet">
+<script type="importmap">{
+ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
+  "./js/figure.js": "./js/figure.js?v=20261116223452",
+  "./js/game.js": "./js/game.js?v=20261116223452",
+  "./js/people.js": "./js/people.js?v=20261116223452",
+  "./js/player.js": "./js/player.js?v=20261116223452",
+  "./js/ui.js": "./js/ui.js?v=20261116223452",
+  "./js/world.js": "./js/world.js?v=20261116223452"
+ }
+}</script>
+<style>
+:root{--gold:#f3c969;--edge:#6b5a36;--panel:rgba(14,12,10,.82);--hp:#3fbf4a;--mana:#3d7fe6;--xp:#8a4fd8}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#0b0d12;color:#eee;font:14px 'Nunito Sans',system-ui,sans-serif;
+  -webkit-user-select:none;user-select:none;touch-action:none}
+canvas#view{position:fixed;inset:0;width:100%;height:100%;display:block}
+#hud{position:fixed;inset:0;pointer-events:none;display:none}
+#hud>*{pointer-events:auto}
+.frame{position:absolute;top:8px;width:210px;background:var(--panel);border:1px solid var(--edge);border-radius:6px;padding:5px 7px 6px 46px;min-height:46px}
+.frame .port{position:absolute;left:5px;top:5px;width:36px;height:36px;border-radius:50%;border:2px solid var(--gold);background:#2b3350;
+  display:grid;place-items:center;font:800 15px Cinzel,serif;color:var(--gold)}
+.frame .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+.frame .sub{font-size:11px;color:#bbb;height:13px;white-space:nowrap;overflow:hidden}
+.bar{height:11px;background:#111;border:1px solid #000;border-radius:2px;margin-top:2px;position:relative;overflow:hidden}
+.bar i{position:absolute;left:0;top:0;bottom:0;width:100%;transform-origin:left;background:var(--hp)}
+.bar.mana i{background:var(--mana)}
+.bar span{position:absolute;inset:0;text-align:center;font-size:9px;line-height:10px;text-shadow:0 0 2px #000}
+#pframe{left:8px}
+#tframe{left:226px;display:none}
+#tframe .port{background:#3a2a2a}
+#mini{position:absolute;right:8px;top:8px;width:132px;text-align:center}
+#mini canvas{width:132px;height:132px;border-radius:50%;border:2px solid var(--gold);background:#1a2418}
+#zone{font:600 12px Cinzel,serif;color:var(--gold);text-shadow:0 1px 2px #000;margin-bottom:2px}
+#chat{position:absolute;left:8px;bottom:8px;width:340px;height:150px;background:rgba(0,0,0,.42);border-radius:5px;padding:4px 6px;
+  overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;font-size:12px;line-height:1.3;pointer-events:none}
+#chat div{text-shadow:0 1px 1px #000}
+.c-sys{color:#ffe066}.c-gen{color:#f4b9a4}.c-say{color:#fff}.c-heal{color:#7fe38a}.c-loot{color:#9fd}.c-guild{color:#5fe06a}.c-yell{color:#ff5a4a}
+#bottom{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px}
+#castbar{width:230px;height:16px;background:#000a;border:1px solid var(--gold);border-radius:3px;position:relative;visibility:hidden}
+#castbar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(#ffe9a0,#d59a1d);width:0}
+#castbar span{position:absolute;inset:0;text-align:center;font-size:11px;line-height:15px;text-shadow:0 0 2px #000}
+#actions{display:flex;gap:4px;background:var(--panel);border:1px solid var(--edge);border-radius:6px;padding:4px}
+.slot{width:46px;height:46px;border:1px solid #8a7a50;border-radius:5px;background:#222 center/cover;position:relative;overflow:hidden;cursor:pointer;
+  display:grid;place-items:center;font-size:24px}
+.slot kbd{position:absolute;right:3px;top:1px;font:700 10px sans-serif;color:#fff;text-shadow:0 0 2px #000}
+.slot .cd{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.72);height:0}
+.slot.dim{filter:saturate(.3) brightness(.55)}
+.slot.locked{font-size:10px;color:#888;text-align:center;cursor:default;line-height:1.2}
+.slot.small{font:700 11px sans-serif;color:var(--gold)}
+#xp{width:100%;height:9px;background:#000a;border:1px solid var(--edge);border-radius:3px;position:relative;overflow:hidden}
+#xp i{position:absolute;left:0;top:0;bottom:0;background:var(--xp);width:0}
+#xp span{position:absolute;inset:0;text-align:center;font-size:8px;line-height:8px}
+#err{position:absolute;top:22%;left:0;right:0;text-align:center;color:#ff4a3d;font-weight:700;font-size:16px;text-shadow:0 1px 2px #000;pointer-events:none;opacity:0;transition:opacity .3s}
+#toast{position:absolute;top:30%;left:0;right:0;text-align:center;font:800 26px Cinzel,serif;color:var(--gold);text-shadow:0 2px 6px #000;pointer-events:none;opacity:0;transition:opacity .5s}
+#hint{position:absolute;bottom:128px;left:0;right:0;text-align:center;color:#ffe9a0;font-size:13px;text-shadow:0 1px 2px #000;pointer-events:none}
+#floats{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.fl{position:absolute;font-weight:700;font-size:17px;color:#6dff7a;text-shadow:0 1px 2px #000,0 0 3px #000;transform:translate(-50%,-50%);white-space:nowrap}
+.fl.crit{font-size:24px;color:#d6ff5a}.fl.dmg{color:#fff;font-size:13px}.fl.xp{color:#c9a2ff;font-size:13px}
+#bag{position:absolute;right:8px;bottom:70px;width:292px;background:var(--panel);border:1px solid var(--gold);border-radius:6px;padding:8px;display:none}
+#bag h3{margin:0 0 4px;font:600 14px Cinzel,serif;color:var(--gold);display:flex;justify-content:space-between}
+#bag h3 b{cursor:pointer;color:#ccc}
+#bag .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px}
+.it{aspect-ratio:1;border:2px solid #444;border-radius:4px;background:#1b1b1b;display:grid;place-items:center;font-size:18px;cursor:pointer;position:relative}
+.it small{position:absolute;bottom:0;left:1px;font-size:8px;color:#aaa}
+.q0{border-color:#9d9d9d;color:#ddd}.q1{border-color:#1eff00;color:#1eff00}.q2{border-color:#3d8bff;color:#6aa5ff}.q3{border-color:#b048f8;color:#c77dff}
+#stats{font-size:12px;color:#ccc;line-height:1.5}
+#tip{position:absolute;display:none;background:#0a0a12ee;border:1px solid #888;border-radius:5px;padding:6px 8px;font-size:12px;width:190px;pointer-events:none;line-height:1.4;z-index:5}
+#tip .n{font-weight:700;font-size:13px}#tip .g{color:#1eff00}#tip .r{color:#ff5a4a}#tip .m{color:#aaa}
+#stick{position:absolute;left:14px;bottom:14px;width:110px;height:110px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.25);display:none}
+#stick i{position:absolute;left:35px;top:35px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.3)}
+#title{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 30%,rgba(30,40,70,.55),rgba(5,6,10,.92));text-align:center;padding:16px}
+#title h1{font:800 clamp(34px,9vw,64px) Cinzel,serif;color:var(--gold);margin:0;text-shadow:0 3px 12px #000;letter-spacing:2px}
+#title p{color:#cfd3e0;max-width:440px;margin:10px auto;line-height:1.45}
+#title input{font:inherit;padding:8px 10px;border-radius:5px;border:1px solid var(--edge);background:#111;color:#fff;text-align:center;width:180px;user-select:text;-webkit-user-select:text}
+#title button{display:block;margin:12px auto;font:800 18px Cinzel,serif;padding:10px 26px;border-radius:6px;border:1px solid var(--gold);
+  background:linear-gradient(#a3221c,#5d0f0c);color:#ffe9a0;cursor:pointer}
+#title .keys{font-size:12px;color:#9aa;max-width:480px}
+#title a{color:#889;font-size:12px}
+@media (pointer:coarse){
+  #stick{display:block}
+  #chat{left:8px;top:62px;bottom:auto;width:230px;height:74px;font-size:11px}
+  #bottom{left:auto;right:8px;transform:none;align-items:flex-end}
+  .slot{width:54px;height:54px}
+  #hint{bottom:150px}
+  #mini,#mini canvas{width:92px}#mini canvas{height:92px}
+}
+@media (max-width:560px){
+  .frame{width:150px}#tframe{left:164px}
+  #mini{top:62px}#mini,#mini canvas{width:84px}#mini canvas{height:84px}
+  #bag{right:4px;left:4px;width:auto;bottom:74px}
+  #castbar{width:180px}
+  .slot.locked{display:none}.slot{width:46px;height:46px}
+}
+@media (prefers-reduced-motion:reduce){#err,#toast{transition:none}}
+</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+<div id="hud">
+  <div id="floats"></div>
+  <div class="frame" id="pframe"><div class="port">✚</div><div class="nm" id="pname"></div>
+    <div class="bar"><i id="php"></i><span id="phpt"></span></div><div class="bar mana"><i id="pmp"></i><span id="pmpt"></span></div></div>
+  <div class="frame" id="tframe"><div class="port" id="tport"></div><div class="nm" id="tname"></div>
+    <div class="bar"><i id="thp"></i><span id="thpt"></span></div><div class="sub" id="tsub"></div></div>
+  <div id="mini"><div id="zone">Lanternrest</div><canvas id="map" width="264" height="264"></canvas></div>
+  <div id="chat"></div>
+  <div id="err"></div><div id="toast"></div><div id="hint"></div>
+  <div id="stick"><i></i></div>
+  <div id="bag"><h3><span>Character</span><b id="bagx">✕</b></h3>
+    <div class="grid" id="equip"></div><div id="stats"></div>
+    <h3 style="margin-top:6px"><span>Bag</span><span id="coins" style="font:12px 'Nunito Sans'"></span></h3>
+    <div class="grid" id="items"></div><div class="m" style="font-size:11px;color:#999">Click to equip. Shift-click or double-tap to sell.</div></div>
+  <div id="tip"></div>
+  <div id="bottom">
+    <div id="castbar"><i></i><span></span></div>
+    <div id="actions"></div>
+    <div id="xp"><i></i><span></span></div>
+  </div>
+</div>
+<div id="title"><div>
+  <h1>MMO Healer</h1>
+  <p>Everyone else is busy playing the game. You just heal them. No party, no invite, no permission.</p>
+  <input id="cname" maxlength="12" placeholder="Character name" autocomplete="off">
+  <button id="enter">Enter World</button>
+  <p class="keys"><b>WASD</b> move and turn · <b>Q/E</b> strafe · <b>right-drag</b> steer · <b>left-drag</b> look · <b>wheel</b> zoom (all the way in for first person, or <b>V</b>) · <b>Tab</b> next target · <b>1, 2</b> heal · <b>B</b> bag · <b>Space</b> jump</p>
+  <a href="https://stilotto.github.io/">More games from Stilotto</a>
+</div></div>
+<script type="module" src="js/main.js?v=20261116223452"></script>
+</body>
+</html>
