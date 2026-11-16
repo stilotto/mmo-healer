@@ -1,6 +1,8 @@
 # Handoff notes
 
 Read this, `CLAUDE.md` and `TODO.md` before changing anything.
+`fable notes.md` is a longer plan for where to take the game next (opinions,
+not agreed work).
 
 ## The idea (owner's words, condensed)
 
