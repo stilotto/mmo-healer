@@ -62,6 +62,13 @@ The ledger of plans. Nothing under "Open" is built until the owner says go.
 - Each visit is a fresh run. A wipe brings a new party after a few seconds.
 - `?speed=N` runs the world N times faster (for tests).
 
+## Agreed, not yet built
+
+- Monsters must not ignore the healer (owner, after sprint 3). Today every
+  monster in Greenhollow and Emberdeep acts as if the healer is not there.
+  Still to settle before building: what draws them (healing aggro, standing
+  too close, or both), and what happens when the healer dies.
+
 ## Sprints (proposed, not yet agreed)
 
 4. **Crowds.** A raid in progress and a battleground to drop in on, with
@@ -82,7 +89,6 @@ The ledger of plans. Nothing under "Open" is built until the owner says go.
 - Make mouse-look the default once it has been tried on a real mouse.
 - Emberdeep extras: a second boss, patrols, things to stand out of, a
   party that waits for the healer's mana, a boss kill count on the frame.
-- Monsters noticing the healer (healing aggro), so you can die too.
 - Quests for the healer ("keep five questers alive", "revive three").
 - People reacting more to the mystery healer: whispers, guild invites, a
   reputation.
