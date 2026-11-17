@@ -122,7 +122,11 @@ they toss you an item or a tip. Progress saves in localStorage (`mmoHealer1`).
   vertex-coloured meshes sharing one material: torso (with head, face, hat
   and robe), two legs, two arms. Merged shapes are cached by calling, skin,
   hair and tunic shade. `fig.sockets` has `head`, `handR` and `handL` groups
-  for gear; weapons hang from the hands. Monsters are still the old style.
+  for gear; weapons hang from the hands. Monsters use the same merged,
+  cached build (`makeMob`).
+- Combat text (`ui.js float`): yellow for hits on monsters, red for damage
+  to people, green with + for heals. Pops, rises, drifts, fades; shrinks with
+  distance and is hidden past 55 yards; capped at 60 on screen.
 - `tools/figures.mjs <out-dir>` lines up every calling close to the camera.
 - `tools/looks.mjs <out-dir> [look ...]` renders looks from the plaza, the
   gate and Greenhollow.

@@ -172,20 +172,43 @@ export const MOBS = {
 };
 export function makeMob(kind, opt = {}) {
   const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
-  const add = (geo, m, x, y, z, parent = body) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); parent.add(o); return o; };
   const legs = [];
   if (kind === 'slime') {
-    const b = add(new THREE.SphereGeometry(0.7, 10, 8), new THREE.MeshLambertMaterial({ color: opt.c || 0x5fd06a, emissive: opt.glow || 0, transparent: true, opacity: 0.85 }), 0, 0.5, 0); b.scale.y = 0.75;
-    add(G.orb, mat(0x111111), -0.22, 0.65, 0.55).scale.setScalar(0.6); add(G.orb, mat(0x111111), 0.22, 0.65, 0.55).scale.setScalar(0.6);
+    const col = opt.c || 0x5fd06a;
+    const b = new THREE.Mesh(S.sph(0.7, 16, 12), new THREE.MeshLambertMaterial({ color: col, emissive: opt.glow || shade(col, 0.15), transparent: true, opacity: 0.82 }));
+    b.position.y = 0.48; b.scale.set(1, 0.72, 1); body.add(b);
+    body.add(new THREE.Mesh(cached('slimeface', () => [
+      [S.sph(0.11, 8, 6), 0xffffff, at(-0.22, 0.66, 0.5)], [S.sph(0.11, 8, 6), 0xffffff, at(0.22, 0.66, 0.5)],
+      [S.sph(0.06, 6, 4), 0x141414, at(-0.21, 0.66, 0.6)], [S.sph(0.06, 6, 4), 0x141414, at(0.21, 0.66, 0.6)],
+      [S.sph(0.09, 8, 6), 0x2a1a14, at(0, 0.48, 0.62, 0, 0, 0, 1.4, 0.5, 0.6)],
+    ]), vmat));
+    const hl = new THREE.Mesh(S.sph(0.16, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45 })); hl.position.set(-0.25, 0.82, 0.3); hl.scale.set(1, 0.6, 1); body.add(hl);
   } else {
-    const wolf = kind === 'wolf', c = mat(opt.c || (wolf ? 0x777c86 : kind === 'tusk' ? 0x3a2a22 : 0x7a5438)), d = mat(opt.d || (wolf ? 0x55585f : 0x4a3222));
-    add(box(wolf ? 0.5 : 0.75, wolf ? 0.5 : 0.65, 1.3), c, 0, 0.75, 0);
-    add(box(wolf ? 0.4 : 0.55, 0.42, 0.5), c, 0, wolf ? 0.95 : 0.78, 0.85);
-    add(box(0.22, 0.2, 0.3), d, 0, wolf ? 0.88 : 0.7, 1.2);
-    if (wolf) { add(box(0.1, 0.2, 0.08), d, -0.14, 1.25, 0.8); add(box(0.1, 0.2, 0.08), d, 0.14, 1.25, 0.8); add(box(0.14, 0.14, 0.6), d, 0, 0.9, -0.9).rotation.x = 0.5; }
-    else { add(box(0.07, 0.07, 0.28), mat(0xf2ead2), -0.22, 0.66, 1.15).rotation.x = -0.6; add(box(0.07, 0.07, 0.28), mat(0xf2ead2), 0.22, 0.66, 1.15).rotation.x = -0.6; add(box(0.12, 0.2, 1), d, 0, 1.15, -0.05); }
+    const wolf = kind === 'wolf', c = opt.c || (wolf ? 0x7a7f8a : kind === 'tusk' ? 0x4a3226 : 0x8a5a3a), d = opt.d || (wolf ? 0x4f525a : 0x4a2e1e);
+    body.add(new THREE.Mesh(cached('mob' + kind + c + d, () => {
+      const P = wolf ? [
+        [S.sph(0.42, 12, 9), c, at(0, 0.86, 0, 0, 0, 0, 0.8, 0.8, 1.55)],
+        [S.sph(0.36, 12, 9), d, at(0, 1.0, 0.42, 0, 0, 0, 1, 1, 0.9)],                 // ruff
+        [S.sph(0.27, 12, 9), c, at(0, 1.12, 0.78)],
+        [S.sph(0.13, 8, 6), c, at(0, 1.04, 1.04, 0, 0, 0, 1, 0.8, 1.5)], [S.sph(0.05, 6, 4), 0x141414, at(0, 1.06, 1.24)],
+        [S.cone(0.09, 0.24), d, at(-0.14, 1.38, 0.72, 0, 0, 0.2)], [S.cone(0.09, 0.24), d, at(0.14, 1.38, 0.72, 0, 0, -0.2)],
+        [S.sph(0.035, 6, 4), 0xffd24a, at(-0.11, 1.17, 1.0)], [S.sph(0.035, 6, 4), 0xffd24a, at(0.11, 1.17, 1.0)],
+        [S.cone(0.12, 0.7), d, at(0, 0.98, -0.78, -2.1)],
+      ] : [
+        [S.sph(0.5, 12, 9), c, at(0, 0.82, 0, 0, 0, 0, 0.95, 0.85, 1.45)],
+        [S.sph(0.36, 12, 9), c, at(0, 0.8, 0.66)],
+        [S.cyl(0.16, 0.2, 0.32, 10), shade(c, 1.2), at(0, 0.72, 0.98, Math.PI / 2)], [S.cyl(0.16, 0.16, 0.02, 10), 0x6a3a3a, at(0, 0.72, 1.14, Math.PI / 2)],
+        [S.cone(0.05, 0.3), 0xf2ead2, at(-0.17, 0.72, 1.02, 0.9)], [S.cone(0.05, 0.3), 0xf2ead2, at(0.17, 0.72, 1.02, 0.9)],
+        [S.cone(0.1, 0.2), d, at(-0.2, 1.1, 0.6, -0.3, 0, 0.4)], [S.cone(0.1, 0.2), d, at(0.2, 1.1, 0.6, -0.3, 0, -0.4)],
+        [S.sph(0.04, 6, 4), 0x141414, at(-0.16, 0.9, 0.92)], [S.sph(0.04, 6, 4), 0x141414, at(0.16, 0.9, 0.92)],
+        ...[-0.4, -0.15, 0.1, 0.35, 0.58].map((z, i) => [S.cone(0.09, 0.26), d, at(0, 1.18 + (i === 3 ? 0.02 : 0) - Math.abs(z) * 0.12, z, -0.35)]),   // bristles
+        [S.cyl(0.03, 0.02, 0.3, 5), d, at(0, 0.9, -0.74, -0.8)],
+      ];
+      return P;
+    }), vmat));
+    const leg = cached('leg' + kind + c + d, () => [[S.cyl(wolf ? 0.08 : 0.1, wolf ? 0.06 : 0.08, 0.5, 7), c, at(0, -0.25, 0)], [S.cyl(0.08, 0.09, 0.08, 7), d, at(0, -0.5, 0)]]);
     for (const [x, z] of [[-0.22, 0.45], [0.22, 0.45], [-0.22, -0.45], [0.22, -0.45]]) {
-      const p = new THREE.Group(); p.position.set(x, 0.5, z); add(box(0.16, 0.5, 0.16), d, 0, -0.25, 0, p); body.add(p); legs.push(p);
+      const p = new THREE.Group(); p.position.set(x, 0.55, z); p.add(new THREE.Mesh(leg, vmat)); body.add(p); legs.push(p);
     }
   }
   const sh = new THREE.Mesh(G.shadow, shadowMat); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.03; sh.scale.setScalar(1.4); g.add(sh);
