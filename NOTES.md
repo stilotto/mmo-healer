@@ -128,6 +128,18 @@ they toss you an item or a tip. Progress saves in localStorage (`mmoHealer1`).
   to people, green with + for heals. Pops, rises, drifts, fades; shrinks with
   distance and is hidden past 55 yards; capped at 60 on screen.
 - `tools/figures.mjs <out-dir>` lines up every calling close to the camera.
+- `js/textures.js` paints textures at start-up: grass, dirt, stone blocks,
+  plaster with timber framing, shingles, planks. They are pale so one
+  texture can be tinted per building by the material colour.
+- Town props (benches, planters, barrels, crates, banners) are one merged
+  mesh built in `world.js`; window boxes are merged per building. Firs are
+  three stacked cones (`FIR`). Greenhollow grass is one instanced mesh of
+  2,600 tufts, kept out of the shadow pass.
+- Frame-rate safety net in `look.js`: after a few seconds it measures the
+  frame rate and, below 40 fps, steps down one notch at a time (glow, then
+  shadows, then resolution), saying so in chat. `?quality=low` starts at the
+  bottom; `?quality=high` never steps down (the look and figure tests use it,
+  since the headless browser is slow).
 - `tools/looks.mjs <out-dir> [look ...]` renders looks from the plaza, the
   gate and Greenhollow.
 - The import map also maps `three/addons/`; tests serve the whole three

@@ -11,7 +11,7 @@ const pg = await br.newPage({ viewport: { width: 1366, height: 620 } }); const e
 pg.on('pageerror', e => errs.push(String(e))); pg.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
 await pg.route('**/cdn.jsdelivr.net/**', async rt => rt.fulfill({ body: await readFile(join(process.env.THREE_DIR, rt.request().url().split('three@0.186.1/')[1])), contentType: 'text/javascript' }));
 await pg.route('**/fonts.g*/**', rt => rt.abort());
-await pg.goto(`http://localhost:${srv.address().port}/?speed=6`); await pg.click('#enter'); await pg.waitForTimeout(1000);
+await pg.goto(`http://localhost:${srv.address().port}/?speed=6&quality=high`); await pg.click('#enter'); await pg.waitForTimeout(1000);
 const out = {};
 const enter = () => pg.evaluate(() => { const P = game.people.list, d = game.dungeon; if (d.active) { game.player.x = game.DUN.exits[0].x; game.player.z = game.DUN.exits[0].z; } });
 await pg.evaluate(() => { game.player.x = -47; game.player.z = -15; }); await pg.waitForTimeout(800);

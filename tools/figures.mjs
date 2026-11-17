@@ -10,7 +10,7 @@ const pg = await br.newPage({ viewport: { width: 1366, height: 620 } }); const e
 pg.on('pageerror', e => errs.push(String(e))); pg.on('console', m => { if (m.type() === 'error' && !m.text().includes('ERR_FAILED')) errs.push(m.text()); });
 await pg.route('**/cdn.jsdelivr.net/**', async rt => rt.fulfill({ body: await readFile(join(process.env.THREE_DIR, rt.request().url().split('three@0.186.1/')[1])), contentType: 'text/javascript' }));
 await pg.route('**/fonts.g*/**', rt => rt.abort());
-await pg.goto(`http://localhost:${srv.address().port}/`); await pg.click('#enter'); await pg.waitForTimeout(2000);
+await pg.goto(`http://localhost:${srv.address().port}/?quality=high`); await pg.click('#enter'); await pg.waitForTimeout(2000);
 const calls = await pg.evaluate(() => {
   document.getElementById('hud').style.display = 'none';
   const P = game.people, K = ['Knight', 'Ranger', 'Mage', 'Rogue', 'Warlock', 'Druid', 'Brawler', 'Healer'];

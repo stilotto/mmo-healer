@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { makeMob, animateMob, makePlate } from './figure.js';
 import { DUN, DX, collide, label } from './world.js';
+import * as TX from './textures.js';
 
 const rnd = (a, b) => a + Math.random() * (b - a), pick = a => a[Math.floor(Math.random() * a.length)];
 const KINDS = {
@@ -21,10 +22,12 @@ const SAY = {
 
 export function buildDungeon(scene, blockers) {
   const L = c => new THREE.MeshLambertMaterial({ color: c });
-  const floorM = L(0x4a3f3a), wallM = L(0x2e2624);
+  const ft = TX.stone(), wt = TX.stone(); ft.repeat.set(0.25, 0.25); wt.repeat.set(0.5, 2);
+  const floorM = new THREE.MeshLambertMaterial({ color: 0x9a8070, map: ft }), wallM = new THREE.MeshLambertMaterial({ color: 0x8a6a5a, map: wt });
   const under = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshBasicMaterial({ color: 0x080404 })); under.rotation.x = -Math.PI / 2; under.position.set(DX + 15, -0.2, -45); scene.add(under);
   for (const [x0, z0, x1, z1] of DUN.rects) {
-    const f = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 0.1, z1 - z0), floorM); f.position.set((x0 + x1) / 2, -0.05, (z0 + z1) / 2); scene.add(f);
+    const t = ft.clone(); t.repeat.set((x1 - x0) / 5, (z1 - z0) / 5); t.needsUpdate = true;
+    const f = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, 0.1, z1 - z0), new THREE.MeshLambertMaterial({ color: 0x9a8070, map: t })); f.position.set((x0 + x1) / 2, -0.05, (z0 + z1) / 2); scene.add(f);
   }
   const walk = (x, z) => DUN.rects.some(([x0, z0, x1, z1]) => x > x0 && x < x1 && z > z0 && z < z1);
   const segs = [];

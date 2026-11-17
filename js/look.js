@@ -63,14 +63,30 @@ export function makeLook(name, { scene, renderer, camera, world }) {
     composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), ...L.bloom));
     composer.addPass(new OutputPass());
   }
-  let t = 0;
-  return {
+  // Frame-rate safety net: if the game runs slow, step down one notch at a
+  // time (glow, then shadows, then resolution). ?quality=low starts at the
+  // bottom; ?quality=high never steps down.
+  const q = new URLSearchParams(location.search).get('quality');
+  let t = 0, level = 0, frames = 0, spent = 0, settle = 4;
+  const steps = [
+    () => { composer = null; },
+    () => { renderer.shadowMap.enabled = false; sun.castShadow = false; scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => m.needsUpdate = true); }); },
+    () => renderer.setPixelRatio(Math.min(devicePixelRatio, 1) * 0.75),
+  ];
+  const lower = () => { if (level < steps.length) { steps[level++](); look.onLower && look.onLower(level); } };
+  if (q === 'low') while (level < steps.length) lower();
+  const look = {
     render() { if (composer) composer.render(); else renderer.render(scene, camera); },
     resize(w, h) { if (composer) composer.setSize(w, h); },
     update(dt, p) {
+      if (q !== 'high' && level < steps.length && (settle -= dt) < 0) {
+        frames++; spent += dt;
+        if (spent > 3) { if (frames / spent < 40) { lower(); settle = 3; } frames = 0; spent = 0; }
+      }
       if ((t += dt) > 1) { t = 0; sweep(); }   // newcomers (people, loot beams) pick up the look
       if (L.shadows) { sun.target.position.set(p.x, 0, p.z); sun.position.set(p.x + L.sun[2][0], L.sun[2][1], p.z + L.sun[2][2]); }
     },
     mood(cave) { if (!cave) outdoors(); },
   };
+  return look;
 }

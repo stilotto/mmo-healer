@@ -2,7 +2,13 @@
 // court, the airship dock, and the collision shapes for all of it.
 // x is east, z is south, y is up. One unit is about a yard.
 import * as THREE from 'three';
-import { canvasTex } from './figure.js';
+import { canvasTex, mergeParts, at, SHAPES as SH } from './figure.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import * as TX from './textures.js';
+
+// A storybook fir: three stacked cones in a unit box (radius 1, height 1).
+const firGeo = () => mergeGeometries([[1, 0.55, -0.2], [0.76, 0.5, 0.1], [0.5, 0.42, 0.33]].map(([r, h, y]) => new THREE.ConeGeometry(r, h, 8).translate(0, y, 0).toNonIndexed()));
+const FIR = firGeo();
 
 export const WALL_R = 62;
 export const colliders = [];   // {x,z,r} circles or {x,z,hw,hd,rot} boxes
@@ -85,8 +91,8 @@ export function buildWorld(scene) {
   const sun = new THREE.DirectionalLight(0xfff0d0, 1.9); sun.position.set(-60, 90, 40); scene.add(sun);
   const sky = scene.background, dark = new THREE.Color(0x140a08);
   const mood = cave => {
-    scene.background = cave ? dark : sky; scene.fog.color.set(cave ? 0x140a08 : 0xcfdbe0); scene.fog.near = cave ? 25 : 90; scene.fog.far = cave ? 120 : 420;
-    hemi.intensity = cave ? 1.0 : 1.5; hemi.color.set(cave ? 0xffc8a0 : 0xdfeaff); sun.intensity = cave ? 0.5 : 1.9;
+    scene.background = cave ? dark : sky; scene.fog.color.set(cave ? 0x140a08 : 0xcfdbe0); scene.fog.near = cave ? 30 : 90; scene.fog.far = cave ? 170 : 420;
+    hemi.intensity = cave ? 1.6 : 1.5; hemi.color.set(cave ? 0xffc8a0 : 0xdfeaff); sun.intensity = cave ? 0.5 : 1.9;
   };
   for (let i = 0; i < 16; i++) {
     const a = i / 16 * Math.PI * 2 + 0.2, h = 70 + (i * 53 % 80), r = h * 1.1;
@@ -110,12 +116,12 @@ export function buildWorld(scene) {
   });
   cob.wrapS = cob.wrapT = THREE.RepeatWrapping; cob.repeat.set(26, 26);
   const flat = (geo, m, y, x = 0, z = 0) => { const o = mesh(geo, m, x, y, z); o.rotation.x = -Math.PI / 2; scene.add(o); return o; };
-  flat(new THREE.CircleGeometry(600, 40), L(0x6f9a4a), -0.05);
+  flat(new THREE.CircleGeometry(600, 40), new THREE.MeshLambertMaterial({ map: TX.grass() }), -0.05);
   flat(new THREE.CircleGeometry(WALL_R, 48), new THREE.MeshLambertMaterial({ map: cob }), 0);
   flat(new THREE.RingGeometry(9, 10.5, 40), L(0x8a7a5a), 0.02);
 
   // City wall, with a gap for the north gate
-  const stone = L(0x9a948a), stoneD = L(0x7d776e);
+  const stoneTex = TX.stone(), stone = new THREE.MeshLambertMaterial({ color: 0xd8d2c6, map: stoneTex }), stoneD = new THREE.MeshLambertMaterial({ color: 0xb0aa9e, map: stoneTex });
   const N = 44;
   for (let i = 0; i < N; i++) {
     const a = (i + 0.5) / N * Math.PI * 2;
@@ -163,13 +169,24 @@ export function buildWorld(scene) {
     x.fillStyle = '#d8b45a'; x.beginPath(); x.arc(50, 70, 4, 0, 7); x.fill();
   });
   const win = new THREE.MeshBasicMaterial({ color: 0xffd98a });
+  const timberTex = TX.timber(), shingleTex = TX.shingles(); timberTex.repeat.set(2, 1);
+  const frame = L(0x4a3220);
   const building = (key, name, sub, x, z, w, d, h, wall, roof, msg) => {
     const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = Math.atan2(-x, -z); scene.add(g);
-    const b = mesh(new THREE.BoxGeometry(w, h, d), L(wall), 0, h / 2, 0); g.add(b); blockers.push(b);
-    const r = mesh(new THREE.ConeGeometry(0.75, 1, 4), L(roof), 0, h + 2.5, 0); r.rotation.y = Math.PI / 4; r.scale.set(w * 1.08, 5, d * 1.08); g.add(r);
+    const b = mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({ color: wall, map: timberTex }), 0, h / 2, 0); g.add(b); blockers.push(b);
+    g.add(mesh(new THREE.BoxGeometry(w + 0.3, 0.9, d + 0.3), stoneD, 0, 0.45, 0));
+    const r = mesh(new THREE.ConeGeometry(0.75, 1, 4), new THREE.MeshLambertMaterial({ color: roof, map: shingleTex }), 0, h + 2.5, 0); r.rotation.y = Math.PI / 4; r.scale.set(w * 1.08, 5, d * 1.08); g.add(r);
     g.add(mesh(new THREE.BoxGeometry(w + 0.4, 0.5, d + 0.4), L(0x5a4630), 0, h * 0.5, 0));
     g.add(mesh(new THREE.PlaneGeometry(2.4, 4), new THREE.MeshLambertMaterial({ map: door }), 0, 2, d / 2 + 0.03));
-    for (const sx of [-w * 0.3, w * 0.3]) { g.add(mesh(new THREE.PlaneGeometry(1.6, 1.8), win, sx, 2.6, d / 2 + 0.03)); g.add(mesh(new THREE.PlaneGeometry(1.6, 1.6), win, sx, h * 0.75, d / 2 + 0.03)); }
+    g.add(mesh(new THREE.BoxGeometry(2.9, 4.4, 0.12), frame, 0, 2.15, d / 2));
+    for (const sx of [-w * 0.3, w * 0.3]) for (const [wy, wh] of [[2.6, 1.8], [h * 0.75, 1.6]]) {
+      g.add(mesh(new THREE.BoxGeometry(2, wh + 0.4, 0.1), frame, sx, wy, d / 2));
+      g.add(mesh(new THREE.PlaneGeometry(1.6, wh), win, sx, wy, d / 2 + 0.06));
+      g.add(mesh(new THREE.BoxGeometry(0.1, wh, 0.06), frame, sx, wy, d / 2 + 0.08));
+      g.add(mesh(new THREE.BoxGeometry(2.2, 0.16, 0.4), frame, sx, wy - wh / 2 - 0.25, d / 2 + 0.15));
+    }
+    g.add(mergeParts([[SH.box(2, 0.4, 0.45), 0x7a5434, at(-w * 0.3, 1.25, d / 2 + 0.3)], [SH.box(2, 0.4, 0.45), 0x7a5434, at(w * 0.3, 1.25, d / 2 + 0.3)],
+      ...[-0.75, -0.35, 0.05, 0.45, 0.8].flatMap((o, i) => [-w * 0.3, w * 0.3].map(sx => [SH.sph(0.2, 6, 4), [0xe85a7a, 0xffd24a, 0xf2f2ff, 0xb070e0, 0xff8a3a][(i + (sx > 0 ? 2 : 0)) % 5], at(sx + o, 1.55, d / 2 + 0.32)]))]));
     g.add(mesh(new THREE.BoxGeometry(1.2, 3, 1.2), L(0x6a5a50), w * 0.3, h + 3.5, 0));
     const lb = label(name, sub, 3.4); lb.position.set(0, h + 1, d / 2 + 1.5); g.add(lb);
     colliders.push({ x, z, hw: w / 2, hd: d / 2, rot: g.rotation.y });
@@ -230,7 +247,8 @@ export function buildWorld(scene) {
   const SHIP_PERIOD = 85;
 
   // Duelling ring and training dummies, south
-  flat(new THREE.CircleGeometry(9, 28), L(0xd8c08a), 0.03, 0, 40);
+  { const t = TX.dirt(); t.repeat.set(3, 3); flat(new THREE.CircleGeometry(9, 28), new THREE.MeshLambertMaterial({ color: 0xe8d8b0, map: t }), 0.03, 0, 40); }
+  flat(new THREE.RingGeometry(9, 9.6, 32), stoneD, 0.035, 0, 40);
   for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283; scene.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 1.1, 6), L(0x6b4a2a), Math.sin(a) * 9.4, 0.55, 40 + Math.cos(a) * 9.4)); }
   const dul = label('Duelling Ring', '', 3); dul.position.set(0, 5.5, 49); scene.add(dul);
   POI.ring = { x: 0, z: 40 };
@@ -267,14 +285,34 @@ export function buildWorld(scene) {
     if ((Math.abs(x) < 10 && z < 0) || (x > 38 && Math.abs(z) < 10) || (x < -38 && Math.abs(z) < 24)) continue;
     const h = 5 + (i * 7 % 4);
     scene.add(mesh(new THREE.CylinderGeometry(0.4, 0.55, 3, 6), L(0x5a4028), x, 1.5, z));
-    scene.add(mesh(new THREE.ConeGeometry(2.6, h, 7), leaf[i % 3], x, 3 + h / 2, z));
+    const f = mesh(FIR, leaf[i % 3], x, 2.6 + h / 2, z); f.scale.set(2.8, h * 1.1, 2.8); f.rotation.y = i; scene.add(f);
     colliders.push({ x, z, r: 0.7 });
   }
   for (let i = 0; i < 40; i++) {
     const a = i * 2.4, d = 80 + (i * 41 % 130), h = 7 + (i % 5);
     if (Math.cos(a) * d < -50 && Math.abs(Math.sin(a) * d) < 135) continue;
-    scene.add(mesh(new THREE.ConeGeometry(3.4, h, 6), leaf[i % 3], Math.sin(a) * d, h / 2 + 1, Math.cos(a) * d));
+    const f = mesh(FIR, leaf[i % 3], Math.sin(a) * d, h / 2 + 1, Math.cos(a) * d); f.scale.set(3.6, h * 1.1, 3.6); scene.add(f);
   }
+
+  // Props: one merged mesh for all the small things that make the town lived in.
+  const P = [], wood = 0x7a5434, dk = 0x4a3220;
+  const barrel = (x, z) => { P.push([SH.cyl(0.42, 0.42, 1.05, 10), wood, at(x, 0.53, z)], [SH.cyl(0.44, 0.44, 0.08, 10), dk, at(x, 0.2, z)], [SH.cyl(0.44, 0.44, 0.08, 10), dk, at(x, 0.86, z)]); colliders.push({ x, z, r: 0.5 }); };
+  const crate = (x, z, s = 0.9, ry = 0) => { P.push([SH.box(s, s, s), 0xa07a4a, at(x, s / 2, z, 0, ry)], [SH.box(s + 0.04, 0.1, s + 0.04), dk, at(x, s - 0.05, z, 0, ry)]); colliders.push({ x, z, r: s * 0.6 }); };
+  const bench = (a) => { const x = Math.sin(a) * 12.5, z = Math.cos(a) * 12.5;
+    P.push([SH.box(3, 0.14, 0.7), wood, at(x, 0.55, z, 0, a)], [SH.box(3, 0.6, 0.12), wood, at(x - Math.sin(a) * 0.32, 0.95, z - Math.cos(a) * 0.32, 0, a)]);
+    for (const o of [-1.2, 1.2]) P.push([SH.box(0.14, 0.55, 0.6), dk, at(x + Math.cos(a) * o, 0.27, z - Math.sin(a) * o, 0, a)]);
+    colliders.push({ x, z, r: 1.2 }); };
+  const planter = (x, z) => { P.push([SH.cyl(0.9, 0.75, 0.7, 10), 0xb0aa9e, at(x, 0.35, z)], [SH.sph(0.8, 10, 6), 0x4f8a3a, at(x, 0.85, z, 0, 0, 0, 1, 0.6, 1)]);
+    for (let k = 0; k < 6; k++) P.push([SH.sph(0.16, 6, 4), [0xe85a7a, 0xffd24a, 0xf2f2ff][k % 3], at(x + Math.sin(k) * 0.5, 1.15, z + Math.cos(k) * 0.5)]);
+    colliders.push({ x, z, r: 1 }); };
+  [0.6, 2.2, 3.9, 5.5].forEach(bench);
+  [[-10, -5], [10, 5], [-6, 10.5], [6, -10.5]].forEach(([x, z]) => planter(x, z));
+  [[-22, -20], [-23.2, -19], [-21, -18.6], [23, 21], [24.2, 19.6]].forEach(([x, z]) => barrel(x, z));
+  [[24, -21, 1], [25.2, -20.6, 0.7], [-25, 22, 1], [-24, 23.3, 0.8], [18.5, 17, 0.8], [-18, -16, 0.8]].forEach(([x, z, s], i) => crate(x, z, s, i));
+  // Guild banners on poles flanking the plaza's south road
+  for (const [x, c] of [[-6, 0x6a2a5a], [6, 0x2a4a8a]]) P.push([SH.cyl(0.1, 0.12, 6, 6), dk, at(x, 3, 30)], [SH.box(1.4, 2.6, 0.06), c, at(x, 4.4, 30.1)], [SH.box(1.4, 0.2, 0.08), 0xd8b45a, at(x, 3.15, 30.12)], [SH.sph(0.16, 6, 4), 0xd8b45a, at(x, 6.1, 30)]);
+  colliders.push({ x: -6, z: 30, r: 0.3 }, { x: 6, z: 30, r: 0.3 });
+  scene.add(mergeParts(P));
 
   const zone = buildZone(scene, { L, mesh, flat, leaf, stone, stoneD });
 
@@ -298,10 +336,11 @@ export function buildWorld(scene) {
 function buildZone(scene, { L, mesh, flat, leaf, stone, stoneD }) {
   let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const road = [[0, -62], [0, -96], [-18, -130], [-8, -175], [24, -212], [6, -262]];
-  const dirt = L(0xb39a68);
+  const dirtTex = TX.dirt();
   for (let i = 0; i < road.length - 1; i++) {
     const [ax, az] = road[i], [bx, bz] = road[i + 1], len = Math.hypot(bx - ax, bz - az);
-    const m = mesh(new THREE.BoxGeometry(5.5, 0.04, len + 4), dirt, (ax + bx) / 2, 0.01, (az + bz) / 2);
+    const t = dirtTex.clone(); t.repeat.set(1, (len + 4) / 6); t.needsUpdate = true;
+    const m = mesh(new THREE.BoxGeometry(5.5, 0.04, len + 4), new THREE.MeshLambertMaterial({ map: t }), (ax + bx) / 2, 0.01, (az + bz) / 2);
     m.rotation.y = Math.atan2(bx - ax, bz - az); scene.add(m);
   }
   mapShapes.push({ t: 'zone' }, { t: 'road', pts: road });
@@ -358,7 +397,7 @@ function buildZone(scene, { L, mesh, flat, leaf, stone, stoneD }) {
     spotsT.push({ x, z, h: 5 + rnd() * 5, bog: Math.hypot(x - 62, z + 224) < 24 });
   }
   const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.4, 0.55, 3, 6), L(0x5a4028), spotsT.length);
-  const tops = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 7), new THREE.MeshLambertMaterial({ color: 0xffffff }), spotsT.length);
+  const tops = new THREE.InstancedMesh(FIR, new THREE.MeshLambertMaterial({ color: 0xffffff }), spotsT.length);
   const M = new THREE.Matrix4(), col = new THREE.Color();
   spotsT.forEach((t, i) => {
     M.makeTranslation(t.x, 1.5, t.z); trunks.setMatrixAt(i, M);
@@ -377,5 +416,16 @@ function buildZone(scene, { L, mesh, flat, leaf, stone, stoneD }) {
     const x = ZONE.x0 + rnd() * 240, z = ZONE.z0 + rnd() * 200; if (Math.hypot(x, z) < WALL_R + 6 || nearRoad(x, z, 5) || Math.hypot(x + 66, z + 138) < 18) continue;
     const s = 0.8 + rnd() * 1.4, k = mesh(new THREE.DodecahedronGeometry(s), i % 2 ? stone : stoneD, x, s * 0.5, z); k.rotation.set(rnd() * 3, rnd() * 3, 0); scene.add(k); colliders.push({ x, z, r: s });
   }
+  // Grass tufts: one instanced mesh, kept out of the shadow pass for speed.
+  const blade = mergeGeometries([-0.5, 0, 0.5].map((a, i) => new THREE.ConeGeometry(0.07, 0.6 - i * 0.1, 3).rotateZ(a * 0.5).translate(Math.sin(a) * 0.12, 0.28, (i - 1) * 0.05).toNonIndexed()));
+  const tufts = [];
+  for (let i = 0; i < 6000 && tufts.length < 2600; i++) {
+    const x = ZONE.x0 + rnd() * 240, z = ZONE.z0 + rnd() * 212;
+    if (Math.hypot(x, z) < WALL_R + 3 || nearRoad(x, z, 3.5) || Math.hypot(x + 66, z + 138) < 17 || (Math.abs(x - 61) < 12 && Math.abs(z + 137) < 9) || (Math.abs(x - 71) < 12 && Math.abs(z + 147) < 9)) continue;
+    tufts.push([x, z]);
+  }
+  const tm = new THREE.InstancedMesh(blade, new THREE.MeshLambertMaterial({ color: 0xffffff }), tufts.length);
+  tufts.forEach(([x, z], i) => { const s = 0.7 + rnd() * 0.9; M.makeScale(s, s * (0.8 + rnd() * 0.6), s); M.setPosition(x, 0, z); tm.setMatrixAt(i, M); tm.setColorAt(i, col.setHSL(0.22 + rnd() * 0.07, 0.55, 0.2 + rnd() * 0.1)); });
+  tm.userData.looked = true; tm.receiveShadow = true; scene.add(tm);
   return { update(dt, t) { fire.scale.y = 1 + Math.sin(t * 13) * 0.18; fire.rotation.y += dt * 4; } };
 }

@@ -46,6 +46,9 @@ function merge(parts) {
     return g;
   }));
 }
+// For other modules: merge [geometry, colour, matrix] parts into one mesh.
+export const mergeParts = parts => new THREE.Mesh(merge(parts), vmat);
+export { at, S as SHAPES };
 const cache = new Map();
 const cached = (key, make) => cache.get(key) || (cache.set(key, merge(make())), cache.get(key));
 const S = {

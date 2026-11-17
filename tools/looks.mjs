@@ -13,7 +13,7 @@ for (const lk of looks) {
   pg.on('pageerror', e => errs.push(String(e))); pg.on('console', m => { if (m.type() === 'error' && !m.text().includes('ERR_FAILED')) errs.push(m.text()); });
   await pg.route('**/cdn.jsdelivr.net/**', async rt => rt.fulfill({ body: await readFile(join(process.env.THREE_DIR, rt.request().url().split('three@0.186.1/')[1])), contentType: 'text/javascript' }));
   await pg.route('**/fonts.g*/**', rt => rt.abort());
-  await pg.goto(`http://localhost:${srv.address().port}/?look=${lk}`); await pg.click('#enter'); await pg.waitForTimeout(2500);
+  await pg.goto(`http://localhost:${srv.address().port}/?look=${lk}&quality=high`); await pg.click('#enter'); await pg.waitForTimeout(2500);
   await pg.evaluate(() => { document.getElementById('hud').style.display = 'none'; });
   for (const [v, [x, z, yaw, pitch, dist]] of Object.entries(VIEWS)) {
     await pg.evaluate(([x, z, yaw, pitch, dist]) => Object.assign(game.player, { x, z, yaw, pitch, dist, camOff: 0 }), [x, z, yaw, pitch, dist]);
