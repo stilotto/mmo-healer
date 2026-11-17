@@ -22,7 +22,8 @@ export const LOOKS = {
 
 export function makeLook(name, { scene, renderer, camera, world }) {
   const L = LOOKS[name || 'storybook'];
-  if (!L) return {   // ?look=original render: () => renderer.render(scene, camera), update() {}, mood() {}, resize() {} };
+  // ?look=original: the first build's flat style
+  if (!L) return { render: () => renderer.render(scene, camera), update() {}, mood() {}, resize() {} };
   const { hemi, sun } = world.lights;
   const skyTex = sky(L.sky);
   renderer.toneMapping = L.tone; renderer.toneMappingExposure = L.exposure;
