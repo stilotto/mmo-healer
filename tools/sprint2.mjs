@@ -14,7 +14,7 @@ await pg.goto(`http://localhost:${srv.address().port}/`); await pg.click('#enter
 const out = {};
 // walk out through the gate
 await pg.evaluate(() => { game.player.x = 0; game.player.z = -50; game.player.yaw = Math.PI; });
-await pg.keyboard.down('w'); await pg.waitForTimeout(9000); await pg.keyboard.up('w');
+await pg.keyboard.down('w'); for (let i = 0; i < 30 && await pg.evaluate(() => game.player.z > -76); i++) await pg.waitForTimeout(1000); await pg.keyboard.up('w');
 out.walked = await pg.evaluate(() => [Math.round(game.player.x), Math.round(game.player.z), document.getElementById('zone').textContent]);
 await pg.screenshot({ path: OUT + '/gate.png' });
 // let the zone run a while, then look at a fight
