@@ -46,9 +46,14 @@ export function zone(name) { $('zone').textContent = name; toast(name); }
 export function hint(text) { const h = $('hint'); if (h.textContent !== text) h.textContent = text; }
 export function itemLink(it) { return `<b style="color:${RARITY_COLOR[it.q]}">[${esc(it.name)}]</b>`; }
 
+// Combat text: numbers pop out over the unit, drift up and sideways, and fade.
+// Damage to monsters is yellow, damage to people red, heals green with a +.
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
 export function float(pos, text, cls) {
+  if (floats.length > 60) return;
   const e = el('div', 'fl ' + (cls || ''), text); $('floats').append(e);
-  floats.push({ e, pos, t: 0, dx: (Math.random() - 0.5) * 40 });
+  const side = Math.random() < 0.5 ? -1 : 1;
+  floats.push({ e, pos, t: 0, dx: side * (14 + Math.random() * 36), life: cls === 'xp' ? 1.6 : cls === 'crit' ? 1.5 : 1.2, big: cls === 'crit' });
 }
 
 function tip(html, ev) {
@@ -142,10 +147,14 @@ export function update(dt, v) {
   if (toastT > 0 && (toastT -= dt) <= 0) $('toast').style.opacity = 0;
   for (let i = floats.length - 1; i >= 0; i--) {
     const f = floats[i]; f.t += dt;
-    if (f.t > 1.4) { f.e.remove(); floats.splice(i, 1); continue; }
-    const p = v.project(f.pos, 2.6 + f.t * 1.4);
-    if (!p) { f.e.style.display = 'none'; continue; }
-    f.e.style.display = ''; f.e.style.left = (p.x + f.dx * f.t) + 'px'; f.e.style.top = p.y + 'px'; f.e.style.opacity = Math.min(1, (1.4 - f.t) * 2.5);
+    if (f.t > f.life) { f.e.remove(); floats.splice(i, 1); continue; }
+    const k = f.t / f.life, p = v.project(f.pos, 2.3);
+    if (!p || p.d > 55) { f.e.style.display = 'none'; continue; }
+    const near = Math.max(0.5, Math.min(1.25, 16 / p.d));           // smaller further away
+    const pop = calm ? 1 : f.t < 0.08 ? 0.6 + f.t / 0.08 * (f.big ? 1.1 : 0.7) : f.t < 0.22 ? (f.big ? 1.7 : 1.3) - (f.t - 0.08) / 0.14 * (f.big ? 0.5 : 0.3) : f.big ? 1.2 : 1;
+    const rise = (1 - (1 - k) * (1 - k)) * 70 * near, drift = calm ? 0 : f.dx * k * near;
+    f.e.style.display = ''; f.e.style.opacity = k < 0.6 ? 1 : (1 - k) / 0.4;
+    f.e.style.transform = `translate(${p.x + drift}px,${p.y - rise}px) translate(-50%,-50%) scale(${pop * near})`;
   }
 }
 

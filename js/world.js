@@ -89,8 +89,12 @@ export function buildWorld(scene) {
     hemi.intensity = cave ? 1.0 : 1.5; hemi.color.set(cave ? 0xffc8a0 : 0xdfeaff); sun.intensity = cave ? 0.5 : 1.9;
   };
   for (let i = 0; i < 16; i++) {
-    const a = i / 16 * Math.PI * 2 + 0.2, d = 260 + (i * 37 % 70), h = 70 + (i * 53 % 80);
-    const m = mesh(new THREE.ConeGeometry(h * 1.1, h, 5), L(i % 3 ? 0x6f8aa6 : 0x8298b0), Math.cos(a) * d, h / 2 - 4, Math.sin(a) * d);
+    const a = i / 16 * Math.PI * 2 + 0.2, h = 70 + (i * 53 % 80), r = h * 1.1;
+    let d = 260 + (i * 37 % 70);
+    // Push each mountain out until its foot clears Greenhollow (with a margin).
+    const clear = () => { const x = Math.cos(a) * d, z = Math.sin(a) * d, cx = Math.max(ZONE.x0, Math.min(ZONE.x1, x)), cz = Math.max(ZONE.z0, Math.min(ZONE.z1, z)); return Math.hypot(x - cx, z - cz) > r + 30; };
+    while (!clear()) d += 10;
+    const m = mesh(new THREE.ConeGeometry(r, h, 5), L(i % 3 ? 0x6f8aa6 : 0x8298b0), Math.cos(a) * d, h / 2 - 4, Math.sin(a) * d);
     m.rotation.y = i; scene.add(m);
   }
 

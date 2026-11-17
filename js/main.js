@@ -51,11 +51,11 @@ const look = makeLook(new URLSearchParams(location.search).get('look'), { scene,
 function resize() { look.resize(innerWidth, innerHeight); renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 
-const v3 = new THREE.Vector3();
+const v3 = new THREE.Vector3(), _w = new THREE.Vector3();
 function project(pos, up) {
   v3.set(pos.x, up, pos.z).project(camera);
   if (v3.z > 1 || Math.abs(v3.x) > 1.1 || Math.abs(v3.y) > 1.1) return null;
-  return { x: (v3.x + 1) / 2 * innerWidth, y: (1 - v3.y) / 2 * innerHeight };
+  return { x: (v3.x + 1) / 2 * innerWidth, y: (1 - v3.y) / 2 * innerHeight, d: camera.position.distanceTo(_w.set(pos.x, up, pos.z)) };
 }
 const distTo = p => Math.hypot(p.x - player.x, p.z - player.z);
 

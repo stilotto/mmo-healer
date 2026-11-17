@@ -106,7 +106,7 @@ export class Dungeon {
   hurt(m, dmg, by) {
     if (m.state === 'dead') return true;
     this.aggro(m.room, by); m.attackers.add(by);
-    m.hp -= dmg; this.ctx.float(m, '-' + dmg, 'dmg');
+    m.hp -= dmg; this.ctx.float(m, String(dmg), 'hit');
     if (m.def.boss && !m.mad && m.hp < m.maxHp * 0.25) { m.mad = true; m.dmg *= 1.3; this.ctx.chat('c-yell', 'Cinderjaw goes into a frenzy!'); }
     if (m.hp <= 0) { m.hp = 0; m.state = 'dead'; m.deadT = 6; return true; }
     return false;
