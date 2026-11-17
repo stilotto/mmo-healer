@@ -76,8 +76,7 @@ do they need me, do they notice me, did I get paid? Build whichever answer
 is weakest. Sprints 4 to 8 are the game; 9 onward is more of it.
 
 4. **The look (agreed, in progress).** Front-loaded so later sprints are
-   built once in the final style. Pick an art direction from rendered
-   samples; a new figure model (better proportions, faces, gear sockets,
+   built once in the final style. Art direction: Storybook (chosen); a new figure model (better proportions, faces, gear sockets,
    cheaper to draw); lighting (soft shadows, better sky, glow on fire,
    portals and spells); textures made in code, grass and props; Lanternrest
    polished as the reference scene; a frame-rate check at Chromebook size.

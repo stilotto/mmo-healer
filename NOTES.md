@@ -105,14 +105,20 @@ they toss you an item or a tip. Progress saves in localStorage (`mmoHealer1`).
 
 ## The look (sprint 4, in progress)
 
-- `js/look.js` holds art direction samples, picked with `?look=storybook`,
-  `?look=toon` or `?look=dusk`. With no `?look` the game renders as before.
-  A look changes light, sky, fog, shadows, tone mapping, saturation, glow
-  (bloom) and, for toon, swaps materials and adds ink outlines. It sweeps the
-  scene once a second so new people pick it up.
-- `tools/looks.mjs <out-dir> [look ...]` renders each look from the plaza,
-  the gate and Greenhollow for comparison.
-- The import map now also maps `three/addons/`; tests serve the whole three
+- Owner's choice: **Storybook throughout** (golden hour, warm low sun, soft
+  shadows, ACES tone mapping, a gentle bloom on lights). It is the default;
+  `?look=original` shows the first build's flat style.
+- Rejected samples, with the owner's reasons: Dusk (the glow around lights
+  was too strong, and it ran choppy on the Chromebook: eleven point lights
+  plus strong bloom); Toon (not chosen). Lessons: keep bloom subtle, avoid
+  many real point lights, fake lamp light instead.
+- `js/look.js` sets light, sky, fog, shadows (the sun's shadow box follows
+  the healer), saturation and bloom. It sweeps the scene once a second so
+  newcomers get shadows and glow. Cave mood in the dungeon still comes from
+  `world.mood`.
+- `tools/looks.mjs <out-dir> [look ...]` renders looks from the plaza, the
+  gate and Greenhollow.
+- The import map also maps `three/addons/`; tests serve the whole three
   package from `THREE_DIR`.
 
 ## Things worth knowing
