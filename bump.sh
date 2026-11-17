@@ -10,6 +10,7 @@ v = sys.argv[1]
 T = '0.186.1'  # three.js version; tools/shot.mjs must match
 imports = {
   'three': 'https://cdn.jsdelivr.net/npm/three@%s/build/three.module.js' % T,
+  'three/addons/': 'https://cdn.jsdelivr.net/npm/three@%s/examples/jsm/' % T,
 }
 for f in sorted(glob.glob('js/*.js')):
   if f != 'js/main.js':

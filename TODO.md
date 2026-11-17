@@ -73,41 +73,47 @@ The ledger of plans. Nothing under "Open" is built until the owner says go.
 
 Rewritten after sprint 3 from `fable notes.md`. The test for every sprint:
 do they need me, do they notice me, did I get paid? Build whichever answer
-is weakest. Sprints 4 to 7 are the game; 8 onward is more of it.
+is weakest. Sprints 4 to 8 are the game; 9 onward is more of it.
 
-4. **The healer's hands.** Health-bar frames down the left edge (the
+4. **The look (agreed, in progress).** Front-loaded so later sprints are
+   built once in the final style. Pick an art direction from rendered
+   samples; a new figure model (better proportions, faces, gear sockets,
+   cheaper to draw); lighting (soft shadows, better sky, glow on fire,
+   portals and spells); textures made in code, grass and props; Lanternrest
+   polished as the reference scene; a frame-rate check at Chromebook size.
+5. **The healer's hands.** Health-bar frames down the left edge (the
    dungeon party inside, the five most hurt nearby outside), click or F1 to
    F5 to target, self-target key. Flash (fast, costly) at level 3 and Ward
    (a shield) at 5, filling the locked slots. Sit to drink. Damage with
    shapes in Emberdeep: tank spikes, a bleed, group damage. A cast bar for
    Flame Breath.
-5. **They bite back.** The agreed item above: healing draws threat from
+6. **They bite back.** The agreed item above: healing draws threat from
    whatever is fighting your target. The healer has real health, can die,
    and runs back as a ghost to the camp or dungeon door. Fade (drop threat)
    as the one escape. The hub stays safe.
-6. **They remember.** A saved roster of about 60 characters who reappear
+7. **They remember.** A saved roster of about 60 characters who reappear
    in town, the zone and parties, each keeping a record of what you did for
    them. Reactions that grow with it (waves, whispers, sulks), a fame meter,
    guild invites, and General chat gossip about what you just did.
-7. **Loot that matters.** Drops in the world with a beam per rarity, picked
+8. **Loot that matters.** Drops in the world with a beam per rarity, picked
    up by walking over them. Need or greed rolls you can crash. Rare and
    above carry an effect that changes play. Gear shows on the character.
    A boss uniques checklist.
-8. **The clock.** An events board by the fountain and a tracker under the
+9. **The clock.** An events board by the fountain and a tracker under the
    minimap: parties forming, Old Tusk hunts, duelling tournaments, raid
    pulls. Events run whether you go or not, and report how they went.
    Zones get fixed level bands instead of matching the healer's level.
-9. **Crowds.** The Shattered Spire: a 20-person raid with two bosses, raid
+10. **Crowds.** The Shattered Spire: a 20-person raid with two bosses, raid
    frames, Circle (group heal) and Cleanse.
-10. **Sides.** Bloodsand Pit: two teams, flags, heal one side or both; the
+11. **Sides.** Bloodsand Pit: two teams, flags, heal one side or both; the
     other side hunts you.
-11. **More world.** Working airship to a second zone, a second dungeon,
+12. **More world.** Working airship to a second zone, a second dungeon,
     item sets, guild perks, working inn, bank and auction hall.
 
 Groundwork to fold into the sprints as needed: a Node balance sim with a
-scripted healer on real mana (sprint 4), a save version number (before
-sprint 6), splitting `people.js` per zone (before sprint 8), cheaper
-figures (before sprint 9).
+scripted healer on real mana (sprint 5), a save version number (before
+sprint 7), splitting `people.js` per zone (before sprint 9), cheaper
+figures (sprint 4).
 
 ## Open (ideas, not yet placed)
 

@@ -103,6 +103,18 @@ they toss you an item or a tip. Progress saves in localStorage (`mmoHealer1`).
   healer tinted the whole view. Keep portals flat against walls.
 - `tools/sprint3.mjs` plays a run with no healer, then one with healing.
 
+## The look (sprint 4, in progress)
+
+- `js/look.js` holds art direction samples, picked with `?look=storybook`,
+  `?look=toon` or `?look=dusk`. With no `?look` the game renders as before.
+  A look changes light, sky, fog, shadows, tone mapping, saturation, glow
+  (bloom) and, for toon, swaps materials and adds ink outlines. It sweeps the
+  scene once a second so new people pick it up.
+- `tools/looks.mjs <out-dir> [look ...]` renders each look from the plaza,
+  the gate and Greenhollow for comparison.
+- The import map now also maps `three/addons/`; tests serve the whole three
+  package from `THREE_DIR`.
+
 ## Things worth knowing
 
 - Coordinates: x east, z south, y up, one unit about a yard. The wall radius

@@ -23,7 +23,7 @@ const br = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsa
 const pg = await br.newPage({ viewport: phone ? { width: 390, height: 760 } : { width: 1366, height: 620 }, hasTouch: phone, isMobile: phone });
 const errs = [];
 pg.on('pageerror', e => errs.push(String(e))); pg.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
-await pg.route('**/cdn.jsdelivr.net/**', async rt => rt.fulfill({ body: await readFile(join(process.env.THREE_DIR, 'build', rt.request().url().split('/').pop())), contentType: 'text/javascript' }));
+await pg.route('**/cdn.jsdelivr.net/**', async rt => rt.fulfill({ body: await readFile(join(process.env.THREE_DIR, rt.request().url().split('three@0.186.1/')[1])), contentType: 'text/javascript' }));
 await pg.route('**/fonts.g*/**', rt => rt.abort());
 await pg.goto(`http://localhost:${port}/`); await pg.waitForTimeout(1500);
 await pg.screenshot({ path: join(out, 'title.png') });

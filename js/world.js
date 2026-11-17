@@ -286,7 +286,7 @@ export function buildWorld(scene) {
     prop.rotation.x += dt * 14;
     state.arrived = state.docked && !was; state.left = !state.docked && was;
   }
-  return { update, ship: state, blockers, mood };
+  return { update, ship: state, blockers, mood, lights: { hemi, sun } };
 }
 
 // Greenhollow: the novice lands outside the north gate. A road, a quest camp,

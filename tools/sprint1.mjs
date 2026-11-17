@@ -8,7 +8,7 @@ const srv = createServer(async (q, r) => { try { const p = q.url.split('?')[0]; 
 const br = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader'] });
 const pg = await br.newPage({ viewport: { width: 1366, height: 620 } }); const errs = [];
 pg.on('pageerror', e => errs.push(String(e))); pg.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
-await pg.route('**/cdn.jsdelivr.net/**', async rt => rt.fulfill({ body: await readFile(join(process.env.THREE_DIR, 'build', rt.request().url().split('/').pop())), contentType: 'text/javascript' }));
+await pg.route('**/cdn.jsdelivr.net/**', async rt => rt.fulfill({ body: await readFile(join(process.env.THREE_DIR, rt.request().url().split('three@0.186.1/')[1])), contentType: 'text/javascript' }));
 await pg.route('**/fonts.g*/**', rt => rt.abort());
 await pg.goto(`http://localhost:${srv.address().port}/`); await pg.click('#enter'); await pg.waitForTimeout(3000);
 const out = {};

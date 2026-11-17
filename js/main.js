@@ -10,6 +10,7 @@ import { DUN } from './world.js';
 import { makeFigure, animate, makePlate } from './figure.js';
 import { People } from './people.js';
 import { Player } from './player.js';
+import { makeLook } from './look.js';
 
 const canvas = document.getElementById('view');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -46,7 +47,8 @@ function beam(p, color = 0xfff2a8) {
   b.t = 0.7; b.p = p; b.m.material.color.set(color); b.m.visible = true;
 }
 
-function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+const look = makeLook(new URLSearchParams(location.search).get('look'), { scene, renderer, camera, world });
+function resize() { look.resize(innerWidth, innerHeight); renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 
 const v3 = new THREE.Vector3();
@@ -166,7 +168,7 @@ function start(name) {
     panel: open => { if (open) player.free(); else if (S.look) player.lock(); } });
   player.look = !!S.look; UI.setLook(player.look, false);
   player.enabled = true; G.save(S);
-  window.game = { S, people, mobs, dungeon, player, DUN, scene, cast, tabTarget, hurtTarget, toggleLook, UI, G, get target() { return target; }, set target(p) { target = p; } };
+  window.game = { S, people, mobs, dungeon, player, DUN, scene, renderer, cast, tabTarget, hurtTarget, toggleLook, UI, G, get target() { return target; }, set target(p) { target = p; } };
 }
 const nameBox = document.getElementById('cname'); nameBox.value = S.name || '';
 document.getElementById('enter').onclick = () => start(nameBox.value.trim().slice(0, 12));
@@ -180,10 +182,11 @@ function tick() {
   if (!started) {   // slow orbit behind the title
     T += dt; world.update(dt, T);
     camera.position.set(Math.sin(T * 0.08) * 46, 16, Math.cos(T * 0.08) * 46); camera.lookAt(0, 4, 0);
-    renderer.render(scene, camera); return;
+    look.render(); return;
   }
   for (let i = 0; i < SPEED; i++) step(dt);   // ?speed=N runs the world faster, for tests
-  renderer.render(scene, camera);
+  look.update(dt, player);
+  look.render();
 }
 const SPEED = Math.max(1, Math.min(20, +new URLSearchParams(location.search).get('speed') || 1));
 function step(dt) {
@@ -201,7 +204,7 @@ function step(dt) {
     player.x = POI.dungeon.x + 3; player.z = POI.dungeon.z; player.yaw = Math.PI / 2; player.camOff = 0; target = null; casting = null; dungeon.leave();
   }
   const z = player.x > 500 ? 'dungeon' : inGreen(player) ? 'green' : 'hub';
-  if (z !== zoneNow) { zoneNow = z; UI.zone(ZONE_NAME[z]); world.mood(z === 'dungeon'); if (z === 'green' && !S.seenGreen) { S.seenGreen = true; UI.chat('c-sys', 'People out here can die. Press 3 to Revive the fallen (5 second cast).'); } }
+  if (z !== zoneNow) { zoneNow = z; UI.zone(ZONE_NAME[z]); world.mood(z === 'dungeon'); look.mood(z === 'dungeon'); if (z === 'green' && !S.seenGreen) { S.seenGreen = true; UI.chat('c-sys', 'People out here can die. Press 3 to Revive the fallen (5 second cast).'); } }
   const st = G.stats(S);
   S.mana = Math.min(st.maxMana, S.mana + st.regen * dt);
   if (gcd > 0) gcd -= dt;
