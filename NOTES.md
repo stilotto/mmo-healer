@@ -39,6 +39,8 @@ Loot drops are key to the fun.
 - If they mention a screenshot or file that is not attached, ask whether they
   forgot it before doing anything.
 - They review on the live site, so every push goes to `main`.
+- The owner is the only player. A broken live site is not an emergency:
+  fix it in the normal flow of work, without rushing or alarm. (Owner, sprint 4.)
 - They talk a change through first. `TODO.md` is the ledger: build on a go.
 
 ## Where things stand (first build)
