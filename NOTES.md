@@ -118,6 +118,12 @@ they toss you an item or a tip. Progress saves in localStorage (`mmoHealer1`).
   the healer), saturation and bloom. It sweeps the scene once a second so
   newcomers get shadows and glow. Cave mood in the dungeon still comes from
   `world.mood`.
+- People (`makeFigure` in `figure.js`) are rounded shapes merged into six
+  vertex-coloured meshes sharing one material: torso (with head, face, hat
+  and robe), two legs, two arms. Merged shapes are cached by calling, skin,
+  hair and tunic shade. `fig.sockets` has `head`, `handR` and `handL` groups
+  for gear; weapons hang from the hands. Monsters are still the old style.
+- `tools/figures.mjs <out-dir>` lines up every calling close to the camera.
 - `tools/looks.mjs <out-dir> [look ...]` renders looks from the plaza, the
   gate and Greenhollow.
 - The import map also maps `three/addons/`; tests serve the whole three

@@ -16,7 +16,7 @@ export const LOOKS = {
   storybook: {   // golden hour, warm and soft
     sky: [[0, '#2f4f9a'], [0.45, '#8fa8d8'], [0.66, '#f6c08a'], [0.75, '#ffd9a8'], [1, '#ffd9a8']],
     fog: [0xf2c9a0, 70, 380], hemi: [0xa8c0ff, 0x7a5a38, 0.9], sun: [0xffc27a, 3.2, [-80, 38, 25]],
-    tone: THREE.ACESFilmicToneMapping, exposure: 1.15, bloom: [0.35, 0.5, 0.82], glow: 1.8, shadows: true, sat: 1.12,
+    tone: THREE.ACESFilmicToneMapping, exposure: 1.15, bloom: [0.35, 0.5, 0.82], glow: 1.4, shadows: true, sat: 1.12,
   },
 };
 

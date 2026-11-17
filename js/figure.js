@@ -1,6 +1,7 @@
-// Blocky people: one model per calling, a walk cycle, and the name plate that
-// floats over each head.
+// People and monsters: one model per calling, a walk cycle, and the name
+// plate that floats over each head.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export const CLASSES = {
   Knight:  { color: '#c79c6e', tunic: 0x8a8f99, hat: 'helm', weapon: 'sword' },
@@ -14,49 +15,98 @@ export const CLASSES = {
   Vendor:  { color: '#ffd24a', tunic: 0x8a6a2a, hat: 'none', weapon: 'none' },
   Healer:  { color: '#ffffff', tunic: 0xf2ead2, hat: 'hood', weapon: 'staff' },
 };
-const SKIN = [0xf1c9a5, 0xd9a577, 0xa8703f, 0x6e4526, 0x9fc98a, 0xb9a8d8];
-const HAIR = [0x2a1b10, 0x6b4a22, 0xd8b45a, 0xb23a1a, 0xdddddd, 0x1a1a22];
+const SKIN = [0xf1c9a5, 0xe0b48a, 0xc68c5e, 0x8a5a36, 0xa8cf8f, 0xc4b4e0];
+const HAIR = [0x2a1b10, 0x6b4a22, 0xe0b85a, 0xb8441e, 0xe8e2d8, 0x1a1a22, 0x8a3a6a];
+const TRIM = { Knight: 0xd8b45a, Ranger: 0x8a6a3a, Mage: 0xe0c060, Rogue: 0x7a2a2a, Warlock: 0x2a1a3a, Druid: 0x4f7a2a, Brawler: 0xe0c060,
+  Warden: 0xd8b45a, Vendor: 0xf2e2b8, Healer: 0xe0b84e };
 
 const mats = {};
 const mat = c => mats[c] || (mats[c] = new THREE.MeshLambertMaterial({ color: c }));
 const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
 const G = {
-  body: box(0.56, 0.7, 0.32), head: box(0.36, 0.36, 0.36), leg: box(0.22, 0.7, 0.24), arm: box(0.18, 0.62, 0.2),
-  skirt: box(0.6, 0.5, 0.36), hair: box(0.4, 0.14, 0.4), helm: box(0.42, 0.3, 0.42), hood: box(0.44, 0.42, 0.42),
-  cone: new THREE.ConeGeometry(0.3, 0.6, 6), brim: new THREE.CylinderGeometry(0.42, 0.42, 0.04, 8),
-  sword: box(0.07, 0.9, 0.12), staff: box(0.07, 1.7, 0.07), dagger: box(0.05, 0.4, 0.08), orb: new THREE.SphereGeometry(0.13, 8, 6),
-  shield: box(0.08, 0.5, 0.42), hit: new THREE.CylinderGeometry(0.55, 0.55, 2.1, 6),
-  shadow: new THREE.CircleGeometry(0.55, 12),
+  orb: new THREE.SphereGeometry(0.13, 8, 6), shadow: new THREE.CircleGeometry(0.55, 12), hit: new THREE.CylinderGeometry(0.55, 0.55, 2.1, 6),
 };
-const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3, depthWrite: false });
+const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.18, depthWrite: false });
 const hitMat = new THREE.MeshBasicMaterial({ visible: false });
 const orbMat = new THREE.MeshBasicMaterial({ color: 0xfff2a8 });
 
+// People are built from simple rounded shapes merged into a few meshes, each
+// coloured per vertex, so a whole figure is one material and six draw calls.
+// Merged shapes are cached, so people who look alike share geometry.
+const vmat = new THREE.MeshLambertMaterial({ vertexColors: true });
+const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _c = new THREE.Color();
+const at = (x, y, z, rx = 0, ry = 0, rz = 0, sx = 1, sy = sx, sz = sx) => _m.clone().compose(_p.set(x, y, z), _q.setFromEuler(_e.set(rx, ry, rz)), _s.set(sx, sy, sz));
+function merge(parts) {
+  return mergeGeometries(parts.map(([geo, col, m]) => {
+    const g = (geo.index ? geo.toNonIndexed() : geo.clone()).applyMatrix4(m);
+    g.deleteAttribute('uv');
+    const n = g.attributes.position.count, c = new Float32Array(n * 3); _c.set(col);
+    for (let i = 0; i < n; i++) { c[i * 3] = _c.r; c[i * 3 + 1] = _c.g; c[i * 3 + 2] = _c.b; }
+    g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+    return g;
+  }));
+}
+const cache = new Map();
+const cached = (key, make) => cache.get(key) || (cache.set(key, merge(make())), cache.get(key));
+const S = {
+  sph: (r, w = 12, h = 9) => new THREE.SphereGeometry(r, w, h), cap: (r, len) => new THREE.SphereGeometry(r, 12, 8, 0, Math.PI * 2, 0, len),
+  cyl: (a, b, h, n = 10) => new THREE.CylinderGeometry(a, b, h, n), torus: () => new THREE.TorusGeometry(0.42, 0.025, 4, 12, Math.PI), cone: (r, h) => new THREE.ConeGeometry(r, h, 10), box,
+};
+const shade = (c, k) => _c.set(c).multiplyScalar(k).getHex();
+
 export function makeFigure(cls, seed = Math.random() * 1000) {
   const c = CLASSES[cls], r = n => { seed = (seed * 9301 + 49297) % 233280; return Math.floor(seed / 233280 * n); };
-  const skin = mat(SKIN[r(SKIN.length)]), tunic = mat(c.tunic), dark = mat(0x2b2622);
-  const g = new THREE.Group(), body = new THREE.Group();
-  g.add(body);
-  const add = (geo, m, x, y, z, parent = body) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); parent.add(o); return o; };
-  add(G.body, tunic, 0, 1.08, 0);
-  const robe = c.weapon === 'staff';
-  if (robe) add(G.skirt, tunic, 0, 0.55, 0);
-  const head = add(G.head, skin, 0, 1.62, 0);
-  if (c.hat === 'helm') add(G.helm, mat(0xaab0bb), 0, 1.7, 0);
-  else if (c.hat === 'hood') add(G.hood, tunic, 0, 1.65, -0.04);
-  else { add(G.hair, mat(HAIR[r(HAIR.length)]), 0, 1.84, 0); }
-  if (c.hat === 'cone') { add(G.brim, tunic, 0, 1.82, 0); add(G.cone, tunic, 0, 2.12, 0); }
-  const limb = (geo, m, x, y) => { const p = new THREE.Group(); p.position.set(x, y, 0); const o = new THREE.Mesh(geo, m); o.position.y = -geo.parameters.height / 2; p.add(o); body.add(p); return p; };
-  const legL = limb(G.leg, robe ? tunic : dark, -0.15, 0.72), legR = limb(G.leg, robe ? tunic : dark, 0.15, 0.72);
-  const armL = limb(G.arm, tunic, -0.38, 1.4), armR = limb(G.arm, tunic, 0.38, 1.4);
-  if (c.weapon === 'sword') { add(G.sword, mat(0xd8dde6), 0, -0.6, 0.35, armR).rotation.x = Math.PI / 2; add(G.shield, mat(0x7a2a22), -0.12, -0.35, 0, armL); }
-  if (c.weapon === 'staff') { add(G.staff, mat(0x6b4a22), 0, -0.3, 0.12, armR); add(G.orb, cls === 'Healer' ? orbMat : mat(c.tunic), 0, 0.62, 0.12, armR); }
-  if (c.weapon === 'dagger') { add(G.dagger, mat(0xd8dde6), 0, -0.62, 0.2, armR).rotation.x = Math.PI / 2; add(G.dagger, mat(0xd8dde6), 0, -0.62, 0.2, armL).rotation.x = Math.PI / 2; }
-  if (c.weapon === 'bow') { const b = add(new THREE.TorusGeometry(0.45, 0.03, 4, 10, Math.PI), mat(0x6b4a22), 0, 1.15, -0.2); b.rotation.z = -Math.PI / 2; b.rotation.y = Math.PI / 2; }
+  const si = r(SKIN.length), hi = r(HAIR.length), tv = r(3);
+  const skin = SKIN[si], hair = HAIR[hi], tunic = shade(c.tunic, [0.9, 1, 1.1][tv]), trim = TRIM[cls] || 0xd8b45a;
+  const robe = c.weapon === 'staff', pants = robe ? shade(tunic, 0.85) : cls === 'Knight' || cls === 'Warden' ? 0x6a6e78 : 0x4a3a2e;
+  const boots = cls === 'Knight' || cls === 'Warden' ? 0x8a8e98 : 0x3a2a1e, sleeve = cls === 'Brawler' ? skin : tunic;
+  const key = [cls, si, hi, tv].join();
+
+  const torso = cached('t' + key, () => {
+    const P = [
+      [S.cyl(0.27, 0.24, 0.6), tunic, at(0, 1.06, 0)],
+      [S.sph(0.27), tunic, at(0, 1.33, 0, 0, 0, 0, 1.3, 0.5, 0.95)],
+      [S.cyl(0.255, 0.255, 0.08), trim, at(0, 0.8, 0)],
+      [S.sph(0.25), skin, at(0, 1.67, 0, 0, 0, 0, 1, 1.06, 1)],
+      [S.sph(0.034, 6, 4), 0x1a1410, at(-0.085, 1.69, 0.222)], [S.sph(0.034, 6, 4), 0x1a1410, at(0.085, 1.69, 0.222)],
+      [S.sph(0.045, 6, 4), shade(skin, 0.92), at(0, 1.63, 0.245)],
+    ];
+    if (robe) P.push([S.cyl(0.27, 0.43, 0.72), tunic, at(0, 0.48, 0)], [S.cyl(0.43, 0.43, 0.05), trim, at(0, 0.14, 0)], [S.box(0.08, 0.6, 0.02), trim, at(0, 1.04, 0.255)]);
+    if (cls === 'Knight' || cls === 'Warden') P.push([S.sph(0.17), 0x9aa0aa, at(-0.32, 1.4, 0, 0, 0, 0, 1, 0.7, 1)], [S.sph(0.17), 0x9aa0aa, at(0.32, 1.4, 0, 0, 0, 0, 1, 0.7, 1)], [S.box(0.3, 0.34, 0.05), trim, at(0, 1.08, 0.265)]);
+    if (cls === 'Vendor') P.push([S.box(0.42, 0.62, 0.04), trim, at(0, 0.88, 0.25)]);
+    if (cls === 'Ranger') P.push([S.cyl(0.08, 0.08, 0.6), 0x6b4a22, at(0.12, 1.2, -0.28, 0, 0, -0.35)], [S.torus(), 0x6b4a22, at(-0.05, 1.1, -0.3, 0, 0, 0.4)]);
+    const hat = c.hat;
+    if (hat === 'helm') P.push([S.cap(0.28, 1.5), 0xaab0bb, at(0, 1.68, 0)], [S.box(0.045, 0.2, 0.04), 0xaab0bb, at(0, 1.66, 0.27)], [S.cyl(0.29, 0.29, 0.05, 12), trim, at(0, 1.74, 0)]);
+    else if (hat === 'hood') P.push([S.cap(0.3, 1.95), tunic, at(0, 1.66, -0.02, -0.55)], [S.sph(0.2), tunic, at(0, 1.5, -0.2, 0, 0, 0, 1.3, 0.7, 1)]);
+    else P.push([S.cap(0.265, 1.2), hair, at(0, 1.69, -0.01, -0.3)]);
+    if (hat === 'cone') P.push([S.cyl(0.44, 0.44, 0.035, 16), tunic, at(0, 1.86, 0)], [S.cone(0.26, 0.6), tunic, at(0.04, 2.15, -0.02, -0.12, 0, -0.18)], [S.cyl(0.27, 0.27, 0.07, 14), trim, at(0, 1.9, 0)]);
+    if (cls === 'Brawler') P.push([S.cyl(0.27, 0.27, 0.06, 12), 0xc83a2a, at(0, 1.78, 0)]);
+    return P;
+  });
+  const leg = cached('l' + key, () => [[S.cyl(0.1, 0.085, 0.62, 8), pants, at(0, -0.31, 0)], [S.sph(0.13, 8, 6), boots, at(0, -0.67, 0.05, 0, 0, 0, 0.85, 0.6, 1.25)]]);
+  const arm = cached('a' + key, () => [[S.cyl(0.09, 0.075, 0.52, 8), sleeve, at(0, -0.26, 0)], [S.sph(0.11, 8, 6), sleeve, at(0, -0.02, 0)], [S.sph(0.09, 8, 6), skin, at(0, -0.56, 0)]]);
+
+  const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+  const head = new THREE.Group(); head.position.y = 1.67; body.add(head);
+  body.add(new THREE.Mesh(torso, vmat));
+  const limb = (geo, x, y) => { const p = new THREE.Group(); p.position.set(x, y, 0); p.add(new THREE.Mesh(geo, vmat)); body.add(p); return p; };
+  const legL = limb(leg, -0.13, 0.76), legR = limb(leg, 0.13, 0.76), armL = limb(arm, -0.37, 1.33), armR = limb(arm, 0.37, 1.33);
+  const handR = new THREE.Group(), handL = new THREE.Group(); handR.position.y = handL.position.y = -0.56; armR.add(handR); armL.add(handL);
+  const w = c.weapon;
+  if (w === 'sword') {
+    handR.add(new THREE.Mesh(cached('sword', () => [[S.box(0.06, 0.03, 0.9), 0xdfe4ec, at(0, 0, 0.55)], [S.box(0.28, 0.05, 0.06), 0xd8b45a, at(0, 0, 0.1)], [S.cyl(0.03, 0.03, 0.16, 6), 0x5a3a22, at(0, 0, 0, Math.PI / 2)]]), vmat));
+    handL.add(new THREE.Mesh(cached('shield' + tunic, () => [[S.cyl(0.32, 0.32, 0.06, 14), shade(c.tunic, 0.8), at(-0.06, 0.05, 0.05, 0, 0, Math.PI / 2)], [S.sph(0.08, 8, 6), 0xd8b45a, at(-0.1, 0.05, 0.05)]]), vmat));
+  } else if (w === 'staff') {
+    handR.add(new THREE.Mesh(cached('staff', () => [[S.cyl(0.035, 0.04, 1.75, 6), 0x7a5430, at(0, 0.3, 0.06)], [S.cyl(0.07, 0.05, 0.14, 6), 0xd8b45a, at(0, 1.12, 0.06)]]), vmat));
+    const orb = new THREE.Mesh(G.orb, cls === 'Healer' ? orbMat : mat(shade(c.tunic, 1.4))); orb.position.set(0, 1.26, 0.06); handR.add(orb);
+  } else if (w === 'dagger') {
+    const d = cached('dagger', () => [[S.box(0.05, 0.025, 0.42), 0xdfe4ec, at(0, 0, 0.26)], [S.box(0.16, 0.04, 0.05), 0x8a6a3a, at(0, 0, 0.05)]]);
+    handR.add(new THREE.Mesh(d, vmat)); handL.add(new THREE.Mesh(d, vmat));
+  }
   const sh = new THREE.Mesh(G.shadow, shadowMat); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.03; g.add(sh);
   const hit = new THREE.Mesh(G.hit, hitMat); hit.position.y = 1.05; g.add(hit);
-  const s = 0.94 + r(14) / 100; body.scale.setScalar(s);
-  return { group: g, body, head, legL, legR, armL, armR, hit, phase: r(100) / 10 };
+  const sc = 0.95 + r(10) / 100; body.scale.setScalar(sc);
+  return { group: g, body, head, legL, legR, armL, armR, hit, sockets: { head, handR, handL }, phase: r(100) / 10 };
 }
 
 // mode: idle | walk | attack | cast | cheer | sit | dead

@@ -31,7 +31,8 @@ know from the big MMOs: unit frames, action bar, tab targeting, cast bar.
   `tools/sprint1.mjs` (target keys, mouse-look, shop), `tools/sprint2.mjs`
   (Greenhollow, monsters, Revive) and `tools/sprint3.mjs` (the dungeon run)
   work the same way. `?speed=N` runs the world faster for tests.
-  `tools/looks.mjs` renders the `?look=` art direction samples.
+  `tools/looks.mjs` renders the `?look=` samples; `tools/figures.mjs` lines up
+  every calling for checking the people models.
 - `js/game.js` is the rules (no DOM, no three.js).
 - Original names and art only. Follow the genre's interface conventions, but
   never use the names, characters, art or text of any published game.
