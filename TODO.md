@@ -64,6 +64,17 @@ The ledger of plans. Nothing under "Open" is built until the owner says go.
 
 ## Agreed, not yet built
 
+- Chat box and slash commands (owner, after sprint 5). Enter opens a chat
+  box (tap the chat panel on phones), Enter sends, Esc closes.
+  - Talk: `/say`, `/yell`; people nearby can react.
+  - Emotes: `/wave`, `/cheer`, `/bow`, `/dance`, `/sit`, acted out by the
+    healer; nearby people sometimes answer.
+  - Channels: chat tabs (All, General, Zone, Party, Combat), `/leave general`
+    and `/join general`, so the owner need not monitor General.
+  - Utility: `/who`, `/target <name>`, `/roll`, `/help`.
+  - Placement: suggested to fold into sprint 7 (They remember), since talking
+    and waving are how people get to know the healer. Not yet decided.
+
 - Monsters must not ignore the healer (owner, after sprint 3). Today every
   monster in Greenhollow and Emberdeep acts as if the healer is not there.
   Still to settle before building: what draws them (healing aggro, standing
