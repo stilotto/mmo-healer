@@ -59,7 +59,7 @@ export function buildDungeon(scene, blockers) {
   }
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.8, 1, 40), new THREE.MeshBasicMaterial({ color: 0xff7a2a, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
   ring.rotation.x = -Math.PI / 2; ring.position.y = 0.08; scene.add(ring);
-  return { ring, update(dt, t) { for (const f of fires) f.scale.y = 1 + Math.sin(t * 12 + f.position.x) * 0.2; for (const p of spin) p.rotation.z += dt; } };
+  return { ring, fires, portals: spin, update(dt, t) { for (const f of fires) f.scale.y = 1 + Math.sin(t * 12 + f.position.x) * 0.2; for (const p of spin) p.rotation.z += dt; } };
 }
 
 export class Dungeon {

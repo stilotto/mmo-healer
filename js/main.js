@@ -11,6 +11,7 @@ import { makeFigure, animate, makePlate } from './figure.js';
 import { People } from './people.js';
 import { Player } from './player.js';
 import { makeLook } from './look.js';
+import { Sparkles } from './fx.js';
 
 const canvas = document.getElementById('view');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -20,6 +21,12 @@ const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 900);
 const world = buildWorld(scene);
 const player = new Player(camera, canvas, world.blockers);
 const me = makeFigure('Healer', 7); scene.add(me.group);
+const fx = new Sparkles(scene), orbAt = new THREE.Vector3();
+// Steady sparkle: embers over fires, motes drifting from the portals, the fountain's light.
+fx.source(9, 1.3, -90, 14, { color: 0xff8a2a, spread: 0.25, up: 1.6, jitter: 0.25, life: 1.3 });
+fx.source(0, 5.6, 0, 6, { color: 0xfff2a8, spread: 0.6, up: 0.3, jitter: 0.3, life: 1.6 });
+for (const [k, c] of [['dungeon', 0xff8a3a], ['raid', 0xc07aff], ['pvp', 0xff4a5a]]) fx.source(POI[k].px, 3.4, POI[k].pz, 12, { color: c, spread: 2.2, up: 0.35, jitter: 0.35, life: 1.4 });
+const burst = (t, color, n, up = 2.2) => fx.emit(t.x, 0.6, t.z, { n, color, spread: 0.55, up, jitter: 0.5, life: 1.2 });
 // Pim the quartermaster stands behind the red stall.
 const VX = 15, VZ = -12.9, vendor = makeFigure('Vendor', 3);
 vendor.group.position.set(VX, 0, VZ); vendor.group.rotation.y = Math.atan2(-VX, -VZ); scene.add(vendor.group);
@@ -122,12 +129,12 @@ function land(sp, t) {
   if ((sp.id === 'revive') !== !!t.dead || t.fading) return UI.err(t.dead ? 'Target is dead' : 'Target is not dead');
   S.mana -= sp.mana;
   if (sp.id === 'revive') {
-    people.revive(t); beam(t, 0xffd76a); UI.sfx('level'); UI.chat('c-heal', `You bring ${t.name} back to life.`);
+    people.revive(t); beam(t, 0xffd76a); burst(t, 0xffd76a, 50, 3.2); fx.emit(t.x, 0.3, t.z, { n: 30, color: 0xfff2a8, spread: 1.2, up: 0.4, jitter: 2.4, life: 0.9 }); UI.sfx('level'); UI.chat('c-heal', `You bring ${t.name} back to life.`);
     UI.float(t, 'Revived', 'crit'); earn(t.maxHp, t); return;
   }
   const h = G.healAmount(S, sp);
-  if (sp.id === 'mend') { beam(t); UI.sfx('heal'); earn(people.heal(t, h.amount, h.crit), t); }
-  else { t.hots = t.hots.filter(x => x.id !== sp.id); t.hots.push({ id: sp.id, tick: h.tick, left: h.ticks, every: h.every, t: h.every }); beam(t, 0x7dffa0); UI.sfx('heal'); }
+  if (sp.id === 'mend') { beam(t); burst(t, 0xa8ff8a, 26); burst(t, 0xfff2a8, 10, 3); UI.sfx('heal'); earn(people.heal(t, h.amount, h.crit), t); }
+  else { t.hots = t.hots.filter(x => x.id !== sp.id); t.hots.push({ id: sp.id, tick: h.tick, left: h.ticks, every: h.every, t: h.every }); beam(t, 0x7dffa0); burst(t, 0x7dffc0, 18); UI.sfx('heal'); }
 }
 function earn(eff, t) {
   const r = G.reward(S, eff, t);
@@ -151,7 +158,7 @@ function start(name) {
   people = new People(scene, {
     S, world, chat: UI.chat, target: () => target, eye: () => player, zone: () => zoneNow,
     float: (p, text, cls) => UI.float(p, text, cls),
-    onHot: (p, amt) => { UI.sfx('tick'); earn(people.heal(p, amt, false, true), p); },
+    onHot: (p, amt) => { UI.sfx('tick'); fx.emit(p.x, 0.8, p.z, { n: 5, color: 0x7dffc0, spread: 0.45, up: 1.6, life: 0.9 }); earn(people.heal(p, amt, false, true), p); },
   });
   mobs = new Mobs(scene, { S, people, eye: () => player, float: (p, text, cls) => UI.float(p, text, cls) });
   people.ctx.mobs = mobs;
@@ -163,6 +170,8 @@ function start(name) {
       UI.toast(drops[0].name, G.RARITY_COLOR[drops[0].q]); UI.sfx('loot');
       S.bosses = (S.bosses || 0) + 1; earn(0.0001, { maxHp: 1e9, level: S.level, name: '' }); UI.drawBag(); G.save(S);
     } });
+  for (const f of dungeon.art.fires) fx.source(f.position.x, f.position.y + 0.4, f.position.z, 8, { color: 0xff7a2a, spread: 0.2, up: 1.5, jitter: 0.2, life: 1.1 }, 40);
+  for (const p of dungeon.art.portals) fx.source(p.position.x, 2.2, p.position.z, 8, { color: 0x8ad0ff, spread: 1.2, up: 0.3, jitter: 0.3, life: 1.3 }, 40);
   people.ctx.dungeon = dungeon;
   UI.init(S, { cast, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
     panel: open => { if (open) player.free(); else if (S.look) player.lock(); } });
@@ -187,6 +196,7 @@ function tick() {
   }
   for (let i = 0; i < SPEED; i++) step(dt);   // ?speed=N runs the world faster, for tests
   look.update(dt, player);
+  fx.update(dt, player);
   look.render();
 }
 const SPEED = Math.max(1, Math.min(20, +new URLSearchParams(location.search).get('speed') || 1));
@@ -210,6 +220,10 @@ function step(dt) {
   S.mana = Math.min(st.maxMana, S.mana + st.regen * dt);
   if (gcd > 0) gcd -= dt;
   if (target && (target.gone || target.fading)) target = null;
+  if (casting && !player.firstPerson) {   // light gathers at the staff while casting
+    me.sockets.handR.localToWorld(orbAt.set(0, 1.26, 0.06));
+    fx.emit(orbAt.x, orbAt.y, orbAt.z, { n: 1, color: casting.spell.id === 'revive' ? 0xffd76a : 0xd8ffb0, spread: 0.35, up: 0.6, jitter: 0.4, life: 0.6 });
+  }
   if (casting) {
     casting.t += dt;
     if (player.moving) { casting = null; gcd = 0; UI.err('Interrupted'); }

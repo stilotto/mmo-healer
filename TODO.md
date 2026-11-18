@@ -75,15 +75,16 @@ Rewritten after sprint 3 from `fable notes.md`. The test for every sprint:
 do they need me, do they notice me, did I get paid? Build whichever answer
 is weakest. Sprints 4 to 8 are the game; 9 onward is more of it.
 
-4. **The look (agreed, mostly built).** Front-loaded so later sprints are
+4. **The look: built.** Front-loaded so later sprints are
    built once in the final style. Art direction: Storybook (chosen); a new figure model (better proportions, faces, gear sockets,
    cheaper to draw); lighting (soft shadows, better sky, glow on fire,
    portals and spells); textures made in code, grass and props; Lanternrest
    polished as the reference scene; a frame-rate check at Chromebook size.
    Built: Storybook light, people and monsters rebuilt, combat text,
    textures, tiered firs, grass, town props, window frames and flower boxes,
-   stone dungeon, frame-rate safety net. Still open: glow and particles for
-   spells, fire and portals; a frame-rate check by the owner.
+   stone dungeon, frame-rate safety net, sparkles for spells, fires and
+   portals. Owner checked the frame rate on the Chromebook: smooth, no
+   step-down.
 5. **The healer's hands.** Health-bar frames down the left edge (the
    dungeon party inside, the five most hurt nearby outside), click or F1 to
    F5 to target, self-target key. Flash (fast, costly) at level 3 and Ward

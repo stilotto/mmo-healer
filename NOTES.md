@@ -135,6 +135,10 @@ they toss you an item or a tip. Progress saves in localStorage (`mmoHealer1`).
   mesh built in `world.js`; window boxes are merged per building. Firs are
   three stacked cones (`FIR`). Greenhollow grass is one instanced mesh of
   2,600 tufts, kept out of the shadow pass.
+- `js/fx.js` (`Sparkles`): one pooled cloud of 1,600 additive particles.
+  `fx.emit` for bursts (heal landing, Renew ticks, Revive, the staff while
+  casting), `fx.source` for steady emitters (fires, portals, the fountain)
+  that only run near the healer. Reduced motion cuts counts to a third.
 - Frame-rate safety net in `look.js`: after a few seconds it measures the
   frame rate and, below 40 fps, steps down one notch at a time (glow, then
   shadows, then resolution), saying so in chat. `?quality=low` starts at the
