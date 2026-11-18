@@ -10,17 +10,17 @@
  "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
-  "./js/dungeon.js": "./js/dungeon.js?v=20261118125003",
-  "./js/figure.js": "./js/figure.js?v=20261118125003",
-  "./js/fx.js": "./js/fx.js?v=20261118125003",
-  "./js/game.js": "./js/game.js?v=20261118125003",
-  "./js/look.js": "./js/look.js?v=20261118125003",
-  "./js/mobs.js": "./js/mobs.js?v=20261118125003",
-  "./js/people.js": "./js/people.js?v=20261118125003",
-  "./js/player.js": "./js/player.js?v=20261118125003",
-  "./js/textures.js": "./js/textures.js?v=20261118125003",
-  "./js/ui.js": "./js/ui.js?v=20261118125003",
-  "./js/world.js": "./js/world.js?v=20261118125003"
+  "./js/dungeon.js": "./js/dungeon.js?v=20261118222926",
+  "./js/figure.js": "./js/figure.js?v=20261118222926",
+  "./js/fx.js": "./js/fx.js?v=20261118222926",
+  "./js/game.js": "./js/game.js?v=20261118222926",
+  "./js/look.js": "./js/look.js?v=20261118222926",
+  "./js/mobs.js": "./js/mobs.js?v=20261118222926",
+  "./js/people.js": "./js/people.js?v=20261118222926",
+  "./js/player.js": "./js/player.js?v=20261118222926",
+  "./js/textures.js": "./js/textures.js?v=20261118222926",
+  "./js/ui.js": "./js/ui.js?v=20261118222926",
+  "./js/world.js": "./js/world.js?v=20261118222926"
  }
 }</script>
 <style>
@@ -42,7 +42,12 @@ canvas#view{position:fixed;inset:0;width:100%;height:100%;display:block}
 .bar span{position:absolute;inset:0;text-align:center;font-size:9px;line-height:10px;text-shadow:0 0 2px #000}
 #pframe{left:8px}
 #tframe{left:226px;display:none}
-#pframe{cursor:pointer}#pframe.sel{border-color:#fff}
+#pframe{cursor:pointer}#pframe.sel{border-color:#fff}#pframe.combat{box-shadow:0 0 0 2px #c0302a,0 0 12px #c0302a}
+#death{position:absolute;left:50%;top:26%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--gold);border-radius:8px;padding:14px 20px;text-align:center;display:none;max-width:90vw}
+#dtext{font:700 16px Cinzel,serif;color:#ffe9a0;margin-bottom:10px}
+#dbtn{font:700 14px 'Nunito Sans',sans-serif;padding:8px 18px;border-radius:5px;border:1px solid var(--gold);background:linear-gradient(#3a5a8a,#1a2a4a);color:#fff;cursor:pointer}
+#dbtn:disabled{opacity:.4;cursor:default}
+body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
 #party{position:absolute;left:8px;top:84px;width:190px;display:flex;flex-direction:column;gap:3px}
 #party .ph{font:600 11px Cinzel,serif;color:var(--gold);text-shadow:0 1px 2px #000;height:13px}
 .pf{position:relative;height:30px;background:var(--panel);border:1px solid #3a3326;border-radius:4px;cursor:pointer;overflow:hidden}
@@ -154,6 +159,7 @@ canvas#view{position:fixed;inset:0;width:100%;height:100%;display:block}
     <h3 style="margin-top:6px"><span>Bag</span><span id="coins" style="font:12px 'Nunito Sans'"></span></h3>
     <div class="grid" id="items"></div><div class="m" style="font-size:11px;color:#999">Click to equip. Shift-click or double-tap to sell.</div></div>
   <div id="tip"></div>
+  <div id="death"><div id="dtext"></div><button id="dbtn"></button></div>
   <div id="bottom">
     <div id="castbar"><i></i><span></span></div>
     <div id="actions"></div>
@@ -168,6 +174,6 @@ canvas#view{position:fixed;inset:0;width:100%;height:100%;display:block}
   <p class="keys"><b>WASD</b> move and turn · <b>Q/E</b> strafe · <b>right-drag</b> steer · <b>left-drag</b> or <b>arrow keys</b> look (up and down too) · <b>wheel</b> zoom (all the way in for first person, or <b>V</b>) · <b>Tab</b> next target · <b>F</b> most hurt · <b>1, 2</b> heal · <b>3</b> revive · <b>B</b> bag · <b>Space</b> jump · <b>X</b> mouse-look (the mouse steers, A and D strafe, Esc frees the cursor)</p>
   <a href="https://stilotto.github.io/">More games from Stilotto</a>
 </div></div>
-<script type="module" src="js/main.js?v=20261118125003"></script>
+<script type="module" src="js/main.js?v=20261118222926"></script>
 </body>
 </html>

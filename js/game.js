@@ -13,7 +13,13 @@ export const SPELLS = [
   { id: 'ward', name: 'Ward', icon: '◈', key: '5', cast: 0, mana: 28, range: 40, color: '#3a4a8a', lvl: 5,
     desc: 'A shield that soaks up damage for 15 seconds. The same person cannot be warded again for 12 seconds.' },
 ];
+SPELLS.push({ id: 'fade', name: 'Fade', icon: '☁', key: '6', cast: 0, mana: 10, range: 0, self: true, cd: 30, color: '#4a4a6a', lvl: 2,
+  desc: 'Slip from every monster\'s mind: they forget you for a moment and go back to whoever they were fighting. 30 second cooldown.' });
 export const WARD_TIME = 15, WARD_LOCK = 12;
+// Threat: healing someone a monster is fighting makes it notice you. It turns
+// on you once its threat passes this share of its own health (a tank holds
+// it better). Outside the dungeon nobody is tanking.
+export const THREAT_SOLO = 0.6, THREAT_TANKED = 1.0, THREAT_PER_HEAL = 0.5, TAUNT_BACK = 4;
 export const GCD = 1.2;
 export const SLOTS = ['Staff', 'Hood', 'Robe', 'Gloves', 'Boots', 'Ring', 'Trinket'];
 export const SLOT_ICON = { Staff: '🪄', Hood: '🎓', Robe: '🥋', Gloves: '🧤', Boots: '🥾', Ring: '💍', Trinket: '🔮' };

@@ -74,7 +74,6 @@ export function makeLook(name, { scene, renderer, camera, world }) {
     () => renderer.setPixelRatio(Math.min(devicePixelRatio, 1) * 0.75),
   ];
   const lower = () => { if (level < steps.length) { steps[level++](); look.onLower && look.onLower(level); } };
-  if (q === 'low') while (level < steps.length) lower();
   const look = {
     render() { if (composer) composer.render(); else renderer.render(scene, camera); },
     resize(w, h) { if (composer) composer.setSize(w, h); },
@@ -88,5 +87,6 @@ export function makeLook(name, { scene, renderer, camera, world }) {
     },
     mood(cave) { if (!cave) outdoors(); },
   };
+  if (q === 'low') while (level < steps.length) lower();
   return look;
 }

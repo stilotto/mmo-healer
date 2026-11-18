@@ -2,7 +2,7 @@
 // attacks them, sometimes jump a passer-by, and come back a while after dying.
 // They ignore the healer.
 import { makeMob, animateMob, makePlate, MOBS } from './figure.js';
-import { CAMPS, collide } from './world.js';
+import { CAMPS, collide, WALL_R } from './world.js';
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 
@@ -48,7 +48,7 @@ export class Mobs {
       m.plate.sprite.visible = true; g.scale.setScalar(Math.max(0.01, m.grow));
       if (m.state === 'fight') {
         let f = m.foe;
-        if (!f || f.dead || f.gone || Math.hypot(f.x - m.camp.x, f.z - m.camp.z) > m.camp.r + 45) {
+        if (!f || f.dead || f.gone || Math.hypot(f.x - m.camp.x, f.z - m.camp.z) > m.camp.r + 45 || Math.hypot(f.x, f.z) < WALL_R + 4) {   // the town is safe
           m.attackers.delete(f); f = m.foe = [...m.attackers].find(a => !a.dead && !a.gone) || null;
           if (!f) { m.state = 'idle'; m.wait = 1; m.attackers.clear(); }
         }
@@ -72,7 +72,11 @@ export class Mobs {
         }
         if ((m.look -= dt) <= 0) {        // now and then, jump someone who wanders close
           m.look = 1;
-          if (Math.random() < 0.12) { const v = folk.find(p => p.zone === 'green' && !p.dead && !p.fading && Math.hypot(p.x - m.x, p.z - m.z) < 7); if (v) { m.foe = v; m.attackers.add(v); m.state = 'fight'; } }
+          if (Math.random() < 0.12) {
+            const me = this.ctx.me, v = folk.find(p => p.zone === 'green' && !p.dead && !p.fading && Math.hypot(p.x - m.x, p.z - m.z) < 7)
+              || (!me.dead && !(me.faded > 0) && Math.hypot(me.x - m.x, me.z - m.z) < 7 ? me : null);     // the healer is fair game too
+            if (v) { m.foe = v; m.attackers.add(v); m.state = 'fight'; if (v === me) this.ctx.aggroed(m); }
+          }
         }
       }
       animateMob(m.fig, anim, t); g.position.set(m.x, 0, m.z); g.rotation.y = m.yaw;

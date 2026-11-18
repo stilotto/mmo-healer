@@ -167,6 +167,25 @@ they toss you an item or a tip. Progress saves in localStorage (`mmoHealer1`).
   the boss frame. The headless browser is slow, so it retries casts past the
   global cooldown and waits on `game.casting`.
 
+## They bite back (sprint 6)
+
+- Threat lives on each monster as `m.ht`; `addThreat(unit, amount)` in
+  `main.js` is called after every heal, Renew tick and Ward. Constants are in
+  `game.js` (`THREAT_*`, `TAUNT_BACK`). Monsters chase `meUnit` like anyone
+  else; `people.hurt` hands damage on `meUnit` to `hurtMe` in `main.js`.
+- Mobs drop a target inside the town wall (`mobs.js`), and the dungeon tank
+  takes a turned monster back after `TAUNT_BACK` seconds (`dungeon.js`).
+- Death: `die`, `release`, `returnToLife` in `main.js`; `UI.death(state)`
+  shows the panel ('dead', 'ghost', 'body'). Ghost spots: the dungeon
+  entrance, the Greenhollow camp, or the fountain. The healer's figure swaps
+  to a see-through material while a ghost (`setGhost`).
+- Spells can be `self` (no target) and have their own `cd` (`cds` in
+  `main.js`, shown on the slot).
+- Mistake already made: `look.js` called `look.onLower` before `look` was
+  defined, so `?quality=low` crashed at start. Fixed.
+- `tools/sprint6.mjs` checks threat, Fade, death and the ghost run, the safe
+  town, and the tank taking a monster back.
+
 ## Things worth knowing
 
 - Coordinates: x east, z south, y up, one unit about a yard. The wall radius

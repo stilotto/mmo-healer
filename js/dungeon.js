@@ -121,7 +121,7 @@ export class Dungeon {
       m.hp = 0; m.state = 'dead'; m.deadT = 6;
       if (m.def.model === 'slime') {           // cinder slimes burst when they die
         this.ctx.boom(m.x, m.z);
-        for (const p of this.alive()) if (Math.hypot(p.x - m.x, p.z - m.z) < 4.5) this.ctx.people.hurt(p, Math.round(p.maxHp * 0.12 / (p.armor || 1)), m);
+        for (const p of [...this.alive(), this.ctx.me]) if (!p.dead && Math.hypot(p.x - m.x, p.z - m.z) < 4.5) this.ctx.people.hurt(p, Math.round(p.maxHp * 0.12 / (p.armor || 1)), m);
       }
       return true;
     }
@@ -138,7 +138,7 @@ export class Dungeon {
   }
 
   update(dt, t) {
-    this.art.update(dt, t);
+    this.art.update(dt, t); this.clock = t;
     if (!this.active) return;
     const ctx = this.ctx, folk = ctx.people, alive = this.alive(), room = DUN.rooms[this.room];
     this.timer -= dt;
@@ -147,7 +147,14 @@ export class Dungeon {
     for (const m of this.mobs) {
       const g = m.fig.group; let anim = 'idle';
       if (m.state === 'dead') { m.deadT -= dt; g.scale.setScalar(m.deadT < 0 ? 0.01 : 1); m.plate.sprite.visible = false; animateMob(m.fig, 'dead', t); continue; }
-      if (m.state === 'idle') { if (alive.some(p => Math.hypot(p.x - m.x, p.z - m.z) < (m.def.boss ? 13 : 9))) this.aggro(m.room, this.tank()); }
+      if (m.state === 'idle') {
+        const me = ctx.me, r = m.def.boss ? 13 : 9;
+        if (alive.some(p => Math.hypot(p.x - m.x, p.z - m.z) < r)) this.aggro(m.room, this.tank());
+        else if (!me.dead && !(me.faded > 0) && Math.hypot(me.x - m.x, me.z - m.z) < r * 0.8) { this.aggro(m.room, me); for (const o of this.mobs) if (o.room === m.room) { o.foe = me; ctx.aggroed(o); } }   // walked in ahead of the party
+      }
+      else if (m.foe === ctx.me && m.tauntAt && (this.clock || 0) > m.tauntAt && this.tank() && !this.tank().dead) {   // the tank takes it back
+        m.foe = this.tank(); m.ht = 0; m.tauntAt = 0; if (Math.random() < 0.6) ctx.chat('c-party', `[Party] ${this.tank().name}: ${pick(['got it!', 'on me, on me', 'sorry healer, my bad', 'taunted'])}`);
+      }
       else {
         let f = m.foe;
         if (!f || f.dead || f.gone) f = m.foe = this.tank() || null;
@@ -227,6 +234,7 @@ export class Dungeon {
       if ((this.breath -= dt) <= 0) {
         const r = this.art.ring; r.position.x = m.x; r.position.z = m.z; r.scale.setScalar(2); r.material.opacity = 0.9;
         for (const p of alive) ctx.people.hurt(p, Math.round(p.maxHp * 0.2 / (p.armor || 1)), m);   // a fifth of everyone's health, armour or not
+        const me = ctx.me; if (!me.dead && Math.hypot(me.x - m.x, me.z - m.z) < 25) ctx.people.hurt(me, Math.round(me.maxHp * 0.2), m);
       }
     } else if ((this.breathAt -= dt) <= 0) { this.breathAt = rnd(11, 15); this.breath = 2.2; ctx.chat('c-yell', 'Cinderjaw draws a deep, glowing breath...'); ctx.warn('Flame Breath!'); }
   }

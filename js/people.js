@@ -145,6 +145,7 @@ export class People {
 
   // A monster hits a person.
   hurt(p, dmg, by, big) {
+    if (p.isMe) return this.ctx.hurtMe(dmg, by, big);
     if (p.dead || p.fading) return;
     dmg = Math.max(1, Math.round(dmg * (p.armor || 1)));
     if (p.ward) {                                   // the healer's Ward soaks it up first

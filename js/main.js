@@ -42,8 +42,53 @@ spots.push({ x: 12.4, z: -10.7, r: 2.2, msg: 'Pim the Quartermaster sells gear a
 let S = G.load() || G.newState('');
 let mobs, dungeon, zoneNow = 'hub';
 // The healer as a unit, so F1 or a click on your own frame targets yourself.
-const meUnit = { isMe: true, name: '', cls: 'Healer', level: 1, hp: 100, maxHp: 100, x: 0, z: 0, hots: [], dots: [], ward: null };
-let drinking = 0, wardLock = new WeakMap();
+const meUnit = { isMe: true, name: '', cls: 'Healer', level: 1, hp: 100, maxHp: 100, x: 0, z: 0, hots: [], dots: [], ward: null, dead: false, faded: 0, lastHit: -99 };
+let drinking = 0, wardLock = new WeakMap(), ghost = false, corpse = null, cds = {};
+
+// Threat. Healing someone a monster is fighting adds to that monster's
+// threat on you; past a share of its health it turns on you. In Emberdeep
+// the tank taunts it back a few seconds later.
+const allMobs = () => zoneNow === 'dungeon' ? dungeon.mobs : mobs.list;
+function addThreat(unit, amt) {
+  if (!amt || meUnit.dead || meUnit.faded > 0) return;
+  const tanked = zoneNow === 'dungeon' && dungeon.tank() && !dungeon.tank().dead;
+  for (const m of allMobs()) {
+    if (m.state !== 'fight' || m.foe === meUnit || !(m.foe === unit || m.attackers.has(unit))) continue;
+    m.ht = (m.ht || 0) + amt * G.THREAT_PER_HEAL;
+    if (m.ht > m.maxHp * (tanked ? G.THREAT_TANKED : G.THREAT_SOLO)) { m.foe = meUnit; m.attackers.add(meUnit); aggroed(m); if (tanked) m.tauntAt = T + G.TAUNT_BACK; }
+  }
+}
+function aggroed(m) { UI.float(m, '!', 'dmg big'); if (!meUnit.lastAggro || T - meUnit.lastAggro > 6) { meUnit.lastAggro = T; UI.chat('c-yell', `${m.name} turns on you!`); UI.sfx('err'); } }
+function hurtMe(dmg, by, big) {
+  if (meUnit.dead) return;
+  if (meUnit.ward) { const soak = Math.min(meUnit.ward.amt, dmg); meUnit.ward.amt -= soak; dmg -= soak; if (meUnit.ward.amt <= 0) meUnit.ward = null; if (!dmg) return UI.float(meUnit, 'Absorbed', 'xp'); }
+  meUnit.hp -= dmg; meUnit.lastHit = T; drinking = 0; UI.float(meUnit, '-' + dmg, big ? 'dmg big' : 'dmg');
+  if (meUnit.hp <= 0) die(by);
+}
+function die(by) {
+  meUnit.hp = 0; meUnit.dead = true; meUnit.hots = []; meUnit.dots = []; meUnit.ward = null; casting = null; drinking = 0;
+  corpse = { x: player.x, z: player.z, zone: zoneNow };
+  for (const m of [...mobs.list, ...dungeon.mobs]) { m.attackers.delete(meUnit); if (m.foe === meUnit) m.foe = null; m.ht = 0; }
+  UI.chat('c-yell', `You have been slain by ${by.name}.`); UI.sfx('err'); UI.death('dead');
+}
+function release() {         // become a ghost at the nearest safe spot and run back
+  if (!meUnit.dead || ghost) return;
+  ghost = true; player.speedMul = 1.35; target = null;
+  const g = corpse.zone === 'dungeon' ? DUN.start : corpse.zone === 'green' ? POI.camp : POI.fountain;
+  player.x = g.x; player.z = g.z + (corpse.zone === 'hub' ? 0 : 2);
+  setGhost(true); UI.death('ghost'); UI.chat('c-sys', 'You are a spirit. Run back to your body, marked by a pillar of light, to return to life.');
+}
+function returnToLife() {
+  if (!ghost || Math.hypot(corpse.x - player.x, corpse.z - player.z) > 6) return;
+  ghost = false; meUnit.dead = false; player.speedMul = 1; setGhost(false); UI.death(null);
+  const st = G.stats(S); meUnit.hp = Math.round(meUnit.maxHp * 0.5); S.mana = Math.max(S.mana, st.maxMana * 0.5); meUnit.faded = 4;
+  burst(meUnit, 0xfff2a8, 40, 3); UI.sfx('level'); corpse = null;
+}
+const ghostMat = new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.4, color: 0x9ad8ff, depthWrite: false });
+const meMats = new Map();
+function setGhost(on) { me.group.traverse(o => { if (!o.isMesh || o === me.hit) return; if (!meMats.has(o)) meMats.set(o, o.material); o.material = on && o.material.vertexColors ? ghostMat : meMats.get(o); }); }
+const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 30, 12, 1, true), new THREE.MeshBasicMaterial({ color: 0xfff2a8, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+pillar.visible = false; scene.add(pillar);
 const ZONE_NAME = { hub: 'Lanternrest', green: 'Greenhollow', dungeon: 'Emberdeep' };
 let people, target = null, casting = null, gcd = 0, gcdMax = 1, started = false, tabSeen = new Set(), tabAt = 0, lastSpot = null, saveT = 0, frame = 0;
 
@@ -108,6 +153,7 @@ player.onKey = e => {
   else if (e.code === 'KeyZ') toggleDrink();
   else if (e.code === 'Digit4' || e.code === 'Numpad4') cast(3);
   else if (e.code === 'Digit5' || e.code === 'Numpad5') cast(4);
+  else if (e.code === 'Digit6' || e.code === 'Numpad6') cast(5);
   else if (e.code === 'KeyF') hurtTarget();
   else if (e.code === 'KeyX') toggleLook();
   else if (e.code === 'Digit1' || e.code === 'Numpad1') cast(0);
@@ -120,16 +166,22 @@ player.onKey = e => {
 function toggleLook() { S.look = !S.look; player.setLook(S.look); UI.setLook(S.look, player.locked); G.save(S); UI.chat('c-sys', S.look ? 'Mouse-look on: the mouse steers, A and D strafe. Esc frees the cursor; click the world to steer again.' : 'Mouse-look off: hold the right button to steer.'); }
 player.onLock = locked => { if (started) UI.setLook(S.look, locked); };
 
+const inCombat = () => !meUnit.dead && allMobs().some(m => m.state === 'fight' && m.foe === meUnit);
 function pickFrame(i) { const u = UI.frameUnits()[i]; if (u) setTarget(u); }
 function toggleDrink() {
   if (drinking) { drinking = 0; return; }
+  if (meUnit.dead) return UI.err('You are dead');
+  if (inCombat()) return UI.err("Can't drink in combat");
   if (casting || player.moving) return UI.err("Can't do that right now");
   drinking = 0.001;
 }
 function cast(i) {
   const sp = G.SPELLS[i];
   if (!G.knows(S, sp)) return UI.err(`${sp.name} is learned at level ${sp.lvl}`);
+  if (meUnit.dead) return UI.err(ghost ? 'You are a spirit' : 'You are dead');
   if (casting || gcd > 0) return UI.err('Not ready yet');
+  if ((cds[sp.id] || 0) > T) return UI.err(`${sp.name} is not ready yet`);
+  if (sp.self) { if (S.mana < sp.mana) return UI.err('Not enough mana'); drinking = 0; gcd = gcdMax = G.gcdTime(S); return land(sp, meUnit); }
   if (!target) return UI.err('You have no target');
   if (sp.id === 'ward' && (wardLock.get(target) || 0) > T) return UI.err('That target was warded too recently');
   if (sp.id === 'revive' && !target.dead) return UI.err('Target is not dead');
@@ -143,6 +195,11 @@ function cast(i) {
   else land(sp, target);
 }
 function land(sp, t) {
+  if (sp.id === 'fade') {
+    S.mana -= sp.mana; cds.fade = T + sp.cd; meUnit.faded = 3;
+    for (const m of [...mobs.list, ...dungeon.mobs]) { m.ht = 0; m.attackers.delete(meUnit); if (m.foe === meUnit) m.foe = [...m.attackers].find(a => !a.dead && !a.gone) || (zoneNow === 'dungeon' ? dungeon.tank() : null) || null; }
+    fx.emit(player.x, 1, player.z, { n: 30, color: 0x9ab0ff, spread: 0.6, up: 0.6, jitter: 1.4, life: 1 }); UI.sfx('equip'); return;
+  }
   if ((sp.id === 'revive') !== !!t.dead || t.fading) return UI.err(t.dead ? 'Target is dead' : 'Target is not dead');
   if (S.mana < sp.mana) return UI.err('Not enough mana');
   S.mana -= sp.mana;
@@ -161,10 +218,11 @@ function land(sp, t) {
     t.ward = { amt: h.absorb, t: G.WARD_TIME }; wardLock.set(t, T + G.WARD_LOCK);
     beam(t, 0x9ac8ff); burst(t, 0xb8d8ff, 22); UI.sfx('heal'); UI.float(t, 'Ward', 'xp');
     if (t.zone === 'dungeon') dungeon.noticed(t);
+    addThreat(t, h.absorb * 0.5);
     return;
   }
-  if (sp.id === 'flash') { beam(t, 0xfff2a8); burst(t, 0xfff2a8, 20, 3); UI.sfx('heal'); earn(people.heal(t, h.amount, h.crit), t); return; }
-  if (sp.id === 'mend') { beam(t); burst(t, 0xa8ff8a, 26); burst(t, 0xfff2a8, 10, 3); UI.sfx('heal'); earn(people.heal(t, h.amount, h.crit), t); }
+  if (sp.id === 'flash') { beam(t, 0xfff2a8); burst(t, 0xfff2a8, 20, 3); UI.sfx('heal'); const e = people.heal(t, h.amount, h.crit); addThreat(t, e); earn(e, t); return; }
+  if (sp.id === 'mend') { beam(t); burst(t, 0xa8ff8a, 26); burst(t, 0xfff2a8, 10, 3); UI.sfx('heal'); const e = people.heal(t, h.amount, h.crit); addThreat(t, e); earn(e, t); }
   else { t.hots = t.hots.filter(x => x.id !== sp.id); t.hots.push({ id: sp.id, tick: h.tick, left: h.ticks, every: h.every, t: h.every }); beam(t, 0x7dffa0); burst(t, 0x7dffc0, 18); UI.sfx('heal'); }
 }
 function earn(eff, t) {
@@ -190,11 +248,11 @@ function start(name) {
   people = new People(scene, {
     S, world, chat: UI.chat, target: () => target, eye: () => player, zone: () => zoneNow,
     float: (p, text, cls) => UI.float(p, text, cls),
-    onHot: (p, amt) => { UI.sfx('tick'); fx.emit(p.x, 0.8, p.z, { n: 5, color: 0x7dffc0, spread: 0.45, up: 1.6, life: 0.9 }); earn(people.heal(p, amt, false, true), p); },
+    onHot: (p, amt) => { UI.sfx('tick'); fx.emit(p.x, 0.8, p.z, { n: 5, color: 0x7dffc0, spread: 0.45, up: 1.6, life: 0.9 }); const e = people.heal(p, amt, false, true); addThreat(p, e); earn(e, p); }, hurtMe,
   });
-  mobs = new Mobs(scene, { S, people, eye: () => player, float: (p, text, cls) => UI.float(p, text, cls) });
+  mobs = new Mobs(scene, { S, people, me: meUnit, aggroed, eye: () => player, float: (p, text, cls) => UI.float(p, text, cls) });
   people.ctx.mobs = mobs;
-  dungeon = new Dungeon(scene, { S, people, world, boom: (x, z) => fx.emit(x, 0.6, z, { n: 40, color: 0xff7a2a, spread: 0.8, up: 1.4, jitter: 3, life: 0.8 }), chat: UI.chat, float: (p, text, cls) => UI.float(p, text, cls), warn: text => { UI.toast(text, '#ff7a2a'); UI.sfx('err'); },
+  dungeon = new Dungeon(scene, { S, people, world, me: meUnit, aggroed, boom: (x, z) => fx.emit(x, 0.6, z, { n: 40, color: 0xff7a2a, spread: 0.8, up: 1.4, jitter: 3, life: 0.8 }), chat: UI.chat, float: (p, text, cls) => UI.float(p, text, cls), warn: text => { UI.toast(text, '#ff7a2a'); UI.sfx('err'); },
     bossLoot(helped) {
       const xp = Math.round(G.xpNeed(S.level) * 0.4); S.xp += xp; UI.chat('c-heal', `You gain ${xp} experience for the fall of Cinderjaw.`);
       const drops = [G.rollItem(S.level + 2, null, 2)]; if (Math.random() < 0.4) drops.push(G.rollItem(S.level + 1, null, 1));
@@ -205,12 +263,12 @@ function start(name) {
   for (const f of dungeon.art.fires) fx.source(f.position.x, f.position.y + 0.4, f.position.z, 8, { color: 0xff7a2a, spread: 0.2, up: 1.5, jitter: 0.2, life: 1.1 }, 40);
   for (const p of dungeon.art.portals) fx.source(p.position.x, 2.2, p.position.z, 8, { color: 0x8ad0ff, spread: 1.2, up: 0.3, jitter: 0.3, life: 1.3 }, 40);
   people.ctx.dungeon = dungeon;
-  UI.init(S, { cast, drink: toggleDrink, self: () => setTarget(meUnit), pick: pickFrame, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
+  UI.init(S, { cast, release, returnToLife, drink: toggleDrink, self: () => setTarget(meUnit), pick: pickFrame, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
     panel: open => { if (open) player.free(); else if (S.look) player.lock(); } });
   player.look = !!S.look; UI.setLook(player.look, false);
   player.enabled = true; G.save(S);
   look.onLower = n => UI.chat('c-sys', ['', 'Graphics: soft glow turned off to keep things smooth.', 'Graphics: shadows turned off to keep things smooth.', 'Graphics: resolution lowered to keep things smooth.'][n]);
-  window.game = { get casting() { return casting; }, S, people, mobs, dungeon, player, DUN, scene, renderer, cast, tabTarget, hurtTarget, toggleLook, UI, G, get target() { return target; }, set target(p) { target = p; } };
+  window.game = { me: meUnit, get corpse() { return corpse; }, get casting() { return casting; }, S, people, mobs, dungeon, player, DUN, scene, renderer, cast, tabTarget, hurtTarget, toggleLook, UI, G, get target() { return target; }, set target(p) { target = p; } };
 }
 const nameBox = document.getElementById('cname'); nameBox.value = S.name || '';
 document.getElementById('enter').onclick = () => start(nameBox.value.trim().slice(0, 12));
@@ -240,6 +298,11 @@ function step(dt) {
     if (meUnit.maxHp !== st0.maxHp) { meUnit.hp = meUnit.maxHp = st0.maxHp; }
     for (let h = meUnit.hots.length - 1; h >= 0; h--) { const o = meUnit.hots[h]; if ((o.t -= dt) <= 0) { o.t += o.every; o.left--; meUnit.hp = Math.min(meUnit.maxHp, meUnit.hp + o.tick); UI.float(meUnit, '+' + o.tick, ''); if (o.left <= 0) meUnit.hots.splice(h, 1); } }
     if (meUnit.ward && (meUnit.ward.t -= dt) <= 0) meUnit.ward = null; }
+  if (meUnit.faded > 0) meUnit.faded -= dt;
+  if (meUnit.dead && !ghost && corpse) { player.x = corpse.x; player.z = corpse.z; }     // lying where you fell
+  pillar.visible = !!(ghost && corpse); if (pillar.visible) { pillar.position.set(corpse.x, 15, corpse.z); }
+  if (ghost && corpse) UI.death(Math.hypot(corpse.x - player.x, corpse.z - player.z) < 6 ? 'body' : 'ghost');
+  if (!meUnit.dead && !inCombat() && T - meUnit.lastHit > 5 && meUnit.hp < meUnit.maxHp) meUnit.hp = Math.min(meUnit.maxHp, meUnit.hp + meUnit.maxHp * (drinking > 1 ? 0.06 : 0.02) * dt);
   if (drinking && (player.moving || casting)) drinking = 0;
   if (drinking) drinking += dt;
   people.update(dt, T);
@@ -268,8 +331,8 @@ function step(dt) {
     else if (casting.target.gone || casting.target.fading) casting = null;
     else if (casting.t >= casting.dur) { const c = casting; casting = null; land(c.spell, c.target); }
   }
-  me.group.position.set(player.x, player.y, player.z); me.group.rotation.y = player.yaw; me.group.visible = !player.firstPerson;
-  animate(me, casting ? 'cast' : drinking ? 'sit' : player.speed ? 'walk' : 'idle', T, player.back ? 0.7 : 1.15);
+  me.group.position.set(player.x, player.y + (ghost ? 0.3 + Math.sin(T * 2) * 0.1 : 0), player.z); me.group.rotation.y = player.yaw; me.group.visible = !player.firstPerson;
+  animate(me, meUnit.dead && !ghost ? 'dead' : casting ? 'cast' : drinking ? 'sit' : player.speed ? 'walk' : 'idle', T, player.back ? 0.7 : 1.15);
 
   ring.visible = !!target;
   if (target) { ring.position.set(target.x, 0.06, target.z); ring.scale.setScalar(1 + Math.sin(T * 5) * 0.06); }
@@ -290,9 +353,9 @@ function step(dt) {
   if (inDun) list = dungeon.party.filter(p => !p.gone);
   else list = people.list.filter(p => p.grow >= 1 && !p.fading && (p.dead || p.hp < p.maxHp) && distTo(p) < 40)
     .sort((a, b) => (a.dead ? 1.5 : a.hp / a.maxHp) - (b.dead ? 1.5 : b.hp / b.maxHp));
-  UI.update(dt, { stats: st, target, dist: target ? distTo(target) : 0, casting, gcd, gcdMax, project, dt, me: meUnit, drinking, list, party: inDun, distOf: distTo,
+  UI.update(dt, { stats: st, combat: inCombat(), cds, T, target, dist: target ? distTo(target) : 0, casting, gcd, gcdMax, project, dt, me: meUnit, drinking, list, party: inDun, distOf: distTo,
     boss: inDun ? dungeon.bossInfo() : null });
-  if (frame % 4 === 0) UI.drawMap(player, player.yaw, people.list, target, zoneNow === 'dungeon' ? dungeon.mobs : mobs.list);
+  if (frame % 4 === 0) UI.drawMap(player, player.yaw, people.list, target, corpse, zoneNow === 'dungeon' ? dungeon.mobs : mobs.list);
   if ((saveT += dt) > 15) { saveT = 0; G.save(S); }
 }
 tick();

@@ -75,11 +75,6 @@ The ledger of plans. Nothing under "Open" is built until the owner says go.
   - Placement: suggested to fold into sprint 7 (They remember), since talking
     and waving are how people get to know the healer. Not yet decided.
 
-- Monsters must not ignore the healer (owner, after sprint 3). Today every
-  monster in Greenhollow and Emberdeep acts as if the healer is not there.
-  Still to settle before building: what draws them (healing aggro, standing
-  too close, or both), and what happens when the healer dies.
-
 ## Sprint plan (proposed, not yet agreed)
 
 Rewritten after sprint 3 from `fable notes.md`. The test for every sprint:
@@ -105,10 +100,18 @@ is weakest. Sprints 4 to 8 are the game; 9 onward is more of it.
    Emberdeep damage shapes: crushing blows on the tank, bleeding bites from
    hounds and Cinderjaw, Cinder Slimes that burst when they die. A boss
    frame with Cinderjaw's Flame Breath cast bar.
-6. **They bite back.** The agreed item above: healing draws threat from
-   whatever is fighting your target. The healer has real health, can die,
-   and runs back as a ghost to the camp or dungeon door. Fade (drop threat)
-   as the one escape. The hub stays safe.
+6. **They bite back: built.** Healing someone a monster is fighting adds
+   to its threat on you (half the healing done); past 60% of its health it
+   turns on you (100% when a tank is up, and the tank taunts it back after 4
+   seconds). Monsters may also jump a healer who wanders close, in
+   Greenhollow and in Emberdeep. Cinderjaw's breath and bursting slimes hit
+   you too. The town is safe: monsters give up at the wall. You have real
+   health, regenerate out of combat, cannot drink in combat, and your frame
+   glows red while something is on you. Death: Release Spirit, run back as
+   a ghost (grey world, faster) to the pillar of light over your body, and
+   Return to Life at half health and mana. Fade (key 6, level 2): monsters
+   forget you and go back to their old target; 30 second cooldown.
+   The original idea and the agreed item above are covered by this sprint.
 7. **They remember.** A saved roster of about 60 characters who reappear
    in town, the zone and parties, each keeping a record of what you did for
    them. Reactions that grow with it (waves, whispers, sulks), a fame meter,

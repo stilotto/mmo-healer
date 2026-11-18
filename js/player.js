@@ -91,7 +91,7 @@ export class Player {
     const m = Math.hypot(f, s);
     this.moving = m > 0.15 || this.y > 0;
     if (m > 0.15) {
-      const sp = (f < -0.1 ? 4.2 : 7) * Math.min(1, m) / m * dt;
+      const sp = (f < -0.1 ? 4.2 : 7) * (this.speedMul || 1) * Math.min(1, m) / m * dt;
       const sn = Math.sin(this.yaw), cs = Math.cos(this.yaw);
       this.x += (sn * f + cs * s) * sp; this.z += (cs * f - sn * s) * sp;
       collide(this, 0.5);

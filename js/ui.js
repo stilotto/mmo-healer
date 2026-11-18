@@ -127,7 +127,7 @@ const setBar = (id, frac, text) => { $(id).style.transform = `scaleX(${Math.max(
 export function update(dt, v) {
   const st = v.stats;
   setBar('php', v.me.hp / v.me.maxHp, `${Math.ceil(v.me.hp)} / ${v.me.maxHp}`);
-  $('pframe').classList.toggle('sel', v.target === v.me);
+  $('pframe').classList.toggle('sel', v.target === v.me); $('pframe').classList.toggle('combat', !!v.combat);
   const ps = v.drinking ? 'Drinking' + (v.me.hots.length ? ' · ❋' : '') : (v.me.hots.length ? '❋ Renew' : '') + (v.me.ward ? ' ◈' : '');
   if ($('psub').textContent !== ps) $('psub').textContent = ps;
   frames(v); boss(v);
@@ -146,8 +146,9 @@ export function update(dt, v) {
   else cb.style.visibility = 'hidden';
   SPELLS.forEach((sp, i) => {
     const lk = slots[i].querySelector('.lk'); if (lk) lk.style.display = knows(S, sp) ? 'none' : '';
-    slots[i].classList.toggle('dim', !t || S.mana < sp.mana || v.dist > sp.range);
-    slots[i].querySelector('.cd').style.height = (v.gcd > 0 ? v.gcd / v.gcdMax * 100 : 0) + '%';
+    slots[i].classList.toggle('dim', v.me.dead || (!sp.self && (!t || v.dist > sp.range)) || S.mana < sp.mana);
+    const own = sp.cd && v.cds[sp.id] > v.T ? (v.cds[sp.id] - v.T) / sp.cd : 0;
+    slots[i].querySelector('.cd').style.height = Math.max(own, v.gcd > 0 ? v.gcd / v.gcdMax : 0) * 100 + '%';
   });
   const need = xpNeed(S.level); $('xp').firstElementChild.style.width = (S.xp / need * 100) + '%'; $('xp').lastElementChild.textContent = `${S.xp} / ${need} XP`;
   if (errT > 0 && (errT -= dt) <= 0) $('err').style.opacity = 0;
@@ -165,7 +166,7 @@ export function update(dt, v) {
   }
 }
 
-export function drawMap(me, yaw, people, target, mobs) {
+export function drawMap(me, yaw, people, target, corpse, mobs) {
   const c = $('map'), x = c.getContext('2d'), W = c.width, k = W / 2 / 48;
   x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = '#3f5c30'; x.fillRect(0, 0, W, W);
   x.translate(W / 2 - me.x * k, W / 2 - me.z * k); x.scale(k, k);
@@ -183,6 +184,7 @@ export function drawMap(me, yaw, people, target, mobs) {
     else { x.fillStyle = '#2a2018'; x.fillRect(s.x - 5, s.z - 1.5, 10, 3); }
   }
   for (const m of mobs) if (m.state !== 'dead') { x.fillStyle = m.def.elite ? '#ffb040' : '#b02a20'; x.beginPath(); x.arc(m.x, m.z, m.def.elite ? 2 : 1.1, 0, 7); x.fill(); }
+  if (corpse) { x.fillStyle = '#fff2a8'; x.strokeStyle = '#000'; x.lineWidth = 0.6; x.beginPath(); x.arc(corpse.x, corpse.z, 2.6, 0, 7); x.fill(); x.stroke(); }
   for (const p of people) {
     x.fillStyle = p.dead ? '#888' : p.hp < p.maxHp * 0.5 ? '#ff5a4a' : p.hp < p.maxHp ? '#ffd24a' : '#7fe38a';
     x.beginPath(); x.arc(p.x, p.z, p === target ? 2 : 1.3, 0, 7); x.fill();
@@ -254,4 +256,17 @@ function boss(v) {
   const c = $('bcast');
   c.style.visibility = b.casting ? 'visible' : 'hidden';
   if (b.casting) { c.firstElementChild.style.width = (b.casting.k * 100) + '%'; c.lastElementChild.textContent = b.casting.name; }
+}
+
+// Death: "dead" offers Release Spirit; "ghost" says where to run; "body"
+// offers Return to Life once you reach your corpse; null hides the panel.
+let deathState;
+export function death(st) {
+  if (st === deathState) return; deathState = st;
+  const box = $('death'), b = $('dbtn'); box.style.display = st ? 'block' : 'none';
+  document.body.classList.toggle('ghost', st === 'ghost' || st === 'body');
+  if (!st) return;
+  $('dtext').textContent = st === 'dead' ? 'You have died.' : st === 'ghost' ? 'Run back to your body (the pillar of light).' : 'You have reached your body.';
+  b.textContent = st === 'dead' ? 'Release Spirit' : 'Return to Life'; b.disabled = st === 'ghost';
+  b.onclick = () => st === 'dead' ? H.release() : H.returnToLife();
 }
