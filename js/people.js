@@ -5,15 +5,8 @@
 import { makeFigure, animate, makePlate, CLASSES } from './figure.js';
 import { POI, CAMPS, collide } from './world.js';
 import { npcMaxHp } from './game.js';
+import { NAMES, KINDS, known, bond } from './memory.js';
 
-const NAMES = ('Brannoc Mirelle Stabbsworth Healzplz Moonwhisk Critney Pwnsalot Sneakums Frostbiscuit Dotsanddots Grumbar Elowen ' +
-  'Kazrik Thistle Oatmeal Nightsoup Arrowynn Shieldon Fizzlewick Bonk Smashley Vexa Dorn Quillon Embera Tobblin Muffinblade ' +
-  'Sapsworth Zugmar Lilybrook Hexabelle Rustyn Corvash Pemberly Ironwhisk Glimmerfen Oxbane Snackrifice Aggrotha Manabun ' +
-  'Lootgoblin Afkevin Rezplox Kitebert Pullmore Wipesalot Nerfbat Gankrid Tavish Ysolde Marrow Juniper Halvard Sable Orrin ' +
-  'Fenna Dask Wren Bigdam Tinycrit Oomagain Stunlock Pocketsand Cheddar Vandrel Isska Bramblewick Tuggle Noobert Questlove ' +
-  'Faceroll Mossbeard Petal Grindolf Yarrow Skiptext Hobnail Clickmore Dewdrop Runsalot Farmhand').split(' ');
-const GUILDS = ['Wipe Club', 'Lantern Guard', 'Casual Fridays', 'Loot Council', 'The Unhealed', 'Dps Is A Role', '', '', ''];
-const KINDS = ['Knight', 'Ranger', 'Mage', 'Rogue', 'Warlock', 'Druid', 'Brawler'];
 const GENERAL = ['LF healer for Emberdeep, have tank and 3 dps', 'WTS 20 copper bars, cheap', 'anyone questing in Greenhollow?',
   'LFM Shattered Spire, need heals!!', 'anyone want to duel?', 'where is the bank', 'it is right behind you', 'WTB bigger bags',
   'need 1 healer then we go', 'when is the next airship', 'ding!', 'gratz', 'selling portals, oh wait they are free', 'any healers on?',
@@ -46,15 +39,22 @@ export class People {
     }
   }
 
+  // Someone from the saved roster who is not about yet (people you know turn
+  // up a little more often). Only if the whole cast is out does a stranger
+  // with a throwaway name appear.
   spawn(x, z, frac = 1, kind) {
-    let name; do { name = pick(NAMES); } while (this.used.has(name) && this.used.size < NAMES.length);
+    const S = this.ctx.S, free = S.roster.filter(r => !this.used.has(r.name) && (!kind || r.cls === kind));
+    const kn = free.filter(r => bond(known(S, r.name)) >= 1);
+    const who = kn.length && Math.random() < 0.4 ? pick(kn) : free.length ? pick(free) : null;
+    let name = who && who.name;
+    if (!name) { let i = 0; do { name = pick(NAMES); } while ((this.used.has(name) || S.roster.some(r => r.name === name)) && ++i < 200); }
     this.used.add(name);
-    const cls = kind || pick(KINDS), level = Math.max(1, this.ctx.S.level + Math.floor(rnd(-1, 3)));
-    const guild = pick(GUILDS);
-    const fig = makeFigure(cls), plate = makePlate(name, guild ? '<' + guild + '>' : '', CLASSES[cls].color);
+    const cls = who ? who.cls : kind || pick(KINDS), level = Math.max(1, S.level + (who ? who.off : Math.floor(rnd(-1, 3))));
+    const guild = who ? who.guild : '';
+    const fig = makeFigure(cls, who ? who.seed : undefined), plate = makePlate(name, guild ? '<' + guild + '>' : '', CLASSES[cls].color);
     fig.group.add(plate.sprite);
     const maxHp = npcMaxHp(level);
-    const p = { name, cls, level, guild, maxHp, hp: Math.max(1, Math.round(maxHp * frac)), x, z, yaw: Math.random() * 6, fig, plate, zone: 'hub',
+    const p = { who, name, cls, level, guild, maxHp, hp: Math.max(1, Math.round(maxHp * frac)), x, z, yaw: Math.random() * 6, fig, plate, zone: 'hub',
       state: 'idle', wait: rnd(0.5, 4), dest: null, path: null, hots: [], duel: null, mob: null, quest: null, hurtAt: this.t, anim: 'idle', animT: 0,
       grow: 0, thankAt: 0, gone: false, dead: false, swing: 1 };
     fig.group.position.set(x, 0, z); fig.group.scale.setScalar(0.01); fig.hit.userData.person = p;
@@ -156,27 +156,29 @@ export class People {
     p.hp -= dmg; p.hurtAt = this.t; p.resting = false; this.ctx.float(p, '-' + dmg, big ? 'dmg big' : 'dmg');
     if (p.hp <= 0) return this.kill(p, by);
     if (p.state !== 'hunt' || !p.mob || p.mob.state === 'dead') { p.mob = by; p.state = 'hunt'; p.path = null; p.stuck = 0; }
-    if (p.hp < p.maxHp * 0.25 && !p.cried && this.near(p)) { p.cried = true; this.say(p, pick(['HELP', 'heals!!', 'I am going down', 'so dead'])); }
+    if (p.hp < p.maxHp * 0.25 && !p.cried && this.near(p)) { p.cried = true; this.say(p, (this.ctx.social && this.ctx.social.cry(p)) || pick(['HELP', 'heals!!', 'I am going down', 'so dead'])); }
   }
   kill(p, by) {
     p.hp = 0; p.dead = true; p.state = 'dead'; p.deadT = 80; p.hots = []; p.dots = []; p.ward = null; p.mob = null; p.path = null; p.cried = false;
     if (p.zone === 'dungeon') p.deadT = 1e9;
     if (this.ctx.zone() === p.zone) this.ctx.chat('c-yell', `${p.name} has been slain by ${by.name}.`);
+    if (this.ctx.social) this.ctx.social.died(p);
   }
   revive(p) {
     p.dead = false; p.hp = Math.round(p.maxHp * 0.35); p.state = 'idle'; p.wait = 4; p.hurtAt = this.t; p.resting = false;
-    p.anim = 'cheer'; p.animT = 2; this.say(p, pick(REZ));
+    p.anim = 'cheer'; p.animT = 2; if (!(this.ctx.social && this.ctx.social.revived(p))) this.say(p, pick(REZ));
   }
 
   // Healing from the player. Returns the effective amount.
   heal(p, amount, crit, quiet) {
     if (p.dead) return 0;
-    const low = p.hp < p.maxHp * 0.3, eff = Math.min(amount, p.maxHp - p.hp);
+    const low = p.hp < p.maxHp * 0.25, eff = Math.min(amount, p.maxHp - p.hp);
     p.hp += eff;
     this.ctx.float(p, '+' + amount, crit ? 'crit' : '');
     if (eff > 0) {
       if (p.zone === 'dungeon') this.ctx.dungeon.noticed(p);
       if (p.duel && !p.duel.healed) { p.duel.healed = true; if (Math.random() < 0.7) this.say(p.duel.foe, pick(['hey! no outside heals!', 'who is healing ' + p.name + '??', 'that is cheating', 'ref!'])); }
+      if (!p.duel && !quiet && this.ctx.social && this.ctx.social.healed(p, eff, low && this.t - p.hurtAt < 5)) return eff;
       if (!p.duel && this.t > p.thankAt && (p.hp >= p.maxHp || eff > p.maxHp * 0.3) && !quiet) {
         p.thankAt = this.t + 15;
         if (p.state !== 'hunt') { p.anim = 'cheer'; p.animT = 1.3; }
@@ -204,7 +206,7 @@ export class People {
     if ((this.chatT -= dt) <= 0) {
       this.chatT = rnd(5, 12);
       const here = ctx.zone(), f = here === 'green' ? this.green().filter(p => !p.dead) : this.free();
-      if (f.length) this.say(pick(f), pick(here === 'green' ? ZONECHAT : GENERAL), 'gen');
+      if (f.length) { const p = pick(f), g = here !== 'dungeon' && ctx.social && ctx.social.general(p); this.say(p, g || pick(here === 'green' ? ZONECHAT : GENERAL), 'gen'); }
     }
     if ((this.popT -= dt) <= 0) {       // keep Greenhollow busy: new faces walk out of the gate
       this.popT = rnd(8, 14);
@@ -236,7 +238,8 @@ export class People {
       if (p.zone === 'hub' && p.z < -66) p.zone = 'green'; else if (p.zone === 'green' && p.z > -58) { p.zone = 'hub'; p.quest = null; }
 
       let anim = 'idle';
-      if (p.state === 'walk') {
+      if (p.pause > 0) p.pause -= dt;
+      else if (p.state === 'walk') {
         const dx = p.dest.x - p.x, dz = p.dest.z - p.z, d = Math.hypot(dx, dz);
         if (d < 0.6 || p.stuck > 3) {
           if (p.path && p.path.length) { p.dest = p.path.shift(); p.stuck = 0; if (!p.path.length) p.path = null; }

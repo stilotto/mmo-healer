@@ -96,6 +96,7 @@ export class Dungeon {
     });
     Object.assign(this, { phase: 'gather', timer: 7, room: 0, seen: false, breath: 0, breathAt: 0, asked: false, won: false });
     this.party_say('gather');
+    if (this.ctx.social) this.ctx.social.party(this);
   }
   party_say(key, who) {
     const alive = this.party.filter(p => !p.dead && !p.gone); if (!alive.length) return;
@@ -193,7 +194,7 @@ export class Dungeon {
       return;
     }
     if (!alive.length && this.phase !== 'gather') {
-      this.phase = 'wipe'; this.timer = 14; ctx.chat('c-yell', 'The party has wiped.');
+      this.phase = 'wipe'; this.timer = 14; ctx.chat('c-yell', 'The party has wiped.'); if (ctx.social) ctx.social.wipe();
       for (const m of this.mobs) if (m.state === 'fight') { m.state = 'idle'; m.hp = m.maxHp; m.attackers.clear(); m.mad = false; }
       return;
     }

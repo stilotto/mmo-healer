@@ -45,7 +45,7 @@ Loot drops are key to the fun.
 
 ## Where things stand (end of the first long session)
 
-Sprints 1 to 6 in `TODO.md` are built and on `main`:
+Sprints 1 to 7 in `TODO.md` are built and on `main`:
 - Lanternrest (the hub), Greenhollow (the questing zone through the north
   gate) and Emberdeep (a dungeon through the orange portal), all in the
   Storybook look the owner chose.
@@ -57,12 +57,11 @@ Sprints 1 to 6 in `TODO.md` are built and on `main`:
 - The owner has played it on their Chromebook: reached level 2, the frame
   rate is smooth with full effects (no step-down).
 
-Next, in order:
-1. Sprint 7, They remember (a saved roster of people who remember you).
-2. Undecided: the chat box and slash commands ("Agreed, not yet built" in
-   `TODO.md`) go either into sprint 7 or as a small sprint first. Ask the
-   owner.
-3. Sprint 8, Loot that matters, now including the paper doll.
+- Sprint 7: the roster, memory, fame, gossip, guilds, and the chat box with
+  slash commands (the owner chose to fold the chat box into sprint 7).
+
+Next: sprint 8, Loot that matters, including the paper doll. Wait for the
+owner's go.
 Nothing has had a hands-on balance pass beyond the owner's first play.
 
 `fable notes.md` holds the longer-term plan and opinions it came from.
@@ -201,6 +200,38 @@ Nothing has had a hands-on balance pass beyond the owner's first play.
   defined, so `?quality=low` crashed at start. Fixed.
 - `tools/sprint6.mjs` checks threat, Fade, death and the ghost run, the safe
   town, and the tank taking a monster back.
+
+## They remember (sprint 7)
+
+- `js/memory.js` (rules, no DOM): `NAMES`, `GUILDS` with perks, `FAME`
+  tiers, `makeRoster`, `rec(S, name)` (h heals, s saves, r revives, d deaths
+  watched, w emotes), `bond` and `mood` (stranger, met, knows, friend,
+  grudge), `deed` (the gossip log), `LINES` by event and temperament, and
+  `upgrade` (save version 2: `S.v`, `S.roster`, `S.rec`, `S.fame`,
+  `S.chan`, `S.guild`, `S.declined`). `G.load` and `G.newState` run it.
+- People are spawned from `S.roster` (`p.who`); `makeFigure` gets the
+  roster seed so a person looks the same every time. Strangers with
+  throwaway names appear only if the whole cast is out.
+- `js/social.js` (`Social`): reactions (`healed`, `revived`, `died`,
+  `cry`), waves as you pass, General gossip (`general`), Emberdeep parties
+  that know you (`party`), fame and tier-ups, guild invites and guild chat,
+  and the answers to chat commands. It keeps its own delay queue on game
+  time (`later`), so `?speed=N` applies; avoid new `setTimeout`s.
+- Saves count from casts only: a heal that lands on someone under 25% who
+  was hit in the last 5 seconds. Renew and Ward count as heals; Renew
+  ticks do not. Emotes add goodwill once a minute, at most 6 in all.
+- Fame: first heal of a person 1, save 2, revive 4, boss kill when the
+  party saw you 6. Guild perks are applied in `game.js` (`perk`,
+  `manaCost`) and `addFame`.
+- `js/chat.js`: the log (160 lines kept, 40 shown), tabs, the chat box and
+  the command parser. `ui.js` re-exports `chat` and `chatHtml`. A line's
+  channel comes from its class and text (`channel`); system lines and
+  whispers show on every tab. Buttons in chat lines use `data-act`.
+- `figure.js animate` has `wave`, `bow` and `dance`. `p.pause` stops a
+  person walking while they wave or dance; `emo` in `main.js` is the
+  healer's emote (`/sit` lasts until you move).
+- `tools/sprint7.mjs` checks the roster, records, waves, the chat box,
+  commands, whispers, tabs, gossip, the guild invite and letting someone die.
 
 ## Things worth knowing
 

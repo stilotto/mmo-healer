@@ -1,5 +1,6 @@
 // Rules: the healer's state, spells, experience and loot. No DOM, no three.js,
 // so it runs headless in Node.
+import { perk, upgrade } from './memory.js';
 
 export const SPELLS = [
   { id: 'mend', name: 'Mend', icon: '✚', key: '1', cast: 2.0, mana: 22, range: 40, color: '#2f7a3a',
@@ -37,10 +38,10 @@ const SAVE = 'mmoHealer1';
 const pick = a => a[Math.floor(Math.random() * a.length)];
 
 export function newState(name) {
-  return { name: name || 'Healer', level: 1, xp: 0, coins: 0, equip: {}, bag: [], healed: 0, mana: 0, lootMeter: 0, lootAt: 1, firstLoot: true };
+  return upgrade({ name: name || 'Healer', level: 1, xp: 0, coins: 0, equip: {}, bag: [], healed: 0, mana: 0, lootMeter: 0, lootAt: 1, firstLoot: true });
 }
 export function load() {
-  try { const s = JSON.parse(localStorage.getItem(SAVE)); if (s && s.level) return s; } catch (e) {}
+  try { const s = JSON.parse(localStorage.getItem(SAVE)); if (s && s.level) return upgrade(s); } catch (e) {}
   return null;
 }
 export function save(S) { try { localStorage.setItem(SAVE, JSON.stringify(S)); } catch (e) {} }
@@ -53,9 +54,9 @@ export function stats(S) {
   return {
     power: 10 + 4 * S.level + g.power,
     maxMana: 100 + 15 * S.level + g.mana,
-    regen: 4 + 0.3 * S.level + g.spirit * 0.12,   // mana per second
-    haste: Math.min(0.5, g.haste / 100),            // fraction off cast time and GCD
-    spirit: g.spirit, hasteRaw: g.haste,
+    regen: (4 + 0.3 * S.level + g.spirit * 0.12) * (perk(S, 'regen') ? 1.1 : 1),   // mana per second
+    haste: Math.min(0.5, (g.haste + (perk(S, 'haste') ? 3 : 0)) / 100),            // fraction off cast time and GCD
+    spirit: g.spirit, hasteRaw: g.haste + (perk(S, 'haste') ? 3 : 0),
     maxHp: 80 + 20 * S.level,
   };
 }
@@ -65,7 +66,7 @@ export function gcdTime(S) { return GCD * (1 - stats(S).haste); }
 
 // How much a spell heals. Mend returns one amount; Renew a tick amount.
 export function healAmount(S, sp) {
-  const p = stats(S).power;
+  const p = stats(S).power * (perk(S, 'heal') ? 1.05 : 1);
   if (sp.id === 'mend' || sp.id === 'flash') {
     const crit = Math.random() < 0.12, k = sp.id === 'flash' ? [22, 1.6] : [30, 2.2];
     return { amount: Math.round((k[0] + p * k[1]) * (0.92 + Math.random() * 0.16) * (crit ? 1.6 : 1)), crit };
@@ -85,7 +86,7 @@ export function reward(S, eff, target) {
   out.xp = Math.max(1, Math.round(frac * (20 + 5 * target.level)));
   S.xp += out.xp;
   while (S.xp >= xpNeed(S.level)) { S.xp -= xpNeed(S.level); S.level++; out.levels++; }
-  S.lootMeter += frac;
+  S.lootMeter += frac * (perk(S, 'loot') ? 1.15 : 1);
   if (S.lootMeter >= S.lootAt) {
     S.lootMeter = 0; S.lootAt = 1.2 + Math.random() * 1.6;
     if (S.firstLoot) { S.firstLoot = false; S.lootAt = 1; }
@@ -161,3 +162,4 @@ export function healEstimate(S, sp) {
   return sp.id === 'mend' ? 30 + p * 2.2 : sp.id === 'flash' ? 22 + p * 1.6 : 0;
 }
 export const knows = (S, sp) => !sp.lvl || S.level >= sp.lvl;
+export const manaCost = (S, sp) => sp.id === 'revive' && perk(S, 'rez') ? Math.round(sp.mana / 2) : sp.mana;

@@ -112,20 +112,25 @@ export function makeFigure(cls, seed = Math.random() * 1000) {
   return { group: g, body, head, legL, legR, armL, armR, hit, sockets: { head, handR, handL }, phase: r(100) / 10 };
 }
 
-// mode: idle | walk | attack | cast | cheer | sit | dead
+// mode: idle | walk | attack | cast | cheer | sit | dead | wave | bow | dance
 export function animate(f, mode, t, k = 1) {
   const p = t + f.phase;
-  let l = 0, aL = 0, aR = 0, y = 0, lean = 0;
+  let l = 0, aL = 0, aR = 0, y = 0, lean = 0, zR = 0, zL = 0, turn = 0;
+  f.armL.rotation.z = f.armR.rotation.z = f.body.rotation.y = 0;
   if (mode === 'dead') { f.legL.rotation.x = f.legR.rotation.x = 0; f.armL.rotation.x = f.armR.rotation.x = -0.3; f.body.position.y = 0.22; f.body.rotation.x = -Math.PI / 2; return; }
   if (mode === 'sit') { f.legL.rotation.x = f.legR.rotation.x = -1.5; f.armL.rotation.x = f.armR.rotation.x = -0.5; f.body.position.y = -0.48; f.body.rotation.x = 0; return; }
   if (mode === 'walk') { l = Math.sin(p * 9 * k) * 0.7; aL = l * 0.7; aR = -l * 0.7; y = Math.abs(Math.cos(p * 9 * k)) * 0.04; }
   else if (mode === 'attack') { const s = (p * 1.6) % 1; aR = s < 0.3 ? -2.4 * (s / 0.3) : -2.4 * (1 - (s - 0.3) / 0.7); aL = -0.4; lean = 0.1; l = 0.15; }
   else if (mode === 'cast') { aL = aR = -1.9 + Math.sin(p * 10) * 0.12; }
   else if (mode === 'cheer') { aL = aR = -2.9; y = Math.abs(Math.sin(p * 8)) * 0.35; }
+  else if (mode === 'wave') { aR = -2.7; zR = 0.25 + Math.sin(p * 11) * 0.35; aL = 0.05; }
+  else if (mode === 'bow') { lean = 0.75; aL = aR = -0.35; }
+  else if (mode === 'dance') { const b = Math.sin(p * 7); y = Math.abs(b) * 0.12; l = b * 0.35; aL = -1.6 - b * 0.9; aR = -1.6 + b * 0.9; zL = -0.3; zR = 0.3; turn = Math.sin(p * 1.7) * 0.6; }
   else { aL = Math.sin(p * 1.5) * 0.05; aR = -aL; y = Math.sin(p * 1.5) * 0.008; }
   f.legL.rotation.x = l; f.legR.rotation.x = -l;
   f.armL.rotation.x = aL; f.armR.rotation.x = aR;
-  f.body.position.y = y; f.body.rotation.x = lean;
+  f.armL.rotation.z = zL; f.armR.rotation.z = zR;
+  f.body.position.y = y; f.body.rotation.x = lean; f.body.rotation.y = turn;
 }
 
 export function canvasTex(w, h, draw) {

@@ -62,19 +62,6 @@ The ledger of plans. Nothing under "Open" is built until the owner says go.
 - Each visit is a fresh run. A wipe brings a new party after a few seconds.
 - `?speed=N` runs the world N times faster (for tests).
 
-## Agreed, not yet built
-
-- Chat box and slash commands (owner, after sprint 5). Enter opens a chat
-  box (tap the chat panel on phones), Enter sends, Esc closes.
-  - Talk: `/say`, `/yell`; people nearby can react.
-  - Emotes: `/wave`, `/cheer`, `/bow`, `/dance`, `/sit`, acted out by the
-    healer; nearby people sometimes answer.
-  - Channels: chat tabs (All, General, Zone, Party, Combat), `/leave general`
-    and `/join general`, so the owner need not monitor General.
-  - Utility: `/who`, `/target <name>`, `/roll`, `/help`.
-  - Placement: suggested to fold into sprint 7 (They remember), since talking
-    and waving are how people get to know the healer. Not yet decided.
-
 ## Sprint plan (proposed, not yet agreed)
 
 Rewritten after sprint 3 from `fable notes.md`. The test for every sprint:
@@ -112,10 +99,22 @@ is weakest. Sprints 4 to 8 are the game; 9 onward is more of it.
    Return to Life at half health and mana. Fade (key 6, level 2): monsters
    forget you and go back to their old target; 30 second cooldown.
    The original idea and the agreed item above are covered by this sprint.
-7. **They remember.** A saved roster of about 60 characters who reappear
-   in town, the zone and parties, each keeping a record of what you did for
-   them. Reactions that grow with it (waves, whispers, sulks), a fame meter,
-   guild invites, and General chat gossip about what you just did.
+7. **They remember: built.** A saved roster of 64 people (calling, guild,
+   temperament, looks) who reappear in town, Greenhollow and Emberdeep
+   parties. Each remembers heals, saves from near death, revives, deaths you
+   watched, and emotes. They thank you, call your name when hurt, wave as you
+   pass, whisper after a save, sulk or rant after you let them die, forgive
+   you later. A fame meter under the minimap (Who?, Some healer, That healer,
+   The mystery healer, The Lantern); General chat gossips about your recent
+   deeds and asks for you by name; parties that know you count you in at
+   once; guilds invite you (Join button or /accept) with a small perk each,
+   and guild chat. Owner chose to fold the chat box in here:
+   Enter opens it (tap the panel on phones), Enter sends, Esc closes, up
+   arrow recalls. Tabs: All, General, Zone, Party, Combat. Commands: /say,
+   /yell, /w, /r, /g, /wave, /cheer, /bow, /dance, /sit, /laugh, /thank,
+   /who, /who <name> (shows their record), /target, /roll, /fame,
+   /leave and /join general or zone, /gquit, /help. People nearby answer.
+   Not built from the original idea: the rival healer and the inn room.
 8. **Loot that matters.** Drops in the world with a beam per rarity, picked
    up by walking over them. Need or greed rolls you can crash. Rare and
    above carry an effect that changes play. Gear shows on the character.
@@ -138,11 +137,17 @@ is weakest. Sprints 4 to 8 are the game; 9 onward is more of it.
     item sets, guild perks, working inn, bank and auction hall.
 
 Groundwork to fold into the sprints as needed: a Node balance sim with a
-scripted healer on real mana (sprint 5), a save version number (before
+scripted healer on real mana (sprint 5), the save version number (done in
 sprint 7), splitting `people.js` per zone (before sprint 9), cheaper
 figures (sprint 4).
 
 ## Open (ideas, not yet placed)
+
+- A rival healer who runs with a party properly and resents you (from the
+  sprint 7 idea, not built).
+- `tools/sprint6.mjs`: the Emberdeep check (tank takes a monster back)
+  rarely passes, on old code too: trash dies before threat builds. Needs a
+  sturdier test, not a game change.
 
 - Make mouse-look the default once it has been tried on a real mouse.
 - Emberdeep extras: a second boss, patrols, a party that waits for the

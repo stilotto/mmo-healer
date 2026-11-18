@@ -10,17 +10,20 @@
  "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
-  "./js/dungeon.js": "./js/dungeon.js?v=20261118222926",
-  "./js/figure.js": "./js/figure.js?v=20261118222926",
-  "./js/fx.js": "./js/fx.js?v=20261118222926",
-  "./js/game.js": "./js/game.js?v=20261118222926",
-  "./js/look.js": "./js/look.js?v=20261118222926",
-  "./js/mobs.js": "./js/mobs.js?v=20261118222926",
-  "./js/people.js": "./js/people.js?v=20261118222926",
-  "./js/player.js": "./js/player.js?v=20261118222926",
-  "./js/textures.js": "./js/textures.js?v=20261118222926",
-  "./js/ui.js": "./js/ui.js?v=20261118222926",
-  "./js/world.js": "./js/world.js?v=20261118222926"
+  "./js/chat.js": "./js/chat.js?v=20261118231203",
+  "./js/dungeon.js": "./js/dungeon.js?v=20261118231203",
+  "./js/figure.js": "./js/figure.js?v=20261118231203",
+  "./js/fx.js": "./js/fx.js?v=20261118231203",
+  "./js/game.js": "./js/game.js?v=20261118231203",
+  "./js/look.js": "./js/look.js?v=20261118231203",
+  "./js/memory.js": "./js/memory.js?v=20261118231203",
+  "./js/mobs.js": "./js/mobs.js?v=20261118231203",
+  "./js/people.js": "./js/people.js?v=20261118231203",
+  "./js/player.js": "./js/player.js?v=20261118231203",
+  "./js/social.js": "./js/social.js?v=20261118231203",
+  "./js/textures.js": "./js/textures.js?v=20261118231203",
+  "./js/ui.js": "./js/ui.js?v=20261118231203",
+  "./js/world.js": "./js/world.js?v=20261118231203"
  }
 }</script>
 <style>
@@ -70,10 +73,19 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
 #mini{position:absolute;right:8px;top:8px;width:132px;text-align:center}
 #mini canvas{width:132px;height:132px;border-radius:50%;border:2px solid var(--gold);background:#1a2418}
 #zone{font:600 12px Cinzel,serif;color:var(--gold);text-shadow:0 1px 2px #000;margin-bottom:2px}
-#chat{position:absolute;left:8px;bottom:8px;width:340px;height:150px;background:rgba(0,0,0,.42);border-radius:5px;padding:4px 6px;
+#hud>#chatwrap{position:absolute;left:8px;bottom:8px;width:340px;pointer-events:none}
+#ctabs{display:flex;gap:2px;pointer-events:auto}
+#ctabs b{font:700 10px 'Nunito Sans',sans-serif;padding:2px 7px;background:rgba(0,0,0,.42);border-radius:4px 4px 0 0;color:#aaa;cursor:pointer}
+#ctabs b.on{color:var(--gold);background:rgba(0,0,0,.62)}
+#chat{height:150px;background:rgba(0,0,0,.42);border-radius:0 5px 5px 5px;padding:4px 6px;
   overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;font-size:12px;line-height:1.3;pointer-events:none}
+#chat button{pointer-events:auto;font:700 11px 'Nunito Sans',sans-serif;margin-left:5px;padding:1px 7px;border-radius:3px;border:1px solid var(--gold);background:#2a3a5a;color:#fff;cursor:pointer}
+#chatin{display:none;width:100%;margin-top:3px;font:13px 'Nunito Sans',sans-serif;padding:5px 7px;border-radius:4px;border:1px solid var(--gold);background:rgba(0,0,0,.85);color:#fff;pointer-events:auto;user-select:text;-webkit-user-select:text;outline:none}
+#chatwrap.typing #chatin{display:block}
+#fame{margin-top:3px;font:600 10px Cinzel,serif;color:#ffd98a;text-shadow:0 1px 2px #000}
+#fame div{height:3px;background:#000a;border-radius:2px;margin:1px 14px 0;overflow:hidden}#fame i{display:block;height:100%;width:0;background:#ffb040}
 #chat div{text-shadow:0 1px 1px #000}
-.c-sys{color:#ffe066}.c-gen{color:#f4b9a4}.c-say{color:#fff}.c-heal{color:#7fe38a}.c-loot{color:#9fd}.c-guild{color:#5fe06a}.c-yell{color:#ff5a4a}.c-party{color:#aab4ff}
+.c-sys{color:#ffe066}.c-gen{color:#f4b9a4}.c-say{color:#fff}.c-heal{color:#7fe38a}.c-loot{color:#9fd}.c-guild{color:#5fe06a}.c-yell{color:#ff5a4a}.c-party{color:#aab4ff}.c-whisp{color:#ff8af0}.c-emote{color:#ffa860}
 #bottom{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px}
 #castbar{width:230px;height:16px;background:#000a;border:1px solid var(--gold);border-radius:3px;position:relative;visibility:hidden}
 #castbar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(#ffe9a0,#d59a1d);width:0}
@@ -119,11 +131,12 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
 #title a{color:#889;font-size:12px}
 @media (pointer:coarse){
   #stick{display:block}
-  #chat{left:8px;top:62px;bottom:auto;width:230px;height:74px;font-size:11px}
+  #hud>#chatwrap{left:8px;top:62px;bottom:auto;width:230px;pointer-events:auto}
+  #chat{height:74px;font-size:11px}
   #bottom{left:auto;right:8px;transform:none;align-items:flex-end}
   .slot{width:54px;height:54px}
   #hint{bottom:150px}
-  #party{top:142px;width:150px}
+  #party{top:160px;width:150px}
   #mini,#mini canvas{width:92px}#mini canvas{height:92px}
 }
 @media (max-width:560px){
@@ -148,8 +161,8 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
     <div class="bar"><i id="php"></i><span id="phpt"></span></div><div class="bar mana"><i id="pmp"></i><span id="pmpt"></span></div><div class="sub" id="psub"></div></div>
   <div class="frame" id="tframe"><div class="port" id="tport"></div><div class="nm" id="tname"></div>
     <div class="bar"><i id="thp"></i><span id="thpt"></span></div><div class="sub" id="tsub"></div></div>
-  <div id="mini"><div id="zone">Lanternrest</div><canvas id="map" width="264" height="264"></canvas></div>
-  <div id="chat"></div>
+  <div id="mini"><div id="zone">Lanternrest</div><canvas id="map" width="264" height="264"></canvas><div id="fame"><span id="famen"></span><div><i id="fameb"></i></div></div></div>
+  <div id="chatwrap"><div id="ctabs"></div><div id="chat"></div><input id="chatin" maxlength="200" autocomplete="off" enterkeyhint="send" placeholder="Say something, or /help"></div>
   <div id="err"></div><div id="toast"></div><div id="hint"></div>
   <div id="stick"><i></i></div>
   <div id="cross"></div>
@@ -171,9 +184,9 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
   <p>Everyone else is busy playing the game. You just heal them. No party, no invite, no permission.</p>
   <input id="cname" maxlength="12" placeholder="Character name" autocomplete="off">
   <button id="enter">Enter World</button>
-  <p class="keys"><b>WASD</b> move and turn · <b>Q/E</b> strafe · <b>right-drag</b> steer · <b>left-drag</b> or <b>arrow keys</b> look (up and down too) · <b>wheel</b> zoom (all the way in for first person, or <b>V</b>) · <b>Tab</b> next target · <b>F</b> most hurt · <b>1, 2</b> heal · <b>3</b> revive · <b>B</b> bag · <b>Space</b> jump · <b>X</b> mouse-look (the mouse steers, A and D strafe, Esc frees the cursor)</p>
+  <p class="keys"><b>WASD</b> move and turn · <b>Q/E</b> strafe · <b>right-drag</b> steer · <b>left-drag</b> or <b>arrow keys</b> look (up and down too) · <b>wheel</b> zoom (all the way in for first person, or <b>V</b>) · <b>Tab</b> next target · <b>F</b> most hurt · <b>1, 2</b> heal · <b>3</b> revive · <b>B</b> bag · <b>Enter</b> chat (<b>/help</b>) · <b>Space</b> jump · <b>X</b> mouse-look (the mouse steers, A and D strafe, Esc frees the cursor)</p>
   <a href="https://stilotto.github.io/">More games from Stilotto</a>
 </div></div>
-<script type="module" src="js/main.js?v=20261118222926"></script>
+<script type="module" src="js/main.js?v=20261118231203"></script>
 </body>
 </html>

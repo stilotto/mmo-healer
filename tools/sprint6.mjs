@@ -51,9 +51,9 @@ out.dun = await ev(async () => {
   g.S.mana = 9999; let turned = false, back = false;
   for (let i = 0; i < 300 && !back && d.phase !== 'wipe' && d.phase !== 'done'; i++) {
     const t = d.tank(); if (!t) break;
-    g.player.x = t.x + 4; g.player.z = t.z + 6; me.hp = me.maxHp;
+    g.player.x = t.x + 4; g.player.z = t.z + 6; me.hp = me.maxHp; g.S.mana = 9999;
     for (const p of d.party) { if (p.dead && !p.gone) g.people.revive(p); }
-    if (d.phase === 'fight' && !g.casting) { g.target = t; t.hp = Math.max(1, t.hp - 40); g.cast(0); }
+    if (d.phase === 'fight' && !g.casting) { g.target = t; t.hp = Math.max(1, t.hp - 150); g.cast(0); }
     if (d.mobs.some(m => m.foe === me)) turned = true;
     if (turned && !d.mobs.some(m => m.foe === me && m.state === 'fight')) back = true;
     await w(250);

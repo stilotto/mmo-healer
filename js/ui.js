@@ -3,6 +3,9 @@
 import { SPELLS, healEstimate, knows, SLOTS, SLOT_ICON, RARITY, RARITY_COLOR, bagSize, stats, xpNeed, itemScore, equipItem, sellItem, stock, price, buy, restock, restockCost, buyBag, bagCost } from './game.js';
 import { CLASSES } from './figure.js';
 import { mapShapes, WALL_R, ZONE, DUN } from './world.js';
+import { chat, chatHtml } from './chat.js';
+import { FAME, fameTier } from './memory.js';
+export { chat, chatHtml };
 
 const $ = id => document.getElementById(id);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
@@ -33,15 +36,10 @@ export function init(state, handlers) {
   bar.lastChild.id = 'lookbtn';
   $('bagx').onclick = toggleBag;
   chat('c-sys', `Welcome to Lanternrest, ${esc(S.name)}.`);
-  chat('c-sys', 'Tab picks a target. 1 casts Mend, 2 casts Renew.');
+  chat('c-sys', 'Tab picks a target. 1 casts Mend, 2 casts Renew. Enter opens the chat box; /help lists commands.');
   $('pframe').onclick = () => H.self();
 }
 
-export function chat(cls, text) {
-  const c = $('chat'); c.append(el('div', cls, esc(text)));
-  while (c.children.length > 40) c.firstChild.remove();
-}
-export function chatHtml(cls, html) { $('chat').append(el('div', cls, html)); }
 export function err(text) { const e = $('err'); e.textContent = text; e.style.opacity = 1; errT = 1.6; sfx('err'); }
 export function toast(text, color) { const e = $('toast'); e.textContent = text; e.style.color = color || ''; e.style.opacity = 1; toastT = 2.6; }
 export function zone(name) { $('zone').textContent = name; toast(name); }
@@ -117,7 +115,7 @@ export function drawBag() {
     bg.append(d);
   }
   const st = stats(S);
-  $('stats').innerHTML = `Level ${S.level} Healer · Power <b>${st.power}</b> · Mana <b>${st.maxMana}</b><br>Spirit <b>${st.spirit}</b> (${st.regen.toFixed(1)}/s) · Haste <b>${st.hasteRaw}%</b> · Healed <b>${Math.round(S.healed)}</b>`;
+  $('stats').innerHTML = `Level ${S.level} Healer · Power <b>${st.power}</b> · Mana <b>${st.maxMana}</b><br>Spirit <b>${st.spirit}</b> (${st.regen.toFixed(1)}/s) · Haste <b>${st.hasteRaw}%</b> · Healed <b>${Math.round(S.healed)}</b><br>Fame <b>${Math.floor(S.fame)}</b> (${FAME[fameTier(S)].name})${S.guild ? ` · &lt;${esc(S.guild)}&gt;` : ''}`;
   $('coins').textContent = S.coins + ' copper';
 }
 
@@ -139,7 +137,7 @@ export function update(dt, v) {
     $('tname').textContent = t.name; $('tname').style.color = CLASSES[t.cls].color; $('tport').textContent = t.level;
     setBar('thp', t.hp / t.maxHp, t.dead ? 'Dead' : `${Math.ceil(t.hp)} / ${t.maxHp}`);
     $('thp').style.background = t.hp < t.maxHp * 0.35 ? '#d83a2a' : '';
-    $('tsub').textContent = `${t.cls}${t.dead ? ' · Dead' : t.duel ? ' · Duelling' : t.state === 'hunt' ? ' · In combat' : t.resting ? ' · Resting' : ''}${t.hots.length ? ' · ❋ Renew' : ''} · ${Math.round(v.dist)} yd`;
+    $('tsub').textContent = `${t.cls}${t.dead ? ' · Dead' : t.duel ? ' · Duelling' : t.state === 'hunt' ? ' · In combat' : t.resting ? ' · Resting' : ''}${t.hots.length ? ' · ❋ Renew' : ''}${v.moodOf && v.moodOf(t) ? ' · ' + v.moodOf(t) : ''} · ${Math.round(v.dist)} yd`;
   }
   const cb = $('castbar');
   if (v.casting) { cb.style.visibility = 'visible'; cb.firstElementChild.style.width = (v.casting.t / v.casting.dur * 100) + '%'; cb.lastElementChild.textContent = v.casting.spell.name; }
@@ -150,6 +148,7 @@ export function update(dt, v) {
     const own = sp.cd && v.cds[sp.id] > v.T ? (v.cds[sp.id] - v.T) / sp.cd : 0;
     slots[i].querySelector('.cd').style.height = Math.max(own, v.gcd > 0 ? v.gcd / v.gcdMax : 0) * 100 + '%';
   });
+  fame();
   const need = xpNeed(S.level); $('xp').firstElementChild.style.width = (S.xp / need * 100) + '%'; $('xp').lastElementChild.textContent = `${S.xp} / ${need} XP`;
   if (errT > 0 && (errT -= dt) <= 0) $('err').style.opacity = 0;
   if (toastT > 0 && (toastT -= dt) <= 0) $('toast').style.opacity = 0;
@@ -164,6 +163,15 @@ export function update(dt, v) {
     f.e.style.display = ''; f.e.style.opacity = k < 0.6 ? 1 : (1 - k) / 0.4;
     f.e.style.transform = `translate(${p.x + drift}px,${p.y - rise}px) translate(-50%,-50%) scale(${pop * near})`;
   }
+}
+
+// Fame under the minimap: the name people call you and progress to the next.
+let fameLast = '';
+function fame() {
+  const i = fameTier(S), a = FAME[i].at, b = FAME[i + 1] ? FAME[i + 1].at : a, k = b > a ? (S.fame - a) / (b - a) : 1, key = i + ':' + Math.round(k * 50);
+  if (key === fameLast) return; fameLast = key;
+  $('famen').textContent = FAME[i].name; $('fameb').style.width = Math.min(100, k * 100) + '%';
+  $('fame').title = `Fame ${Math.floor(S.fame)}` + (FAME[i + 1] ? `. Next: ${FAME[i + 1].name} at ${b}` : '');
 }
 
 export function drawMap(me, yaw, people, target, corpse, mobs) {
