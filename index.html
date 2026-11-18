@@ -10,17 +10,17 @@
  "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
-  "./js/dungeon.js": "./js/dungeon.js?v=20261118120259",
-  "./js/figure.js": "./js/figure.js?v=20261118120259",
-  "./js/fx.js": "./js/fx.js?v=20261118120259",
-  "./js/game.js": "./js/game.js?v=20261118120259",
-  "./js/look.js": "./js/look.js?v=20261118120259",
-  "./js/mobs.js": "./js/mobs.js?v=20261118120259",
-  "./js/people.js": "./js/people.js?v=20261118120259",
-  "./js/player.js": "./js/player.js?v=20261118120259",
-  "./js/textures.js": "./js/textures.js?v=20261118120259",
-  "./js/ui.js": "./js/ui.js?v=20261118120259",
-  "./js/world.js": "./js/world.js?v=20261118120259"
+  "./js/dungeon.js": "./js/dungeon.js?v=20261118125003",
+  "./js/figure.js": "./js/figure.js?v=20261118125003",
+  "./js/fx.js": "./js/fx.js?v=20261118125003",
+  "./js/game.js": "./js/game.js?v=20261118125003",
+  "./js/look.js": "./js/look.js?v=20261118125003",
+  "./js/mobs.js": "./js/mobs.js?v=20261118125003",
+  "./js/people.js": "./js/people.js?v=20261118125003",
+  "./js/player.js": "./js/player.js?v=20261118125003",
+  "./js/textures.js": "./js/textures.js?v=20261118125003",
+  "./js/ui.js": "./js/ui.js?v=20261118125003",
+  "./js/world.js": "./js/world.js?v=20261118125003"
  }
 }</script>
 <style>
@@ -42,6 +42,25 @@ canvas#view{position:fixed;inset:0;width:100%;height:100%;display:block}
 .bar span{position:absolute;inset:0;text-align:center;font-size:9px;line-height:10px;text-shadow:0 0 2px #000}
 #pframe{left:8px}
 #tframe{left:226px;display:none}
+#pframe{cursor:pointer}#pframe.sel{border-color:#fff}
+#party{position:absolute;left:8px;top:84px;width:190px;display:flex;flex-direction:column;gap:3px}
+#party .ph{font:600 11px Cinzel,serif;color:var(--gold);text-shadow:0 1px 2px #000;height:13px}
+.pf{position:relative;height:30px;background:var(--panel);border:1px solid #3a3326;border-radius:4px;cursor:pointer;overflow:hidden}
+.pf.sel{border-color:#fff;box-shadow:0 0 0 1px #fff}
+.pf .fill{position:absolute;left:0;top:0;bottom:0;width:100%;background:#2f8f3a;transform-origin:left}
+.pf .inc{position:absolute;top:0;bottom:0;background:rgba(150,255,150,.45);transform-origin:left}
+.pf .wd{position:absolute;left:0;bottom:0;height:3px;background:#9ac8ff;transform-origin:left}
+.pf .t{position:absolute;left:6px;top:2px;right:6px;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-shadow:0 1px 2px #000}
+.pf .s{position:absolute;left:6px;bottom:2px;right:6px;font-size:10px;color:#ddd;text-shadow:0 1px 2px #000;display:flex;justify-content:space-between}
+.pf.dead{filter:grayscale(1) brightness(.7)}.pf.far{opacity:.5}
+.pf kbd{position:absolute;right:4px;top:2px;font:700 9px sans-serif;color:#bbb}
+#boss{position:absolute;left:50%;top:8px;transform:translateX(-50%);width:300px;display:none;text-align:center}
+#boss .bn{font:700 13px Cinzel,serif;color:#ffb040;text-shadow:0 1px 3px #000}
+#boss .bar{height:14px}#boss .bar i{background:#c0302a}
+#bcast{height:13px;margin:3px 30px 0;background:#000a;border:1px solid #ff7a2a;border-radius:3px;position:relative;visibility:hidden}
+#bcast i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(#ffb060,#d0401a);width:0}
+#bcast span{position:absolute;inset:0;font-size:10px;line-height:12px;font-weight:700;text-shadow:0 0 2px #000}
+.slot .lk{position:absolute;inset:0;background:rgba(0,0,0,.72);color:#aaa;font:700 10px sans-serif;display:grid;place-items:center}
 #tframe .port{background:#3a2a2a}
 #mini{position:absolute;right:8px;top:8px;width:132px;text-align:center}
 #mini canvas{width:132px;height:132px;border-radius:50%;border:2px solid var(--gold);background:#1a2418}
@@ -70,7 +89,7 @@ canvas#view{position:fixed;inset:0;width:100%;height:100%;display:block}
 #hint{position:absolute;bottom:128px;left:0;right:0;text-align:center;color:#ffe9a0;font-size:13px;text-shadow:0 1px 2px #000;pointer-events:none}
 #floats{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .fl{position:absolute;left:0;top:0;font:800 22px 'Nunito Sans',sans-serif;color:#5dff6a;-webkit-text-stroke:1px #062a0a;text-shadow:0 2px 3px rgba(0,0,0,.7);white-space:nowrap;will-change:transform,opacity}
-.fl.crit{font-size:30px;color:#c8ff4a}.fl.hit{color:#ffe14a;-webkit-text-stroke:1px #3a2a00;font-size:20px}.fl.dmg{color:#ff5a4a;-webkit-text-stroke:1px #3a0a06;font-size:18px}.fl.xp{color:#d0a8ff;-webkit-text-stroke:1px #2a0a4a;font-size:16px}
+.fl.crit{font-size:30px;color:#c8ff4a}.fl.hit{color:#ffe14a;-webkit-text-stroke:1px #3a2a00;font-size:20px}.fl.dmg{color:#ff5a4a;-webkit-text-stroke:1px #3a0a06;font-size:18px}.fl.dmg.big{font-size:28px;color:#ff3a2a}.fl.xp{color:#d0a8ff;-webkit-text-stroke:1px #2a0a4a;font-size:16px}
 #bag{position:absolute;right:8px;bottom:70px;width:292px;background:var(--panel);border:1px solid var(--gold);border-radius:6px;padding:8px;display:none}
 #bag h3{margin:0 0 4px;font:600 14px Cinzel,serif;color:var(--gold);display:flex;justify-content:space-between}
 #bag h3 b{cursor:pointer;color:#ccc}
@@ -99,10 +118,12 @@ canvas#view{position:fixed;inset:0;width:100%;height:100%;display:block}
   #bottom{left:auto;right:8px;transform:none;align-items:flex-end}
   .slot{width:54px;height:54px}
   #hint{bottom:150px}
+  #party{top:142px;width:150px}
   #mini,#mini canvas{width:92px}#mini canvas{height:92px}
 }
 @media (max-width:560px){
   .frame{width:150px}#tframe{left:164px}
+  #boss{width:200px;top:60px}
   #mini{top:62px}#mini,#mini canvas{width:84px}#mini canvas{height:84px}
   #bag{right:4px;left:4px;width:auto;bottom:74px}
   #castbar{width:180px}
@@ -116,8 +137,10 @@ canvas#view{position:fixed;inset:0;width:100%;height:100%;display:block}
 <canvas id="view"></canvas>
 <div id="hud">
   <div id="floats"></div>
+  <div id="party"><div class="ph" id="phead"></div></div>
+  <div id="boss"><div class="bn" id="bname"></div><div class="bar"><i id="bhp"></i><span id="bhpt"></span></div><div id="bcast"><i></i><span></span></div></div>
   <div class="frame" id="pframe"><div class="port">✚</div><div class="nm" id="pname"></div>
-    <div class="bar"><i id="php"></i><span id="phpt"></span></div><div class="bar mana"><i id="pmp"></i><span id="pmpt"></span></div></div>
+    <div class="bar"><i id="php"></i><span id="phpt"></span></div><div class="bar mana"><i id="pmp"></i><span id="pmpt"></span></div><div class="sub" id="psub"></div></div>
   <div class="frame" id="tframe"><div class="port" id="tport"></div><div class="nm" id="tname"></div>
     <div class="bar"><i id="thp"></i><span id="thpt"></span></div><div class="sub" id="tsub"></div></div>
   <div id="mini"><div id="zone">Lanternrest</div><canvas id="map" width="264" height="264"></canvas></div>
@@ -145,6 +168,6 @@ canvas#view{position:fixed;inset:0;width:100%;height:100%;display:block}
   <p class="keys"><b>WASD</b> move and turn · <b>Q/E</b> strafe · <b>right-drag</b> steer · <b>left-drag</b> or <b>arrow keys</b> look (up and down too) · <b>wheel</b> zoom (all the way in for first person, or <b>V</b>) · <b>Tab</b> next target · <b>F</b> most hurt · <b>1, 2</b> heal · <b>3</b> revive · <b>B</b> bag · <b>Space</b> jump · <b>X</b> mouse-look (the mouse steers, A and D strafe, Esc frees the cursor)</p>
   <a href="https://stilotto.github.io/">More games from Stilotto</a>
 </div></div>
-<script type="module" src="js/main.js?v=20261118120259"></script>
+<script type="module" src="js/main.js?v=20261118125003"></script>
 </body>
 </html>

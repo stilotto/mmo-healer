@@ -144,16 +144,21 @@ export class People {
   }
 
   // A monster hits a person.
-  hurt(p, dmg, by) {
+  hurt(p, dmg, by, big) {
     if (p.dead || p.fading) return;
     dmg = Math.max(1, Math.round(dmg * (p.armor || 1)));
-    p.hp -= dmg; p.hurtAt = this.t; p.resting = false; this.ctx.float(p, '-' + dmg, 'dmg');
+    if (p.ward) {                                   // the healer's Ward soaks it up first
+      const soak = Math.min(p.ward.amt, dmg); p.ward.amt -= soak; dmg -= soak;
+      if (p.ward.amt <= 0) p.ward = null;
+      if (!dmg) { this.ctx.float(p, 'Absorbed', 'xp'); return; }
+    }
+    p.hp -= dmg; p.hurtAt = this.t; p.resting = false; this.ctx.float(p, '-' + dmg, big ? 'dmg big' : 'dmg');
     if (p.hp <= 0) return this.kill(p, by);
     if (p.state !== 'hunt' || !p.mob || p.mob.state === 'dead') { p.mob = by; p.state = 'hunt'; p.path = null; p.stuck = 0; }
     if (p.hp < p.maxHp * 0.25 && !p.cried && this.near(p)) { p.cried = true; this.say(p, pick(['HELP', 'heals!!', 'I am going down', 'so dead'])); }
   }
   kill(p, by) {
-    p.hp = 0; p.dead = true; p.state = 'dead'; p.deadT = 80; p.hots = []; p.mob = null; p.path = null; p.cried = false;
+    p.hp = 0; p.dead = true; p.state = 'dead'; p.deadT = 80; p.hots = []; p.dots = []; p.ward = null; p.mob = null; p.path = null; p.cried = false;
     if (p.zone === 'dungeon') p.deadT = 1e9;
     if (this.ctx.zone() === p.zone) this.ctx.chat('c-yell', `${p.name} has been slain by ${by.name}.`);
   }
@@ -215,6 +220,11 @@ export class People {
       if (p.dead) {
         if ((p.deadT -= dt) <= 0 && !p.fading) { p.fading = true; if (this.near(p)) ctx.chat('c-sys', `${p.name} releases their spirit.`); }
         animate(p.fig, 'dead', t); g.position.set(p.x, 0, p.z); p.plate.draw(0, ctx.target() === p, true); continue;
+      }
+      if (p.ward && (p.ward.t -= dt) <= 0) p.ward = null;
+      if (p.dots) for (let h = p.dots.length - 1; h >= 0; h--) {   // bleeds and burns
+        const d = p.dots[h];
+        if ((d.t -= dt) <= 0) { d.t += d.every; d.left--; if (d.left <= 0) p.dots.splice(h, 1); this.hurt(p, d.tick, d.by); if (p.dead) break; }
       }
       for (let h = p.hots.length - 1; h >= 0; h--) {
         const hot = p.hots[h];

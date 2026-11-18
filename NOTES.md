@@ -149,6 +149,24 @@ they toss you an item or a tip. Progress saves in localStorage (`mmoHealer1`).
 - The import map also maps `three/addons/`; tests serve the whole three
   package from `THREE_DIR`.
 
+## The healer's hands (sprint 5)
+
+- `meUnit` in `main.js` is the healer as a unit (F1 targets it). It has
+  health from `stats().maxHp` but nothing damages it yet (sprint 6).
+  Healing yourself gives no experience.
+- Ward: `p.ward = { amt, t }`, soaked up first in `people.hurt`. A target
+  cannot be warded again for 12 seconds (`wardLock`, keyed by unit).
+- Damage over time: `p.dots` (bleeds), ticked in `people.update`.
+- Frames: `ui.js frames()` takes the list from `main.js` (dungeon party, or
+  nearby hurt and dead sorted by need) and keeps slots stable for a second
+  at a time. `UI.frameUnits()` is what F2 to F6 pick from.
+- Boss frame: `dungeon.bossInfo()` while Cinderjaw is fighting.
+- Spells carry `lvl`; `G.knows(S, sp)` gates them. A level-up announces
+  newly learned spells.
+- `tools/sprint5.mjs` checks frames, keys, Flash, Ward, drinking, bleeds and
+  the boss frame. The headless browser is slow, so it retries casts past the
+  global cooldown and waits on `game.casting`.
+
 ## Things worth knowing
 
 - Coordinates: x east, z south, y up, one unit about a yard. The wall radius

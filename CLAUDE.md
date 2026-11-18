@@ -29,8 +29,8 @@ know from the big MMOs: unit frames, action bar, tab targeting, cast bar.
 - Headless check: `THREE_DIR=<node_modules/three> node tools/shot.mjs <out-dir> [phone]`
   plays a few heals and saves screenshots. Errors should be only the blocked font.
   `tools/sprint1.mjs` (target keys, mouse-look, shop), `tools/sprint2.mjs`
-  (Greenhollow, monsters, Revive) and `tools/sprint3.mjs` (the dungeon run)
-  work the same way. `?speed=N` runs the world faster for tests.
+  (Greenhollow, monsters, Revive), `tools/sprint3.mjs` (the dungeon run) and
+  `tools/sprint5.mjs` (frames, Flash, Ward, drink, boss frame) work the same way. `?speed=N` runs the world faster for tests.
   `tools/looks.mjs` renders the `?look=` samples; `tools/figures.mjs` lines up
   every calling for checking the people models.
 - `js/game.js` is the rules (no DOM, no three.js).

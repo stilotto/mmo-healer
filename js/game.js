@@ -8,7 +8,12 @@ export const SPELLS = [
     desc: 'Heals over 9 seconds. Instant.' },
   { id: 'revive', name: 'Revive', icon: '☥', key: '3', cast: 5.0, mana: 45, range: 30, color: '#8a6a1a',
     desc: 'Brings a dead player back to life.' },
+  { id: 'flash', name: 'Flash', icon: '✦', key: '4', cast: 1.0, mana: 32, range: 40, color: '#7a6a1a', lvl: 3,
+    desc: 'A quick, costly heal for emergencies.' },
+  { id: 'ward', name: 'Ward', icon: '◈', key: '5', cast: 0, mana: 28, range: 40, color: '#3a4a8a', lvl: 5,
+    desc: 'A shield that soaks up damage for 15 seconds. The same person cannot be warded again for 12 seconds.' },
 ];
+export const WARD_TIME = 15, WARD_LOCK = 12;
 export const GCD = 1.2;
 export const SLOTS = ['Staff', 'Hood', 'Robe', 'Gloves', 'Boots', 'Ring', 'Trinket'];
 export const SLOT_ICON = { Staff: '🪄', Hood: '🎓', Robe: '🥋', Gloves: '🧤', Boots: '🥾', Ring: '💍', Trinket: '🔮' };
@@ -55,10 +60,11 @@ export function gcdTime(S) { return GCD * (1 - stats(S).haste); }
 // How much a spell heals. Mend returns one amount; Renew a tick amount.
 export function healAmount(S, sp) {
   const p = stats(S).power;
-  if (sp.id === 'mend') {
-    const crit = Math.random() < 0.12;
-    return { amount: Math.round((30 + p * 2.2) * (0.92 + Math.random() * 0.16) * (crit ? 1.6 : 1)), crit };
+  if (sp.id === 'mend' || sp.id === 'flash') {
+    const crit = Math.random() < 0.12, k = sp.id === 'flash' ? [22, 1.6] : [30, 2.2];
+    return { amount: Math.round((k[0] + p * k[1]) * (0.92 + Math.random() * 0.16) * (crit ? 1.6 : 1)), crit };
   }
+  if (sp.id === 'ward') return { absorb: Math.round(25 + p * 2.4) };
   return { tick: Math.round((20 + p * 2.0) / 6), ticks: 6, every: 1.5 };
 }
 
@@ -142,3 +148,10 @@ export function buyBag(S) {
   if (S.coins < c) return 'Not enough copper';
   S.coins -= c; S.bagSize = bagSize(S) + 7; return '';
 }
+
+// The average a spell will heal, for the "incoming heal" segment on bars.
+export function healEstimate(S, sp) {
+  const p = stats(S).power;
+  return sp.id === 'mend' ? 30 + p * 2.2 : sp.id === 'flash' ? 22 + p * 1.6 : 0;
+}
+export const knows = (S, sp) => !sp.lvl || S.level >= sp.lvl;

@@ -101,6 +101,12 @@ export class Dungeon {
     const alive = this.party.filter(p => !p.dead && !p.gone); if (!alive.length) return;
     this.ctx.chat('c-party', `[Party] ${(who || pick(alive)).name}: ${pick(SAY[key])}`);
   }
+  // For the boss frame: the boss while it is in a fight, and its breath cast.
+  bossInfo() {
+    const b = this.mobs.find(m => m.def.boss);
+    if (!this.active || !b || b.state !== 'fight') return null;
+    return { name: b.name, hp: b.hp, maxHp: b.maxHp, casting: this.breath > 0 ? { name: 'Flame Breath', k: 1 - this.breath / 2.2 } : null };
+  }
   noticed(p) { if (!this.seen) { this.seen = true; setTimeout(() => this.active && this.party_say('noticed'), 1200); } }
   alive() { return this.party.filter(p => !p.dead && !p.gone); }
   tank() { const a = this.alive(); return a.find(p => p.tank) || a[0]; }
@@ -111,7 +117,14 @@ export class Dungeon {
     this.aggro(m.room, by); m.attackers.add(by);
     m.hp -= dmg; this.ctx.float(m, String(dmg), 'hit');
     if (m.def.boss && !m.mad && m.hp < m.maxHp * 0.25) { m.mad = true; m.dmg *= 1.3; this.ctx.chat('c-yell', 'Cinderjaw goes into a frenzy!'); }
-    if (m.hp <= 0) { m.hp = 0; m.state = 'dead'; m.deadT = 6; return true; }
+    if (m.hp <= 0) {
+      m.hp = 0; m.state = 'dead'; m.deadT = 6;
+      if (m.def.model === 'slime') {           // cinder slimes burst when they die
+        this.ctx.boom(m.x, m.z);
+        for (const p of this.alive()) if (Math.hypot(p.x - m.x, p.z - m.z) < 4.5) this.ctx.people.hurt(p, Math.round(p.maxHp * 0.12 / (p.armor || 1)), m);
+      }
+      return true;
+    }
     return false;
   }
   aggro(room, who) { for (const m of this.mobs) if (m.room === room && m.state === 'idle') { m.state = 'fight'; m.foe = this.tank() || who; m.swing = rnd(0.6, 1.6); } }
@@ -146,7 +159,13 @@ export class Dungeon {
           else {
             anim = 'attack';
             if ((m.swing -= dt) <= 0) {
-              m.swing = rnd(1.5, 2.1); folk.hurt(f, Math.round(m.dmg * rnd(0.8, 1.25)), m);
+              m.swing = rnd(1.5, 2.1);
+              const spike = f.tank && Math.random() < 0.15;          // a crushing blow on the tank
+              folk.hurt(f, Math.round(m.dmg * rnd(0.8, 1.25) * (spike ? 2.2 : 1)), m, spike);
+              if (m.def.model === 'wolf' && !f.dead && Math.random() < (m.def.boss ? 0.35 : 0.25)) {   // a bleeding bite
+                f.dots = (f.dots || []).filter(d => d.id !== 'bleed');
+                f.dots.push({ id: 'bleed', tick: Math.max(2, Math.round(f.maxHp * 0.035)), left: 6, every: 1.5, t: 1.5, by: m });
+              }
               if (Math.random() < 0.12) { const o = alive.filter(p => p !== f); if (o.length) m.foe = pick(o); }   // someone pulled aggro
               else if (Math.random() < 0.5) m.foe = this.tank();
             }

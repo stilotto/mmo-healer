@@ -1,6 +1,6 @@
 // The heads-up display: unit frames, action bar, cast bar, chat, minimap,
 // floating numbers, the bag, and the few sounds (all made in code).
-import { SPELLS, SLOTS, SLOT_ICON, RARITY, RARITY_COLOR, bagSize, stats, xpNeed, itemScore, equipItem, sellItem, stock, price, buy, restock, restockCost, buyBag, bagCost } from './game.js';
+import { SPELLS, healEstimate, knows, SLOTS, SLOT_ICON, RARITY, RARITY_COLOR, bagSize, stats, xpNeed, itemScore, equipItem, sellItem, stock, price, buy, restock, restockCost, buyBag, bagCost } from './game.js';
 import { CLASSES } from './figure.js';
 import { mapShapes, WALL_R, ZONE, DUN } from './world.js';
 
@@ -18,14 +18,15 @@ export function init(state, handlers) {
     const s = el('div', 'slot', `${sp.icon}<kbd>${sp.key}</kbd><div class="cd"></div>`);
     s.style.background = `radial-gradient(circle at 40% 35%, ${sp.color}, #101418)`;
     s.onclick = () => H.cast(i);
+    if (sp.lvl) s.append(el('div', 'lk', 'Lv ' + sp.lvl));
     s.onpointerenter = e => tip(`<div class="n">${sp.name}</div><div class="m">${sp.mana} mana · ${sp.cast ? sp.cast + ' sec cast' : 'Instant'} · ${sp.range} yd</div>${sp.desc}`, e);
     s.onpointerleave = () => tip();
     bar.append(s); slots.push(s);
   });
-  for (const lv of [5, 10]) bar.append(el('div', 'slot locked', `Level<br>${lv}`));
   const mk = (txt, fn, title) => { const b = el('div', 'slot small', txt); b.title = title; b.onclick = fn; bar.append(b); };
   mk('Tab', () => H.tab(), 'Next target (Tab, Shift+Tab goes back)');
   mk('Hurt', () => H.hurt(), 'Target the most hurt person nearby (F)');
+  mk('Drink', () => H.drink(), 'Sit and drink to restore mana (Z). Moving or casting stands you up.');
   mk('Bag', toggleBag, 'Character and bag (B)');
   mk('View', () => H.view(), 'First or third person (V)');
   mk('Mouse', () => H.look(), 'Mouse-look on or off (X). Esc frees the cursor.');
@@ -33,6 +34,7 @@ export function init(state, handlers) {
   $('bagx').onclick = toggleBag;
   chat('c-sys', `Welcome to Lanternrest, ${esc(S.name)}.`);
   chat('c-sys', 'Tab picks a target. 1 casts Mend, 2 casts Renew.');
+  $('pframe').onclick = () => H.self();
 }
 
 export function chat(cls, text) {
@@ -53,7 +55,7 @@ export function float(pos, text, cls) {
   if (floats.length > 60) return;
   const e = el('div', 'fl ' + (cls || ''), text); $('floats').append(e);
   const side = Math.random() < 0.5 ? -1 : 1;
-  floats.push({ e, pos, t: 0, dx: side * (14 + Math.random() * 36), life: cls === 'xp' ? 1.6 : cls === 'crit' ? 1.5 : 1.2, big: cls === 'crit' });
+  floats.push({ e, pos, t: 0, dx: side * (14 + Math.random() * 36), life: cls === 'xp' ? 1.6 : cls === 'crit' ? 1.5 : 1.2, big: cls === 'crit' || cls === 'dmg big' });
 }
 
 function tip(html, ev) {
@@ -124,7 +126,11 @@ const setBar = (id, frac, text) => { $(id).style.transform = `scaleX(${Math.max(
 // Called every frame with what the HUD needs to show.
 export function update(dt, v) {
   const st = v.stats;
-  setBar('php', 1, `${st.maxHp} / ${st.maxHp}`);
+  setBar('php', v.me.hp / v.me.maxHp, `${Math.ceil(v.me.hp)} / ${v.me.maxHp}`);
+  $('pframe').classList.toggle('sel', v.target === v.me);
+  const ps = v.drinking ? 'Drinking' + (v.me.hots.length ? ' · ❋' : '') : (v.me.hots.length ? '❋ Renew' : '') + (v.me.ward ? ' ◈' : '');
+  if ($('psub').textContent !== ps) $('psub').textContent = ps;
+  frames(v); boss(v);
   setBar('pmp', S.mana / st.maxMana, `${Math.floor(S.mana)} / ${st.maxMana}`);
   $('pname').textContent = `${S.name}  ·  ${S.level}`;
   const t = v.target, tf = $('tframe');
@@ -139,8 +145,9 @@ export function update(dt, v) {
   if (v.casting) { cb.style.visibility = 'visible'; cb.firstElementChild.style.width = (v.casting.t / v.casting.dur * 100) + '%'; cb.lastElementChild.textContent = v.casting.spell.name; }
   else cb.style.visibility = 'hidden';
   SPELLS.forEach((sp, i) => {
+    const lk = slots[i].querySelector('.lk'); if (lk) lk.style.display = knows(S, sp) ? 'none' : '';
     slots[i].classList.toggle('dim', !t || S.mana < sp.mana || v.dist > sp.range);
-    slots[i].lastElementChild.style.height = (v.gcd > 0 ? v.gcd / v.gcdMax * 100 : 0) + '%';
+    slots[i].querySelector('.cd').style.height = (v.gcd > 0 ? v.gcd / v.gcdMax * 100 : 0) + '%';
   });
   const need = xpNeed(S.level); $('xp').firstElementChild.style.width = (S.xp / need * 100) + '%'; $('xp').lastElementChild.textContent = `${S.xp} / ${need} XP`;
   if (errT > 0 && (errT -= dt) <= 0) $('err').style.opacity = 0;
@@ -200,4 +207,51 @@ export function sfx(kind) {
       o.connect(g).connect(ac.destination); o.start(t); o.stop(t + len + 0.02);
     }
   } catch (e) {}
+}
+
+// Unit frames: the dungeon party when inside, otherwise the people nearby who
+// most need you. Click a frame (or F2 to F6) to target. Slots are kept stable
+// so frames do not jump around while you aim.
+const rows = [];
+let shown = [], pickT = 0;
+export const frameUnits = () => shown;
+function frames(v) {
+  const box = $('party');
+  if ((pickT -= v.dt) <= 0 || v.list !== frames.list) {
+    pickT = 1; frames.list = v.list;
+    const want = v.list.slice(0, 5), keep = shown.filter(u => want.includes(u));
+    shown = [...keep, ...want.filter(u => !keep.includes(u))].slice(0, 5);
+    if (v.party) shown = v.list.slice(0, 5);
+  }
+  $('phead').textContent = shown.length ? v.party ? 'Their party (not yours)' : 'Nearby' : '';
+  while (rows.length < 5) {
+    const r = el('div', 'pf', '<div class="fill"></div><div class="inc"></div><div class="wd"></div><div class="t"></div><div class="s"><span></span><span></span></div><kbd></kbd>');
+    const i = rows.length; r.onclick = () => H.pick(i); r.querySelector('kbd').textContent = 'F' + (i + 2); box.append(r);
+    rows.push({ r, fill: r.children[0], inc: r.children[1], wd: r.children[2], t: r.children[3], a: r.children[4].children[0], b: r.children[4].children[1] });
+  }
+  rows.forEach((w, i) => {
+    const u = shown[i];
+    w.r.style.display = u ? '' : 'none'; if (!u) return;
+    const f = u.dead ? 0 : u.hp / u.maxHp;
+    w.fill.style.transform = `scaleX(${f})`;
+    w.fill.style.background = f < 0.35 ? '#c0302a' : CLASSES[u.cls].color; w.fill.style.opacity = f < 0.35 ? 1 : 0.62;   // class-coloured, red when low
+    let inc = 0;
+    if (v.casting && v.casting.target === u) inc = Math.min(1 - f, healEstimate(S, v.casting.spell) / u.maxHp);
+    w.inc.style.left = (f * 100) + '%'; w.inc.style.width = (inc * 100) + '%';
+    w.wd.style.width = u.ward ? Math.min(100, u.ward.amt / u.maxHp * 100) + '%' : '0';
+    if (w.t.textContent !== u.name) w.t.textContent = u.name;
+    const icons = (u.hots.length ? '❋' : '') + (u.ward ? '◈' : '') + (u.dots && u.dots.length ? '<b style="color:#ff5a4a">●</b>' : '');
+    if (w.a.innerHTML !== icons) w.a.innerHTML = icons;
+    const txt = u.dead ? 'Dead' : Math.round(f * 100) + '%'; if (w.b.textContent !== txt) w.b.textContent = txt;
+    w.r.classList.toggle('sel', v.target === u); w.r.classList.toggle('dead', !!u.dead); w.r.classList.toggle('far', v.distOf(u) > 40);
+  });
+}
+function boss(v) {
+  const b = v.boss, box = $('boss');
+  box.style.display = b ? 'block' : 'none'; if (!b) return;
+  if ($('bname').textContent !== b.name) $('bname').textContent = b.name;
+  setBar('bhp', b.hp / b.maxHp, Math.round(b.hp / b.maxHp * 100) + '%');
+  const c = $('bcast');
+  c.style.visibility = b.casting ? 'visible' : 'hidden';
+  if (b.casting) { c.firstElementChild.style.width = (b.casting.k * 100) + '%'; c.lastElementChild.textContent = b.casting.name; }
 }

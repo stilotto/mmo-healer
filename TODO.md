@@ -85,12 +85,15 @@ is weakest. Sprints 4 to 8 are the game; 9 onward is more of it.
    stone dungeon, frame-rate safety net, sparkles for spells, fires and
    portals. Owner checked the frame rate on the Chromebook: smooth, no
    step-down.
-5. **The healer's hands.** Health-bar frames down the left edge (the
-   dungeon party inside, the five most hurt nearby outside), click or F1 to
-   F5 to target, self-target key. Flash (fast, costly) at level 3 and Ward
-   (a shield) at 5, filling the locked slots. Sit to drink. Damage with
-   shapes in Emberdeep: tank spikes, a bleed, group damage. A cast bar for
-   Flame Breath.
+5. **The healer's hands: built.** Frames down the left (Emberdeep's party
+   inside; otherwise the five nearby who most need you), class-coloured,
+   with Renew, Ward and bleed icons and an incoming-heal segment. Click or
+   F2 to F6 to target; F1 or a click on your own frame targets yourself.
+   Flash (key 4, level 3) and Ward (key 5, level 5), locked on the bar until
+   learned. Drink (Z or the Drink button): about 12 seconds from empty.
+   Emberdeep damage shapes: crushing blows on the tank, bleeding bites from
+   hounds and Cinderjaw, Cinder Slimes that burst when they die. A boss
+   frame with Cinderjaw's Flame Breath cast bar.
 6. **They bite back.** The agreed item above: healing draws threat from
    whatever is fighting your target. The healer has real health, can die,
    and runs back as a ghost to the camp or dungeon door. Fade (drop threat)
