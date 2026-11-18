@@ -43,13 +43,29 @@ Loot drops are key to the fun.
   fix it in the normal flow of work, without rushing or alarm. (Owner, sprint 4.)
 - They talk a change through first. `TODO.md` is the ledger: build on a go.
 
-## Where things stand (first build)
+## Where things stand (end of the first long session)
 
-The hub city, Lanternrest, is playable. About 22 to 34 simulated players
-wander between the inn, bank, auction hall, guild hall, stalls and fountain;
-pair off to duel in the ring; train on dummies; arrive hurt from the three
-portals; and come and go by airship. Healing them gives XP, and now and then
-they toss you an item or a tip. Progress saves in localStorage (`mmoHealer1`).
+Sprints 1 to 6 in `TODO.md` are built and on `main`:
+- Lanternrest (the hub), Greenhollow (the questing zone through the north
+  gate) and Emberdeep (a dungeon through the orange portal), all in the
+  Storybook look the owner chose.
+- About 60 simulated players: town life, questing, dying, a dungeon party.
+- Six spells: Mend, Renew, Revive, Flash (level 3), Ward (level 5), Fade
+  (level 2). Unit frames, boss frame, drinking, threat, healer death and
+  the ghost run.
+- XP, levels, loot in four rarities, seven gear slots, a vendor (Pim).
+- The owner has played it on their Chromebook: reached level 2, the frame
+  rate is smooth with full effects (no step-down).
+
+Next, in order:
+1. Sprint 7, They remember (a saved roster of people who remember you).
+2. Undecided: the chat box and slash commands ("Agreed, not yet built" in
+   `TODO.md`) go either into sprint 7 or as a small sprint first. Ask the
+   owner.
+3. Sprint 8, Loot that matters, now including the paper doll.
+Nothing has had a hands-on balance pass beyond the owner's first play.
+
+`fable notes.md` holds the longer-term plan and opinions it came from.
 
 ## How the pieces fit
 
@@ -105,7 +121,7 @@ they toss you an item or a tip. Progress saves in localStorage (`mmoHealer1`).
   healer tinted the whole view. Keep portals flat against walls.
 - `tools/sprint3.mjs` plays a run with no healer, then one with healing.
 
-## The look (sprint 4, in progress)
+## The look (sprint 4)
 
 - Owner's choice: **Storybook throughout** (golden hour, warm low sun, soft
   shadows, ACES tone mapping, a gentle bloom on lights). It is the default;

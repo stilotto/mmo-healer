@@ -120,6 +120,12 @@ is weakest. Sprints 4 to 8 are the game; 9 onward is more of it.
    up by walking over them. Need or greed rolls you can crash. Rare and
    above carry an effect that changes play. Gear shows on the character.
    A boss uniques checklist.
+   Paper doll (owner, after sprint 6): the character window shows the
+   healer in 3D in the middle, slowly turning (drag to spin). Slots around
+   the figure in the genre's usual layout: head, robe, trinket on the left;
+   gloves, boots, ring on the right; staff below. Hovering a bag item
+   previews it on the figure. Stats beside it (power, spirit, mana regen,
+   haste, average item level). Slot borders in rarity colours.
 9. **The clock.** An events board by the fountain and a tracker under the
    minimap: parties forming, Old Tusk hunts, duelling tournaments, raid
    pulls. Events run whether you go or not, and report how they went.
