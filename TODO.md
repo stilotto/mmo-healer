@@ -181,6 +181,10 @@ figures (sprint 4).
 
 ## Open (ideas, not yet placed)
 
+- A real graveyard: ghosts rise in a small Greenhollow churchyard (and one
+  near Lanternrest) instead of at the quest camp or fountain, with a spirit
+  keeper figure, headstones and a soft light. Maybe the keeper offers to
+  bring you back on the spot for a cost (lost durability or a debuff).
 - A rival healer who runs with a party properly and resents you (from the
   sprint 7 idea, not built).
 - `tools/sprint6.mjs`: the Emberdeep check (tank takes a monster back)
