@@ -143,6 +143,36 @@ is weakest. Sprints 4 to 8 are the game; 9 onward is more of it.
 12. **More world.** Working airship to a second zone, a second dungeon,
     item sets, guild perks, working inn, bank and auction hall.
 
+## Agreed after sprint 8 (owner), order not yet set
+
+Proposed order: the pond next (small), then talents, then the clock
+(sprint 9 above) and the rest; the stats tab later. Confirm with the owner.
+
+- **The pond (small sprint).** The Greenhollow pond is solid today: you
+  walk round it. Make it water.
+  - Wading in the shallow ring: a little slower, figure sunk to the knees,
+    splashes as you move.
+  - Swimming in the deep middle: sunk to the shoulders, slow, no casting
+    (the genre's usual rule). Monsters do not follow you in.
+  - People fish: a few of the roster sit on the bank with rods and chat.
+  - The healer fishes: stand at the edge, cast, watch the float, click
+    when it dips. Catches: fish that restore mana like a drink or sell to
+    Pim, now and then an odd item, and a rare named fish people gossip
+    about. A side activity; healing stays the game.
+  - Fix while there: a dark blue triangle drawn on the pond surface (seen
+    in the owner's screenshot, near the top left of the water).
+- **Talent tree.** Three sections (owner). Talents can unlock spells,
+  improve existing ones, or do other creative things; propose the ideas
+  when the sprint starts. First sketch, not agreed: Mending (direct heals),
+  Grace (heals over time and shields), Shadow (staying alive: threat, Fade,
+  the ghost run); a point per level from level 3; free respec at first,
+  then a coin cost. Decide with the owner whether Circle and Cleanse
+  (planned for the raid, sprint 10) come from talents or the raid.
+- **Stats tab (own sprint, later).** A tab in the character window with
+  lifetime numbers: total healed (dropped from the window in sprint 8, so
+  bring it back), saves, revives, bosses killed, people met, friends,
+  grudges, uniques found, deaths, time played.
+
 Groundwork to fold into the sprints as needed: a Node balance sim with a
 scripted healer on real mana (sprint 5), the save version number (done in
 sprint 7), splitting `people.js` per zone (before sprint 9), cheaper

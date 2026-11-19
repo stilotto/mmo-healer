@@ -63,7 +63,11 @@ Sprints 1 to 8 in `TODO.md` are built and on `main`:
 - Sprint 8: loot in the world, Need or Greed, item effects, boss uniques,
   gear on the figure and the paper doll.
 
-Next: sprint 9, The clock. Wait for the owner's go.
+Next: agreed after sprint 8 (see "Agreed after sprint 8" in `TODO.md`): the
+pond (wading, swimming, fishing), a three-section talent tree, and later a
+stats tab. The order is only proposed (pond, talents, then sprint 9, The
+clock); confirm it with the owner, then wait for their go.
+The owner liked the paper doll.
 Nothing has had a hands-on balance pass beyond the owner's first play.
 
 `fable notes.md` holds the longer-term plan and opinions it came from.
