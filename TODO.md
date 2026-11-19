@@ -145,7 +145,7 @@ is weakest. Sprints 4 to 8 are the game; 9 onward is more of it.
 
 ## Agreed after sprint 8 (owner), order not yet set
 
-Proposed order: the pond (built), then talents, then the clock
+Proposed order: the pond (built), talents (built), then the clock
 (sprint 9 above) and the rest; the stats tab later. Confirm with the owner.
 
 - **The pond: built.** The Greenhollow pond is water. Wading in the
@@ -162,13 +162,23 @@ Proposed order: the pond (built), then talents, then the clock
   was a fir's shadow on the water; water no longer takes shadows.
   Water is a system now: `addWater` in `js/water.js` makes any circle or
   rectangle of water with all of the above.
-- **Talent tree.** Three sections (owner). Talents can unlock spells,
-  improve existing ones, or do other creative things; propose the ideas
-  when the sprint starts. First sketch, not agreed: Mending (direct heals),
-  Grace (heals over time and shields), Shadow (staying alive: threat, Fade,
-  the ghost run); a point per level from level 3; free respec at first,
-  then a coin cost. Decide with the owner whether Circle and Cleanse
-  (planned for the raid, sprint 10) come from talents or the raid.
+- **Talent tree: built.** A point a level from level 3; each row of a
+  section opens after 3 points in it (the capstone needs 6); free respec.
+  N or Talents in the character window. Mending: Quick Hands (3, Mend
+  0.15 s faster each), Steady Light (2, +5% crit on Mend and Flash),
+  Overflow (Mend overhealing becomes a small heal over time), capstone
+  Circle (key 7: heals the target and everyone within 8 yards). Grace:
+  Lasting Renew (2, +1 tick each), Thick Ward (3, +10% each), Deep Well
+  (3, +6% mana regen each, owner's ask), Quickening (Renew below 30% heals
+  at once), capstone Cleanse (key 8: removes bleeds and burns). Shadow:
+  Quiet Hands (3, -10% threat each), Swift Spirit (ghost 30% faster),
+  Waterborne (full speed in water), Calm Mind (mana regen +50% after 4 s
+  without casting, owner's ask), Last Breath (once in 2 minutes a killing
+  blow leaves you at 1 and Fades you), capstone Second Wind (once in 10
+  minutes rise where you fell). Circle and Cleanse come from talents
+  (owner), so the raid sprint can use them.
+  Also asked for here: F (the Hurt button) targets the most hurt person in
+  spell range (40 yards), the healer included.
 - **Stats tab (own sprint, later).** A tab in the character window with
   lifetime numbers: total healed (dropped from the window in sprint 8, so
   bring it back), saves, revives, bosses killed, people met, friends,

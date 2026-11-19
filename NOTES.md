@@ -66,10 +66,12 @@ Sprints 1 to 8 in `TODO.md` are built and on `main`:
 - The pond (after sprint 8): wading, swimming, fishing, and water as a
   reusable system.
 
-Next: agreed after sprint 8 (see "Agreed after sprint 8" in `TODO.md`): a
-three-section talent tree, and later a stats tab. The order is only
-proposed (talents, then sprint 9, The clock); confirm it with the owner,
-then wait for their go.
+- Talents: three sections (Mending, Grace, Shadow), Circle and Cleanse.
+
+Next: proposed only: sprint 9 (The clock), the stats tab later, and the
+open ideas in `TODO.md` (graveyard, rival healer). Confirm with the owner,
+then wait for their go. On a Chromebook, F1 to F6 need Search plus the top
+row (or the "top-row keys as function keys" setting); the owner knows.
 The owner liked the paper doll.
 Nothing has had a hands-on balance pass beyond the owner's first play.
 
@@ -296,6 +298,24 @@ Nothing has had a hands-on balance pass beyond the owner's first play.
   `S.fishCaught` and `S.glimmer` are counted for the stats tab later.
   Landing Old Glimmerfin calls `social.fished` (fame 3, a `fish` deed).
 - `tools/pond.mjs` checks all of it.
+
+## Talents
+
+- Rules in `game.js`: `TREES` (each talent has `tier`, `max`, `desc(rank)`),
+  `rank(S, id)`, `pointsFree`, `cantLearn`, `learn`, `resetTalents`;
+  `S.talents` is `{ id: rank }`. Points: level minus 2. `TIER_COST` 3.
+- Spells with `talent` (Circle, Cleanse) are known only once learned
+  (`knows`); their bar slots stay hidden until then. Keys 7 and 8.
+- Where each talent acts: `castTime`, `healAmount`, `stats` (Deep Well) in
+  `game.js`; `addThreat` (Quiet Hands), `land` (Overflow as an `overflow`
+  hot, Quickening, Circle, Cleanse), the mana line (Calm Mind, using
+  `lastCast`), `hurtMe` (Last Breath, `cds.breath`), `release` (Swift
+  Spirit), `secondWind` (`cds.wind`, the death panel's second button) in
+  `main.js`; `player.waterborne` in `player.js`. `fadeAway()` is Fade
+  without the cost, shared with Last Breath.
+- `ui.js`: `toggleTalents`, `drawTalents`; the window is `#talents`.
+- `hurtTarget` (F) includes `meUnit` and uses 40 yards.
+- `tools/talents.mjs` checks it all.
 
 ## Things worth knowing
 

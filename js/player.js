@@ -92,7 +92,7 @@ export class Player {
     const m = Math.hypot(f, s);
     this.moving = m > 0.15 || this.y > 0;
     if (m > 0.15) {
-      const wet = this.water === 'swim' ? SWIM_SPEED : this.water === 'wade' && this.y === 0 ? WADE_SPEED : 1;
+      const wet = this.waterborne ? 1 : this.water === 'swim' ? SWIM_SPEED : this.water === 'wade' && this.y === 0 ? WADE_SPEED : 1;
       const sp = (f < -0.1 ? 4.2 : 7) * wet * (this.speedMul || 1) * (this.gearSpeed || 1) * Math.min(1, m) / m * dt;
       const sn = Math.sin(this.yaw), cs = Math.cos(this.yaw);
       this.x += (sn * f + cs * s) * sp; this.z += (cs * f - sn * s) * sp;

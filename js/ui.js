@@ -1,6 +1,6 @@
 // The heads-up display: unit frames, action bar, cast bar, chat, minimap,
 // floating numbers, the bag, and the few sounds (all made in code).
-import { SPELLS, healEstimate, knows, SLOTS, SLOT_ICON, RARITY, RARITY_COLOR, bagSize, stats, xpNeed, itemScore, equipItem, sellItem, stock, price, buy, restock, restockCost, buyBag, bagCost, EFFECTS, UNIQUES, avgIlvl } from './game.js';
+import { SPELLS, healEstimate, knows, SLOTS, TREES, TIER_COST, rank, cantLearn, learn, resetTalents, pointsFree, pointsSpent, SLOT_ICON, RARITY, RARITY_COLOR, bagSize, stats, xpNeed, itemScore, equipItem, sellItem, stock, price, buy, restock, restockCost, buyBag, bagCost, EFFECTS, UNIQUES, avgIlvl } from './game.js';
 import { makeDoll } from './doll.js';
 import { CLASSES } from './figure.js';
 import { mapShapes, WALL_R, ZONE, DUN } from './world.js';
@@ -23,13 +23,14 @@ export function init(state, handlers) {
     s.style.background = `radial-gradient(circle at 40% 35%, ${sp.color}, #101418)`;
     s.onclick = () => H.cast(i);
     if (sp.lvl) s.append(el('div', 'lk', 'Lv ' + sp.lvl));
+    if (sp.talent) s.style.display = 'none';      // talent spells appear once learned
     s.onpointerenter = e => tip(`<div class="n">${sp.name}</div><div class="m">${sp.mana} mana · ${sp.cast ? sp.cast + ' sec cast' : 'Instant'} · ${sp.range} yd</div>${sp.desc}`, e);
     s.onpointerleave = () => tip();
     bar.append(s); slots.push(s);
   });
   const mk = (txt, fn, title) => { const b = el('div', 'slot small', txt); b.title = title; b.onclick = fn; bar.append(b); };
   mk('Tab', () => H.tab(), 'Next target (Tab, Shift+Tab goes back)');
-  mk('Hurt', () => H.hurt(), 'Target the most hurt person nearby (F)');
+  mk('Hurt', () => H.hurt(), 'Target the most hurt person in range, you included (F)');
   mk('Drink', () => H.drink(), 'Sit and drink to restore mana (Z). Moving or casting stands you up.');
   mk('Fish', () => H.fish(), 'Fish from the water\'s edge (G). Click when the float dips.');
   bar.lastChild.id = 'fishbtn'; bar.lastChild.style.display = 'none';
@@ -37,7 +38,8 @@ export function init(state, handlers) {
   mk('View', () => H.view(), 'First or third person (V)');
   mk('Mouse', () => H.look(), 'Mouse-look on or off (X). Esc frees the cursor.');
   bar.lastChild.id = 'lookbtn';
-  $('bagx').onclick = toggleBag;
+  $('bagx').onclick = toggleBag; $('talbtn').onclick = toggleTalents; $('talx').onclick = toggleTalents;
+  $('treset').onclick = () => { resetTalents(S); sfx('equip'); drawTalents(); H.changed(); chat('c-sys', 'Your talents are reset. Every point is free to spend again.'); };
   chat('c-sys', `Welcome to Lanternrest, ${esc(S.name)}.`);
   chat('c-sys', 'Tab picks a target. 1 casts Mend, 2 casts Renew. Enter opens the chat box; /help lists commands.');
   $('pframe').onclick = () => H.self();
@@ -45,6 +47,31 @@ export function init(state, handlers) {
 
 let canFish = false;
 export function fishable(on) { if (on === undefined) return canFish; canFish = on; $('fishbtn').style.display = on ? '' : 'none'; }
+// The talent window: three sections, each in rows (tiers).
+let talOpen = false;
+export function toggleTalents() { talOpen = !talOpen; $('talents').style.display = talOpen ? 'block' : 'none'; tip(); if (talOpen) drawTalents(); H.panel(talOpen || bagOpen); }
+export function drawTalents() {
+  if (!talOpen) return;
+  const free = pointsFree(S); $('tpts').textContent = S.level < 3 ? '(points start at level 3)' : `${free} point${free === 1 ? '' : 's'} to spend`;
+  const box = $('trees'); box.innerHTML = '';
+  for (const t of TREES) {
+    const spent = pointsSpent(S, t), d = el('div', 'tree', `<div class="tn">${t.name} <small style="color:#aaa;font:11px sans-serif">${spent}</small></div><div class="tt">${t.note}</div>`);
+    for (let tier = 0; tier < 3; tier++) {
+      const row = el('div', 'trow', '');
+      for (const x of t.talents.filter(x => x.tier === tier)) {
+        const r = rank(S, x.id), open = spent >= tier * TIER_COST, why = cantLearn(S, x.id);
+        const b = el('div', 'tal' + (r >= x.max ? ' full' : r ? ' has' : '') + (open ? '' : ' shut'), `${x.icon}<small>${r}/${x.max}</small>`);
+        b.onpointerenter = e => tip(`<div class="n">${x.name}</div><div class="m">Rank ${r} of ${x.max}${tier ? ` · needs ${tier * TIER_COST} in ${t.name}` : ''}</div>` +
+          `<div>${x.desc(Math.max(1, r))}</div>${r && r < x.max ? `<div class="g">Next rank: ${x.desc(r + 1)}</div>` : ''}${why && r < x.max ? `<div class="r">${why}</div>` : ''}`, e);
+        b.onpointerleave = () => tip();
+        b.onclick = e => { const m = learn(S, x.id); if (m) err(m); else { sfx('level'); if (x.tier === 2) chat('c-heal', `${x.name}: ${x.desc(1)}`); H.changed(); } drawTalents(); tip(); };
+        row.append(b);
+      }
+      d.append(row);
+    }
+    box.append(d);
+  }
+}
 export function err(text) { const e = $('err'); e.textContent = text; e.style.opacity = 1; errT = 1.6; sfx('err'); }
 export function toast(text, color) { const e = $('toast'); e.textContent = text; e.style.color = color || ''; e.style.opacity = 1; toastT = 2.6; }
 export function zone(name) { $('zone').textContent = name; toast(name); }
@@ -172,6 +199,7 @@ export function update(dt, v) {
   else cb.style.visibility = 'hidden';
   SPELLS.forEach((sp, i) => {
     const lk = slots[i].querySelector('.lk'); if (lk) lk.style.display = knows(S, sp) ? 'none' : '';
+    if (sp.talent) { const d = knows(S, sp) ? '' : 'none'; if (slots[i].style.display !== d) slots[i].style.display = d; }
     slots[i].classList.toggle('dim', v.me.dead || (!sp.self && (!t || v.dist > sp.range)) || S.mana < sp.mana);
     const own = sp.cd && v.cds[sp.id] > v.T ? (v.cds[sp.id] - v.T) / sp.cd : 0;
     slots[i].querySelector('.cd').style.height = Math.max(own, v.gcd > 0 ? v.gcd / v.gcdMax : 0) * 100 + '%';
@@ -307,4 +335,5 @@ export function death(st) {
   $('dtext').textContent = st === 'dead' ? 'You have died.' : st === 'ghost' ? 'Run back to your body (the pillar of light).' : 'You have reached your body.';
   b.textContent = st === 'dead' ? 'Release Spirit' : 'Return to Life'; b.disabled = st === 'ghost';
   b.onclick = () => st === 'dead' ? H.release() : H.returnToLife();
+  const w = $('wbtn'); w.style.display = st === 'dead' && H.windReady() ? '' : 'none'; w.onclick = () => H.secondWind();
 }

@@ -16,6 +16,10 @@ export const SPELLS = [
 ];
 SPELLS.push({ id: 'fade', name: 'Fade', icon: '☁', key: '6', cast: 0, mana: 10, range: 0, self: true, cd: 30, color: '#4a4a6a', lvl: 2,
   desc: 'Slip from every monster\'s mind: they forget you for a moment and go back to whoever they were fighting. 30 second cooldown.' });
+SPELLS.push({ id: 'circle', name: 'Circle', icon: '◎', key: '7', cast: 2.0, mana: 48, range: 40, color: '#5a7a2a', talent: 'circle',
+  desc: 'Heals your target and everyone within 8 yards of them. Learned from the Mending talents.' });
+SPELLS.push({ id: 'cleanse', name: 'Cleanse', icon: '✧', key: '8', cast: 0, mana: 18, range: 40, color: '#2a7a6a', talent: 'cleanse',
+  desc: 'Washes away bleeds and burns. Learned from the Grace talents.' });
 export const WARD_TIME = 15, WARD_LOCK = 12;
 // Threat: healing someone a monster is fighting makes it notice you. It turns
 // on you once its threat passes this share of its own health (a tank holds
@@ -93,25 +97,25 @@ export function stats(S) {
   return {
     power: 10 + 4 * S.level + g.power,
     maxMana: 100 + 15 * S.level + g.mana,
-    regen: (4 + 0.3 * S.level + g.spirit * 0.12) * (perk(S, 'regen') ? 1.1 : 1),   // mana per second
+    regen: (4 + 0.3 * S.level + g.spirit * 0.12) * (perk(S, 'regen') ? 1.1 : 1) * (1 + 0.06 * rank(S, 'deep')),   // mana per second
     haste: Math.min(0.5, (g.haste + (perk(S, 'haste') ? 3 : 0)) / 100),            // fraction off cast time and GCD
     spirit: g.spirit, hasteRaw: g.haste + (perk(S, 'haste') ? 3 : 0),
     maxHp: 80 + 20 * S.level,
   };
 }
 
-export function castTime(S, sp) { return (sp.id === 'revive' && hasFx(S, 'swiftrez') ? 3 : sp.cast) * (1 - stats(S).haste); }
+export function castTime(S, sp) { return Math.max(0.5, (sp.id === 'revive' && hasFx(S, 'swiftrez') ? 3 : sp.cast) - (sp.id === 'mend' ? 0.15 * rank(S, 'quick') : 0)) * (1 - stats(S).haste); }
 export function gcdTime(S) { return GCD * (1 - stats(S).haste); }
 
 // How much a spell heals. Mend returns one amount; Renew a tick amount.
 export function healAmount(S, sp) {
   const p = stats(S).power * (perk(S, 'heal') ? 1.05 : 1);
-  if (sp.id === 'mend' || sp.id === 'flash') {
-    const crit = Math.random() < 0.12, k = sp.id === 'flash' ? [22, 1.6] : [30, 2.2];
+  if (sp.id === 'mend' || sp.id === 'flash' || sp.id === 'circle') {
+    const crit = Math.random() < 0.12 + (sp.id === 'circle' ? 0 : 0.05 * rank(S, 'steady')), k = sp.id === 'flash' ? [22, 1.6] : sp.id === 'circle' ? [16, 1.1] : [30, 2.2];
     return { amount: Math.round((k[0] + p * k[1]) * (0.92 + Math.random() * 0.16) * (crit ? 1.6 : 1)), crit };
   }
-  if (sp.id === 'ward') return { absorb: Math.round(25 + p * 2.4) };
-  return { tick: Math.round((20 + p * 2.0) / 6), ticks: hasFx(S, 'beacon') ? 9 : 6, every: 1.5 };
+  if (sp.id === 'ward') return { absorb: Math.round((25 + p * 2.4) * (1 + 0.1 * rank(S, 'thick'))) };
+  return { tick: Math.round((20 + p * 2.0) / 6), ticks: (hasFx(S, 'beacon') ? 9 : 6) + rank(S, 'lasting'), every: 1.5 };
 }
 
 export function npcMaxHp(level) { return 60 + 25 * level; }
@@ -201,7 +205,7 @@ export function healEstimate(S, sp) {
   const p = stats(S).power;
   return sp.id === 'mend' ? 30 + p * 2.2 : sp.id === 'flash' ? 22 + p * 1.6 : 0;
 }
-export const knows = (S, sp) => !sp.lvl || S.level >= sp.lvl;
+export const knows = (S, sp) => (!sp.lvl || S.level >= sp.lvl) && (!sp.talent || rank(S, sp.talent) > 0);
 export const manaCost = (S, sp) => sp.id === 'revive' && perk(S, 'rez') ? Math.round(sp.mana / 2) : sp.id === 'flash' && hasFx(S, 'thrift') ? Math.round(sp.mana * 0.7) : sp.mana;
 
 // Fishing. A side activity: fish restore mana when you sit and eat them (or
@@ -225,3 +229,46 @@ export function fishCatch(S, r = Math.random()) {
   for (const x of FISH) { if ((w -= x.w) < 0) { f = x; break; } }
   return { kind: 'fish', item: { kind: 'fish', slot: 'Fish', name: f.name, q: f.q, restore: f.restore, ilvl: S.level, value: f.value + Math.floor(S.level / 3) } };
 }
+
+// Talents: a point a level from level 3, spent in three sections. Each tier
+// opens once you have spent 3 points per tier in that section (tier 2, the
+// capstone, needs 6). Respec is free for now.
+export const TREES = [
+  { id: 'mending', name: 'Mending', note: 'Direct heals', talents: [
+    { id: 'quick', name: 'Quick Hands', icon: '⏱', tier: 0, max: 3, desc: r => `Mend casts ${(0.15 * r).toFixed(2)} seconds faster.` },
+    { id: 'steady', name: 'Steady Light', icon: '☀', tier: 0, max: 2, desc: r => `+${5 * r}% chance to crit with Mend and Flash.` },
+    { id: 'overflow', name: 'Overflow', icon: '≋', tier: 1, max: 1, desc: () => 'Overhealing from Mend becomes a small heal over time on the same target.' },
+    { id: 'circle', name: 'Circle', icon: '◎', tier: 2, max: 1, desc: () => 'Learn Circle (key 7): heals your target and everyone within 8 yards of them.' },
+  ] },
+  { id: 'grace', name: 'Grace', note: 'Heals over time, shields, mana', talents: [
+    { id: 'lasting', name: 'Lasting Renew', icon: '❋', tier: 0, max: 2, desc: r => `Renew heals ${r} more time${r > 1 ? 's' : ''}.` },
+    { id: 'thick', name: 'Thick Ward', icon: '◈', tier: 0, max: 3, desc: r => `Ward absorbs ${10 * r}% more.` },
+    { id: 'deep', name: 'Deep Well', icon: '💧', tier: 0, max: 3, desc: r => `+${6 * r}% mana regeneration.` },
+    { id: 'quicken', name: 'Quickening', icon: '✶', tier: 1, max: 1, desc: () => 'Renew on someone below 30% health heals its first tick at once.' },
+    { id: 'cleanse', name: 'Cleanse', icon: '✧', tier: 2, max: 1, desc: () => 'Learn Cleanse (key 8): washes away bleeds and burns.' },
+  ] },
+  { id: 'shadow', name: 'Shadow', note: 'Staying alive', talents: [
+    { id: 'quiet', name: 'Quiet Hands', icon: '🤫', tier: 0, max: 3, desc: r => `Your healing causes ${10 * r}% less threat.` },
+    { id: 'swift', name: 'Swift Spirit', icon: '👻', tier: 0, max: 1, desc: () => 'Run 30% faster as a ghost.' },
+    { id: 'water', name: 'Waterborne', icon: '🌊', tier: 0, max: 1, desc: () => 'Wade and swim at full speed.' },
+    { id: 'calm', name: 'Calm Mind', icon: '☯', tier: 1, max: 1, desc: () => 'When you have not cast for 4 seconds, mana regenerates 50% faster.' },
+    { id: 'breath', name: 'Last Breath', icon: '💨', tier: 1, max: 1, desc: () => 'Once every 2 minutes, a killing blow leaves you at 1 health and Fades you.' },
+    { id: 'wind', name: 'Second Wind', icon: '🌬', tier: 2, max: 1, desc: () => 'Once every 10 minutes, rise where you fell instead of running back as a ghost.' },
+  ] },
+];
+export const TIER_COST = 3;
+const tal = id => { for (const t of TREES) for (const x of t.talents) if (x.id === id) return [t, x]; return [null, null]; };
+export const rank = (S, id) => (S.talents && S.talents[id]) || 0;
+export const pointsTotal = S => Math.max(0, S.level - 2);
+export const pointsSpent = (S, tree) => (tree ? tree.talents : TREES.flatMap(t => t.talents)).reduce((a, x) => a + rank(S, x.id), 0);
+export const pointsFree = S => pointsTotal(S) - pointsSpent(S);
+// Why a talent cannot take another point, or '' if it can.
+export function cantLearn(S, id) {
+  const [t, x] = tal(id); if (!x) return 'No such talent';
+  if (rank(S, id) >= x.max) return 'Already at full rank';
+  if (pointsFree(S) <= 0) return S.level < 3 ? 'Talent points start at level 3' : 'No talent points left';
+  if (pointsSpent(S, t) < x.tier * TIER_COST) return `Needs ${x.tier * TIER_COST} points in ${t.name}`;
+  return '';
+}
+export function learn(S, id) { const why = cantLearn(S, id); if (why) return why; S.talents = S.talents || {}; S.talents[id] = rank(S, id) + 1; return ''; }
+export function resetTalents(S) { S.talents = {}; }
