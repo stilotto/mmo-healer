@@ -16,6 +16,7 @@ import { Sparkles } from './fx.js';
 import * as Chat from './chat.js';
 import { Social } from './social.js';
 import { Fishing } from './fishing.js';
+import { Clock } from './clock.js';
 import { ripple, updateWater, SURFACE } from './water.js';
 
 const canvas = document.getElementById('view');
@@ -42,6 +43,7 @@ const warden = makeFigure('Warden', 5);
 warden.group.position.set(POI.warden.x, 0, POI.warden.z); warden.group.rotation.y = -2.2; scene.add(warden.group);
 { const pl = makePlate('Warden Hale', '<Quests>', '#ffd24a'); warden.group.add(pl.sprite); }
 spots.push({ x: POI.warden.x - 1.5, z: POI.warden.z - 1.5, r: 2.4, msg: 'Warden Hale looks at your staff. "No quests for you, healer. Just keep them alive out there."' });
+spots.push({ x: POI.board.x, z: POI.board.z, r: 2, msg: 'The events board. Click it (or the tracker under the minimap, or type /events) to see what is on.' });
 spots.push({ x: 12.4, z: -10.7, r: 2.2, msg: 'Pim the Quartermaster sells gear and bigger bags. Click or tap Pim to trade.' });
 
 let S = G.load() || G.newState(''); S.deeds = [];
@@ -49,7 +51,7 @@ let mobs, dungeon, zoneNow = 'hub';
 // The healer as a unit, so F1 or a click on your own frame targets yourself.
 const meUnit = { isMe: true, name: '', cls: 'Healer', level: 1, hp: 100, maxHp: 100, x: 0, z: 0, hots: [], dots: [], ward: null, dead: false, faded: 0, lastHit: -99 };
 let social, loot, emo = null;      // emo: the healer's emote animation
-let lastCast = -99, fishing, meal = null, splashT = 0, lastWater = '';
+let clock, lastCast = -99, fishing, meal = null, splashT = 0, lastWater = '';
 let drinking = 0, wardLock = new WeakMap(), ghost = false, corpse = null, cds = {};
 
 // Threat. Healing someone a monster is fighting adds to that monster's
@@ -159,7 +161,8 @@ const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 player.onClick = (x, y) => {
   if (fishing && fishing.state === 'bite') { fishing.reel(); return; }
   ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
-  const hit = ray.intersectObjects([vendor.hit, ...people.list.map(p => p.fig.hit)], false)[0];
+  const hit = ray.intersectObjects([vendor.hit, world.board, ...people.list.map(p => p.fig.hit)], true)[0];
+  if (hit && hit.object.parent === world.board || (hit && hit.object.parent && hit.object.parent.parent === world.board)) { if (Math.hypot(-8 - player.x, 10 - player.z) > 12) return UI.err('Too far away'); if (!UI.eventsOpen()) UI.toggleEvents(); return; }
   if (hit && hit.object === vendor.hit) {
     if (Math.hypot(VX - player.x, VZ - player.z) > 9) return UI.err('Too far away');
     UI.openShop(); UI.chat('c-say', 'Pim says: Copper for cloth. Everything is blessed, probably.'); return;
@@ -391,6 +394,8 @@ function start(name) {
     splash: (x, z, n) => fx.emit(x, SURFACE + 0.1, z, { n, color: 0xdff4ff, spread: 0.3, up: 1.8, jitter: 1, life: 0.7 }),
     npcCatch: (p, got) => people.fishBite(p, got) });
   people.ctx.fishing = fishing;
+  clock = new Clock({ S, people, mobs, chat: UI.chat, later: (s, f) => social.later(s, f) });
+  dungeon.ctx.booked = () => clock.booked(); dungeon.ctx.runOver = (won, d) => clock.runOver(won, d);
   dungeon.ctx.roomLoot = d => { if (Math.random() < 0.6) { const m = d.mobs.find(m => m.room === d.room); loot.startRoll(G.rollItem(S.level + 1, null, 1), d.alive(), m ? 'The ' + m.name : 'The pack'); } };
   mobs.ctx.killed = m => {           // Old Tusk leaves something behind if you were there
     if (m.kind !== 'tusk' || zoneNow !== 'green' || meUnit.dead || distTo(m) > 60) return;
@@ -401,23 +406,23 @@ function start(name) {
   Chat.init(S, { say: (t, y) => social.talk(t, y), emote: doEmote, whisper: (n, t) => social.whisper(n, t), reply: t => social.reply(t), guild: t => social.guildSay(t),
     who: a => social.who(a), fame: () => social.fameInfo(), gquit: () => social.gquit(), act: a => social.act(a), changed: () => G.save(S),
     target: n => { const p = n && social.find(n, true); if (p) setTarget(p); else UI.err(n ? `No one called ${n} is here` : 'Usage: /target <name>'); },
-    roll: k => loot.choose(k), opened: () => { player.keys.clear(); } });
-  UI.init(S, { dressed, cast, fish, eat, secondWind, windReady: () => G.rank(S, 'wind') > 0 && (cds.wind || 0) <= T, release, returnToLife, drink: toggleDrink, self: () => setTarget(meUnit), pick: pickFrame, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
+    roll: k => loot.choose(k), events: () => UI.toggleEvents(), opened: () => { player.keys.clear(); } });
+  UI.init(S, { clock: () => clock, dressed, cast, fish, eat, secondWind, windReady: () => G.rank(S, 'wind') > 0 && (cds.wind || 0) <= T, release, returnToLife, drink: toggleDrink, self: () => setTarget(meUnit), pick: pickFrame, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
     panel: open => { if (open) player.free(); else if (S.look) player.lock(); } });
   player.look = !!S.look; UI.setLook(player.look, false);
   player.enabled = true; G.save(S);
   look.onLower = n => UI.chat('c-sys', ['', 'Graphics: soft glow turned off to keep things smooth.', 'Graphics: shadows turned off to keep things smooth.', 'Graphics: resolution lowered to keep things smooth.'][n]);
-  window.game = { me: meUnit, get corpse() { return corpse; }, get casting() { return casting; }, S, people, mobs, dungeon, player, DUN, scene, renderer, cast, tabTarget, hurtTarget, toggleLook, UI, G, Chat, get social() { return social; }, get loot() { return loot; }, get fishing() { return fishing; }, get meal() { return meal; }, eat, fish, secondWind, release, cds, get T() { return T; }, fig: me, dressed, get target() { return target; }, set target(p) { target = p; } };
+  window.game = { me: meUnit, get corpse() { return corpse; }, get casting() { return casting; }, S, people, mobs, dungeon, player, DUN, scene, renderer, cast, tabTarget, hurtTarget, toggleLook, UI, G, Chat, get social() { return social; }, get loot() { return loot; }, get fishing() { return fishing; }, get clock() { return clock; }, get meal() { return meal; }, eat, fish, secondWind, release, cds, get T() { return T; }, fig: me, dressed, get target() { return target; }, set target(p) { target = p; } };
 }
 const nameBox = document.getElementById('cname'); nameBox.value = S.name || '';
 document.getElementById('enter').onclick = () => start(nameBox.value.trim().slice(0, 12));
 nameBox.addEventListener('keydown', e => { if (e.key === 'Enter') start(nameBox.value.trim().slice(0, 12)); });
 if (new URLSearchParams(location.search).has('go')) start('Tester');
 
-const clock = new THREE.Clock(); let T = 0;
+const frameClock = new THREE.Clock(); let T = 0;
 function tick() {
   requestAnimationFrame(tick);
-  const dt = Math.min(0.05, clock.getDelta());
+  const dt = Math.min(0.05, frameClock.getDelta());
   if (!started) {   // slow orbit behind the title
     T += dt; world.update(dt, T);
     camera.position.set(Math.sin(T * 0.08) * 46, 16, Math.cos(T * 0.08) * 46); camera.lookAt(0, 4, 0);
@@ -460,6 +465,7 @@ function step(dt) {
     else if (!player.speed && splashT <= -1.4) { splashT = 0; ripple(player.x, player.z, 1, 0.3); }
   }
   fishing.update(dt, T);
+  clock.update(dt, T);
   { const can = !!(fishing.active || (!meUnit.dead && fishing.spot()));
     if (can !== UI.fishable()) { UI.fishable(can); if (can && !S.seenBank) { S.seenBank = true; UI.chat('c-sys', 'You could fish here. Press G or the Fish button, then click when the float dips.'); } } }
   people.update(dt, T);
@@ -475,7 +481,7 @@ function step(dt) {
     player.x = POI.dungeon.x + 3; player.z = POI.dungeon.z; player.yaw = Math.PI / 2; player.camOff = 0; target = null; casting = null; dungeon.leave();
   }
   const z = player.x > 500 ? 'dungeon' : inGreen(player) ? 'green' : 'hub';
-  if (z !== zoneNow) { zoneNow = z; UI.zone(ZONE_NAME[z]); world.mood(z === 'dungeon'); look.mood(z === 'dungeon'); if (z === 'green' && !S.seenGreen) { S.seenGreen = true; UI.chat('c-sys', 'People out here can die. Press 3 to Revive the fallen (5 second cast).'); } }
+  if (z !== zoneNow) { zoneNow = z; UI.zone(ZONE_NAME[z], G.BANDS[z]); world.mood(z === 'dungeon'); look.mood(z === 'dungeon'); if (z === 'green' && !S.seenGreen) { S.seenGreen = true; UI.chat('c-sys', 'People out here can die. Press 3 to Revive the fallen (5 second cast).'); } }
   const st = G.stats(S);
   S.mana = Math.min(st.maxMana, S.mana + (st.regen * (G.rank(S, 'calm') && T - lastCast > 4 ? 1.5 : 1) + (meal ? meal.rate : 0) + (drinking > 1 ? st.maxMana * 0.08 * (G.hasFx(S, 'spring') ? 2 : 1) : 0)) * dt);   // drinking: about 12 s from empty
   if (gcd > 0) gcd -= dt;

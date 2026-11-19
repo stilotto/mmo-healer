@@ -5,7 +5,7 @@
 import { makeFigure, animate, makePlate, CLASSES } from './figure.js';
 import { POI, CAMPS, collide } from './world.js';
 import { WATERS } from './water.js';
-import { npcMaxHp } from './game.js';
+import { npcMaxHp, bandLevel, BANDS } from './game.js';
 import { NAMES, KINDS, known, bond } from './memory.js';
 
 const GENERAL = ['LF healer for Emberdeep, have tank and 3 dps', 'WTS 20 copper bars, cheap', 'anyone questing in Greenhollow?',
@@ -38,17 +38,17 @@ export class People {
     for (let i = 0; i < GREEN_POP; i++) {
       const c = pick(CAMPS.filter(c => c.kind !== 'tusk')), a = Math.random() * 6.283;
       const p = this.spawn(c.x + Math.sin(a) * (c.r + 6), c.z + Math.cos(a) * (c.r + 6), rnd(0.45, 1));
-      p.zone = 'green'; p.quest = { need: 3 + Math.floor(rnd(0, 3)), done: Math.floor(rnd(0, 3)) }; collide(p, 0.5);
+      p.zone = 'green'; this.relevel(p, 'green'); p.quest = { need: 3 + Math.floor(rnd(0, 3)), done: Math.floor(rnd(0, 3)) }; collide(p, 0.5);
     }
   }
 
   // Someone from the saved roster who is not about yet (people you know turn
   // up a little more often). Only if the whole cast is out does a stranger
   // with a throwaway name appear.
-  spawn(x, z, frac = 1, kind) {
+  spawn(x, z, frac = 1, kind, want) {
     const S = this.ctx.S, free = S.roster.filter(r => !this.used.has(r.name) && (!kind || r.cls === kind));
-    const kn = free.filter(r => bond(known(S, r.name)) >= 1);
-    const who = kn.length && Math.random() < 0.4 ? pick(kn) : free.length ? pick(free) : null;
+    const kn = free.filter(r => bond(known(S, r.name)) >= 1), named = want && free.find(r => r.name === want);
+    const who = named || (kn.length && Math.random() < 0.4 ? pick(kn) : free.length ? pick(free) : null);
     let name = who && who.name;
     if (!name) { let i = 0; do { name = pick(NAMES); } while ((this.used.has(name) || S.roster.some(r => r.name === name)) && ++i < 200); }
     this.used.add(name);
@@ -65,11 +65,15 @@ export class People {
     return p;
   }
 
+  // Level someone for the zone they are in (Greenhollow and Emberdeep have fixed bands).
+  relevel(p, zone) {
+    const f = p.hp / p.maxHp; p.level = bandLevel(zone, this.ctx.S); p.maxHp = npcMaxHp(p.level); p.hp = Math.max(1, Math.round(p.maxHp * f));
+  }
   remove(p) { this.stopFish(p); p.gone = true; this.used.delete(p.name); this.scene.remove(p.fig.group); p.plate.sprite.material.map.dispose(); this.list.splice(this.list.indexOf(p), 1); }
 
   hub() { return this.list.filter(p => p.zone === 'hub' && !p.fading); }
   green() { return this.list.filter(p => p.zone === 'green' && !p.fading); }
-  free() { return this.list.filter(p => p.zone === 'hub' && !p.duel && !p.leaving && !p.path && p.grow >= 1 && !p.fading); }
+  free() { return this.list.filter(p => p.zone === 'hub' && !p.event && !p.duel && !p.leaving && !p.path && p.grow >= 1 && !p.fading); }
   near(p) { const e = this.ctx.eye(); return Math.hypot(p.x - e.x, p.z - e.z) < 60; }
 
   say(p, text, kind = 'say') {
@@ -157,7 +161,12 @@ export class People {
   startDuel() {
     const f = this.free().filter(p => p.hp > p.maxHp * 0.7);
     if (f.length < 2 || this.list.filter(p => p.duel).length >= 4) return;
-    const a = f.splice(Math.floor(Math.random() * f.length), 1)[0], b = pick(f), ang = Math.random() * 6.283;
+    const a = f.splice(Math.floor(Math.random() * f.length), 1)[0], b = pick(f);
+    this.duelPair(a, b);
+  }
+  // Two people walk into the ring and fight (used by the tournament too).
+  duelPair(a, b) {
+    const ang = Math.random() * 6.283;
     const off = rnd(-4, 4), ox = Math.cos(ang) * off, oz = Math.sin(ang) * off;
     [a, b].forEach((p, i) => {
       const s = i ? -1 : 1;
@@ -168,6 +177,7 @@ export class People {
   endDuel(w, l, draw) {
     if (this.near(w)) this.ctx.chat('c-sys', draw ? `${w.name} and ${l.name} call their duel a draw.` : `${w.name} has defeated ${l.name} in a duel.`);
     for (const p of [w, l]) { p.duel = null; p.state = 'idle'; p.wait = rnd(3, 7); p.anim = 'idle'; }
+    w.duelResult = draw ? 'draw' : 'win'; l.duelResult = draw ? 'draw' : 'lose';
     if (!draw) { w.anim = 'cheer'; w.animT = 2; if (Math.random() < 0.5) this.say(l, pick(['gg', 'rematch', 'lag', 'I was not ready'])); }
   }
 
@@ -243,7 +253,7 @@ export class People {
     }
     if ((this.popT -= dt) <= 0) {       // keep Greenhollow busy: new faces walk out of the gate
       this.popT = rnd(8, 14);
-      if (this.green().length < GREEN_POP) { const p = this.spawn(POI.gateOut.x + rnd(-1, 1), POI.gateOut.z - 2, 1); p.zone = 'green'; }
+      if (this.green().length < GREEN_POP) { const p = this.spawn(POI.gateOut.x + rnd(-1, 1), POI.gateOut.z - 2, 1); p.zone = 'green'; this.relevel(p, 'green'); }
     }
 
     for (let i = this.list.length - 1; i >= 0; i--) {
@@ -268,7 +278,7 @@ export class People {
       }
       if (p.resting) p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.05 * dt);
       else if (!p.duel && p.state !== 'hunt' && t - p.hurtAt > 25 && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.003 * dt);
-      if (p.zone === 'hub' && p.z < -66) p.zone = 'green'; else if (p.zone === 'green' && p.z > -58) { p.zone = 'hub'; p.quest = null; }
+      if (p.zone === 'hub' && p.z < -66) { p.zone = 'green'; this.relevel(p, 'green'); } else if (p.zone === 'green' && p.z > -58) { p.zone = 'hub'; p.quest = null; this.relevel(p, 'hub'); }
 
       let anim = 'idle';
       if (p.pause > 0) p.pause -= dt;
@@ -285,7 +295,7 @@ export class People {
               p.atCamp = false; p.wait = rnd(2, 5); p.yaw = Math.atan2(POI.warden.x - p.x, POI.warden.z - p.z);
               if (p.turnIn) {
                 p.anim = 'cheer'; p.animT = 1.5; p.quest = null;
-                if (Math.random() < 0.3) { p.level++; p.maxHp = npcMaxHp(p.level); p.hp = p.maxHp; this.say(p, 'ding!'); }
+                if (Math.random() < 0.3 && p.level < BANDS.green[1]) { p.level++; p.maxHp = npcMaxHp(p.level); p.hp = p.maxHp; this.say(p, 'ding!'); }
                 if (Math.random() < 0.3) { p.goHome = true; }
               } else p.quest = { need: 3 + Math.floor(rnd(0, 3)), done: 0 };
             }

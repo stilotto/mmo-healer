@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { makeMob, animateMob, makePlate } from './figure.js';
 import { DUN, DX, collide, label } from './world.js';
 import * as TX from './textures.js';
+import { BANDS, bandLevel } from './game.js';
 
 const rnd = (a, b) => a + Math.random() * (b - a), pick = a => a[Math.floor(Math.random() * a.length)];
 const KINDS = {
@@ -78,7 +79,7 @@ export class Dungeon {
     DUN.rooms.forEach((room, ri) => {
       const c = DUN.way[room.way];
       room.mobs.forEach((k, i) => {
-        const def = KINDS[k], level = Math.max(1, S.level + (def.boss ? 2 : Math.floor(rnd(0, 2)))), fig = makeMob(def.model, def.opt);
+        const def = KINDS[k], level = def.boss ? BANDS.dungeon[1] + 1 : bandLevel('dungeon', S), fig = makeMob(def.model, def.opt);
         const a = i / room.mobs.length * 6.283 + ri, d = def.boss ? 0 : 4.5;
         const m = { owner: this, def, name: def.name, level, room: ri, x: c.x + Math.sin(a) * d - (def.boss ? 6 : 0), z: c.z + Math.cos(a) * d, yaw: def.boss ? Math.PI / 2 : a + Math.PI,
           maxHp: Math.round((40 + 18 * level) * def.hp), dmg: (6 + 2.5 * level) * def.dmg, state: 'idle', foe: null, attackers: new Set(), swing: 1, deadT: 0, fig, mad: false };
@@ -87,10 +88,12 @@ export class Dungeon {
         fig.group.position.set(m.x, 0, m.z); fig.group.rotation.y = m.yaw; this.scene.add(fig.group); this.mobs.push(m);
       });
     });
-    const kinds = ['Knight', pick(['Mage', 'Warlock']), pick(['Rogue', 'Brawler']), 'Ranger', pick(['Mage', 'Rogue', 'Druid'])];
+    // The party from the events board, if one went in a little while ago; otherwise a pickup group.
+    const booked = this.ctx.booked && this.ctx.booked();
+    const kinds = booked ? booked.map(b => b.cls) : ['Knight', pick(['Mage', 'Warlock']), pick(['Rogue', 'Brawler']), 'Ranger', pick(['Mage', 'Rogue', 'Druid'])];
     this.party = kinds.map((k, i) => {
-      const p = folk.spawn(DUN.start.x + (i - 2) * 1.6, -4.5 - (i % 2) * 1.6, 1, k);
-      p.zone = 'dungeon'; p.wait = 1e9; p.yaw = Math.PI; p.off = { x: (i - 2) * 1.1, z: (i % 2) * 1.4 };
+      const p = folk.spawn(DUN.start.x + (i - 2) * 1.6, -4.5 - (i % 2) * 1.6, 1, k, booked && booked[i].name);
+      p.zone = 'dungeon'; folk.relevel(p, 'dungeon'); p.wait = 1e9; p.yaw = Math.PI; p.off = { x: (i - 2) * 1.1, z: (i % 2) * 1.4 };
       if (!i) { p.tank = true; p.armor = 0.55; p.maxHp = Math.round(p.maxHp * 1.6); p.hp = p.maxHp; }
       return p;
     });
@@ -194,7 +197,7 @@ export class Dungeon {
       return;
     }
     if (!alive.length && this.phase !== 'gather') {
-      this.phase = 'wipe'; this.timer = 14; ctx.chat('c-yell', 'The party has wiped.'); if (ctx.social) ctx.social.wipe();
+      this.phase = 'wipe'; this.timer = 14; ctx.chat('c-yell', 'The party has wiped.'); if (ctx.social) ctx.social.wipe(); if (ctx.runOver) ctx.runOver(false, this);
       for (const m of this.mobs) if (m.state === 'fight') { m.state = 'idle'; m.hp = m.maxHp; m.attackers.clear(); m.mad = false; }
       return;
     }
@@ -241,7 +244,7 @@ export class Dungeon {
   }
 
   victory() {
-    this.phase = 'done'; this.won = true;
+    this.phase = 'done'; this.won = true; if (this.ctx.runOver) this.ctx.runOver(true, this);
     this.ctx.chat('c-sys', 'Cinderjaw has been defeated!');
     for (const p of this.alive()) { p.mob = null; p.state = 'idle'; p.anim = 'cheer'; p.animT = 4; }
     this.party_say('win'); setTimeout(() => this.active && this.party_say('win'), 2500);

@@ -38,6 +38,7 @@ export function init(state, handlers) {
   mk('View', () => H.view(), 'First or third person (V)');
   mk('Mouse', () => H.look(), 'Mouse-look on or off (X). Esc frees the cursor.');
   bar.lastChild.id = 'lookbtn';
+  $('evx').onclick = toggleEvents; $('tracker').onclick = toggleEvents;
   $('bagx').onclick = toggleBag; $('talbtn').onclick = toggleTalents; $('talx').onclick = toggleTalents;
   $('treset').onclick = () => { resetTalents(S); sfx('equip'); drawTalents(); H.changed(); chat('c-sys', 'Your talents are reset. Every point is free to spend again.'); };
   chat('c-sys', `Welcome to Lanternrest, ${esc(S.name)}.`);
@@ -47,6 +48,18 @@ export function init(state, handlers) {
 
 let canFish = false;
 export function fishable(on) { if (on === undefined) return canFish; canFish = on; $('fishbtn').style.display = on ? '' : 'none'; }
+// Events: the tracker under the minimap and the board's window.
+let evOpen = false, evT = 0;
+export function toggleEvents() { evOpen = !evOpen; $('events').style.display = evOpen ? 'block' : 'none'; if (evOpen) { evT = 0; drawEvents(); } H.panel(evOpen || bagOpen || talOpen); }
+export const eventsOpen = () => evOpen;
+export function drawEvents(force) {
+  const c = H.clock(); if (!c) return;
+  const ago = t => { const m = Math.floor((c.T - t) / 60); return m < 1 ? 'just now' : m + ' min ago'; };
+  $('tracker').innerHTML = c.list().slice(0, 3).map(e => `<div class="${e.state === 'on' ? 'on' : ''}"><b>${e.name}</b> ${c.short(e)}</div>`).join('');
+  if (!evOpen) return;
+  $('evlist').innerHTML = c.list().map(e => `<div class="ev ${e.state === 'on' ? 'on' : ''}"><span class="s">${c.status(e)}</span><b>${e.name}</b><div class="w">At ${e.where}${e.people.length ? ' · ' + e.people.filter(p => !p.gone).map(p => esc(p.name)).join(', ') : ''}</div></div>`).join('');
+  $('evdone').innerHTML = c.results.length ? c.results.map(r => `<div class="ev"><span class="s" style="color:#999">${ago(r.t)}</span><b>${r.name}</b><div class="${r.good ? 'good' : 'bad'}">${esc(r.text)}</div></div>`).join('') : '<div class="w" style="color:#999">Nothing yet today.</div>';
+}
 // The talent window: three sections, each in rows (tiers).
 let talOpen = false;
 export function toggleTalents() { talOpen = !talOpen; $('talents').style.display = talOpen ? 'block' : 'none'; tip(); if (talOpen) drawTalents(); H.panel(talOpen || bagOpen); }
@@ -74,7 +87,7 @@ export function drawTalents() {
 }
 export function err(text) { const e = $('err'); e.textContent = text; e.style.opacity = 1; errT = 1.6; sfx('err'); }
 export function toast(text, color) { const e = $('toast'); e.textContent = text; e.style.color = color || ''; e.style.opacity = 1; toastT = 2.6; }
-export function zone(name) { $('zone').textContent = name; toast(name); }
+export function zone(name, band) { $('zone').textContent = name; toast(name + (band ? ` (levels ${band[0]} to ${band[1]})` : '')); }
 export function hint(text) { const h = $('hint'); if (h.textContent !== text) h.textContent = text; }
 const qcol = it => it.unique ? '#ffa030' : RARITY_COLOR[it.q], qcls = it => it ? (it.unique ? 'qu' : 'q' + it.q) : '';
 export function itemLink(it) { return `<b style="color:${qcol(it)}">[${esc(it.name)}]</b>`; }
@@ -205,6 +218,7 @@ export function update(dt, v) {
     slots[i].querySelector('.cd').style.height = Math.max(own, v.gcd > 0 ? v.gcd / v.gcdMax : 0) * 100 + '%';
   });
   fame();
+  if ((evT -= v.dt) <= 0) { evT = 0.5; drawEvents(); }
   if (bagOpen && doll) doll.render(dt);
   const need = xpNeed(S.level); $('xp').firstElementChild.style.width = (S.xp / need * 100) + '%'; $('xp').lastElementChild.textContent = `${S.xp} / ${need} XP`;
   if (errT > 0 && (errT -= dt) <= 0) $('err').style.opacity = 0;

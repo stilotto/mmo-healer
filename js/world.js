@@ -164,6 +164,21 @@ export function buildWorld(scene) {
   POI.fountain = { x: 0, z: 8 };
   mapShapes.push({ t: 'c', x: 0, z: 0, r: 5, c: '#4fb0d8' });
 
+  // The events board beside the fountain: what is on today.
+  const board = new THREE.Group(); board.position.set(-8, 0, 10); board.rotation.y = Math.atan2(8, -10); scene.add(board);
+  { const wood = L(0x6a4a2a);
+    for (const x of [-1.35, 1.35]) board.add(mesh(new THREE.BoxGeometry(0.18, 3, 0.18), wood, x, 1.5, 0));
+    const face = canvasTex(256, 160, (x, w, h) => {
+      x.fillStyle = '#b8935a'; x.fillRect(0, 0, w, h); x.strokeStyle = '#6a4a2a'; x.lineWidth = 8; x.strokeRect(4, 4, w - 8, h - 8);
+      x.fillStyle = '#3a2412'; x.font = '700 30px Cinzel, Georgia, serif'; x.textAlign = 'center'; x.fillText('EVENTS', w / 2, 40);
+      for (let i = 0; i < 4; i++) { x.fillStyle = ['#f4ecd8', '#efe2c0', '#f6f0e0', '#ece0c4'][i]; const px = 22 + i * 56, py = 56 + (i % 2) * 10; x.fillRect(px, py, 48, 62); x.fillStyle = '#7a6a5a'; for (let j = 0; j < 5; j++) x.fillRect(px + 6, py + 10 + j * 9, 36 - (j % 2) * 10, 3); x.fillStyle = '#c03a2a'; x.beginPath(); x.arc(px + 24, py + 3, 3, 0, 7); x.fill(); }
+    });
+    board.add(mesh(new THREE.BoxGeometry(2.9, 1.8, 0.12), new THREE.MeshLambertMaterial({ map: face }), 0, 2.05, 0.02));
+    const roof = mesh(new THREE.BoxGeometry(3.3, 0.12, 0.8), L(0x7a3a2a), 0, 3.08, 0.1); roof.rotation.x = 0.25; board.add(roof);
+    const lb = label('Events Board', '', 2.2); lb.position.set(0, 4, 0); board.add(lb); }
+  colliders.push({ x: -8, z: 10, r: 1.4 }); mapShapes.push({ t: 'c', x: -8, z: 10, r: 1.2, c: '#ffd24a' });
+  POI.board = { x: -8 + Math.sin(board.rotation.y) * 2.2, z: 10 + Math.cos(board.rotation.y) * 2.2 };
+
   // Buildings on the diagonals, doors facing the plaza
   const door = canvasTex(64, 128, (x) => {
     x.fillStyle = '#4a2f18'; x.fillRect(0, 0, 64, 128); x.strokeStyle = '#2a1a0c'; x.lineWidth = 3;
@@ -330,7 +345,7 @@ export function buildWorld(scene) {
     prop.rotation.x += dt * 14;
     state.arrived = state.docked && !was; state.left = !state.docked && was;
   }
-  return { update, ship: state, blockers, mood, lights: { hemi, sun } };
+  return { update, ship: state, blockers, mood, board, lights: { hemi, sun } };
 }
 
 // Greenhollow: the novice lands outside the north gate. A road, a quest camp,

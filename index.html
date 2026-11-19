@@ -10,24 +10,25 @@
  "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
-  "./js/chat.js": "./js/chat.js?v=20261119232746",
-  "./js/doll.js": "./js/doll.js?v=20261119232746",
-  "./js/dungeon.js": "./js/dungeon.js?v=20261119232746",
-  "./js/figure.js": "./js/figure.js?v=20261119232746",
-  "./js/fishing.js": "./js/fishing.js?v=20261119232746",
-  "./js/fx.js": "./js/fx.js?v=20261119232746",
-  "./js/game.js": "./js/game.js?v=20261119232746",
-  "./js/look.js": "./js/look.js?v=20261119232746",
-  "./js/loot.js": "./js/loot.js?v=20261119232746",
-  "./js/memory.js": "./js/memory.js?v=20261119232746",
-  "./js/mobs.js": "./js/mobs.js?v=20261119232746",
-  "./js/people.js": "./js/people.js?v=20261119232746",
-  "./js/player.js": "./js/player.js?v=20261119232746",
-  "./js/social.js": "./js/social.js?v=20261119232746",
-  "./js/textures.js": "./js/textures.js?v=20261119232746",
-  "./js/ui.js": "./js/ui.js?v=20261119232746",
-  "./js/water.js": "./js/water.js?v=20261119232746",
-  "./js/world.js": "./js/world.js?v=20261119232746"
+  "./js/chat.js": "./js/chat.js?v=20261119234528",
+  "./js/clock.js": "./js/clock.js?v=20261119234528",
+  "./js/doll.js": "./js/doll.js?v=20261119234528",
+  "./js/dungeon.js": "./js/dungeon.js?v=20261119234528",
+  "./js/figure.js": "./js/figure.js?v=20261119234528",
+  "./js/fishing.js": "./js/fishing.js?v=20261119234528",
+  "./js/fx.js": "./js/fx.js?v=20261119234528",
+  "./js/game.js": "./js/game.js?v=20261119234528",
+  "./js/look.js": "./js/look.js?v=20261119234528",
+  "./js/loot.js": "./js/loot.js?v=20261119234528",
+  "./js/memory.js": "./js/memory.js?v=20261119234528",
+  "./js/mobs.js": "./js/mobs.js?v=20261119234528",
+  "./js/people.js": "./js/people.js?v=20261119234528",
+  "./js/player.js": "./js/player.js?v=20261119234528",
+  "./js/social.js": "./js/social.js?v=20261119234528",
+  "./js/textures.js": "./js/textures.js?v=20261119234528",
+  "./js/ui.js": "./js/ui.js?v=20261119234528",
+  "./js/water.js": "./js/water.js?v=20261119234528",
+  "./js/world.js": "./js/world.js?v=20261119234528"
  }
 }</script>
 <style>
@@ -131,6 +132,13 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
 #talents{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:560px;max-width:calc(100% - 8px);max-height:calc(100% - 16px);overflow:auto;background:rgba(14,12,10,.96);border:1px solid var(--gold);border-radius:6px;padding:8px;display:none;z-index:5}
 #talents h3{margin:0 0 6px;font:600 14px Cinzel,serif;color:var(--gold);display:flex;justify-content:space-between;align-items:center}
 #talents h3 b{cursor:pointer;color:#ccc}#talents h3 small{font:12px 'Nunito Sans',sans-serif;color:#ddd}
+#tracker{margin-top:4px;font:11px 'Nunito Sans',sans-serif;color:#eee;text-shadow:0 1px 2px #000;cursor:pointer;text-align:left;max-width:180px;margin-left:auto}
+#tracker div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#tracker b{color:var(--gold);font-weight:700}#tracker .on b{color:#6dff7a}
+#events{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:440px;max-width:calc(100% - 8px);max-height:calc(100% - 16px);overflow:auto;background:rgba(14,12,10,.96);border:1px solid var(--gold);border-radius:6px;padding:8px;display:none;z-index:5;font-size:13px}
+#events h3{margin:0 0 4px;font:600 14px Cinzel,serif;color:var(--gold);display:flex;justify-content:space-between}#events h3 b{cursor:pointer;color:#ccc}
+.ev{padding:4px 0;border-top:1px dashed #2e2a20}.ev .w{font-size:11px;color:#aaa}.ev .s{float:right;color:var(--gold);font-size:12px}.ev.on .s{color:#6dff7a}
+.ev .good{color:#8aff8a}.ev .bad{color:#ff8a7a}
+@media (max-width:600px){#tracker{max-width:140px;font-size:10px}}
 #trees{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .tree{border:1px solid #3a3426;border-radius:5px;padding:5px;background:#16130e}
 .tree .tn{font:600 13px Cinzel,serif;color:var(--gold)}.tree .tt{font-size:10px;color:#999;margin-bottom:4px}
@@ -192,7 +200,7 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
     <div class="bar"><i id="php"></i><span id="phpt"></span></div><div class="bar mana"><i id="pmp"></i><span id="pmpt"></span></div><div class="sub" id="psub"></div></div>
   <div class="frame" id="tframe"><div class="port" id="tport"></div><div class="nm" id="tname"></div>
     <div class="bar"><i id="thp"></i><span id="thpt"></span></div><div class="sub" id="tsub"></div></div>
-  <div id="mini"><div id="zone">Lanternrest</div><canvas id="map" width="264" height="264"></canvas><div id="fame"><span id="famen"></span><div><i id="fameb"></i></div></div></div>
+  <div id="mini"><div id="zone">Lanternrest</div><canvas id="map" width="264" height="264"></canvas><div id="fame"><span id="famen"></span><div><i id="fameb"></i></div></div><div id="tracker" title="Events (click for the board)"></div></div>
   <div id="chatwrap"><div id="ctabs"></div><div id="chat"></div><input id="chatin" maxlength="200" autocomplete="off" enterkeyhint="send" placeholder="Say something, or /help"></div>
   <div id="err"></div><div id="toast"></div><div id="hint"></div>
   <div id="stick"><i></i></div>
@@ -209,6 +217,9 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
   <div id="tip"></div>
   <div id="talents"><h3><span>Talents <small id="tpts"></small></span><span><button id="treset" class="tb">Reset</button> <b id="talx">✕</b></span></h3><div id="trees"></div>
     <div class="m" style="font-size:11px;color:#999">A point each level from level 3. Click a talent to learn it. Each row opens after 3 points in that section. Reset is free for now.</div></div>
+  <div id="events"><h3><span>Events Board</span><b id="evx">✕</b></h3><div id="evlist"></div>
+    <h3 style="margin-top:8px"><span>How it went</span></h3><div id="evdone"></div>
+    <div class="m" style="font-size:11px;color:#999;margin-top:6px">Events run whether you go or not. Greenhollow is levels 1 to 6, Emberdeep 5 to 10.</div></div>
   <div id="death"><div id="dtext"></div><button id="dbtn"></button><button id="wbtn" style="display:none;margin-left:6px">Second Wind</button></div>
   <div id="bottom">
     <div id="castbar"><i></i><span></span></div>
@@ -224,6 +235,6 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
   <p class="keys"><b>WASD</b> move and turn · <b>Q/E</b> strafe · <b>right-drag</b> steer · <b>left-drag</b> or <b>arrow keys</b> look (up and down too) · <b>wheel</b> zoom (all the way in for first person, or <b>V</b>) · <b>Tab</b> next target · <b>F</b> most hurt · <b>1, 2</b> heal · <b>3</b> revive · <b>B</b> bag · <b>Enter</b> chat (<b>/help</b>) · <b>Space</b> jump · <b>X</b> mouse-look (the mouse steers, A and D strafe, Esc frees the cursor)</p>
   <a href="https://stilotto.github.io/">More games from Stilotto</a>
 </div></div>
-<script type="module" src="js/main.js?v=20261119232746"></script>
+<script type="module" src="js/main.js?v=20261119234528"></script>
 </body>
 </html>

@@ -68,7 +68,10 @@ Sprints 1 to 8 in `TODO.md` are built and on `main`:
 
 - Talents: three sections (Mending, Grace, Shadow), Circle and Cleanse.
 
-Next: proposed only: sprint 9 (The clock), the stats tab later, and the
+- Sprint 9, the clock: events board, tracker, four scheduled events, zone
+  level bands.
+
+Next: proposed only: sprint 10 (Crowds: the raid), the stats tab, and the
 open ideas in `TODO.md` (graveyard, rival healer). Confirm with the owner,
 then wait for their go. On a Chromebook, F1 to F6 need Search plus the top
 row (or the "top-row keys as function keys" setting); the owner knows.
@@ -316,6 +319,28 @@ Nothing has had a hands-on balance pass beyond the owner's first play.
 - `ui.js`: `toggleTalents`, `drawTalents`; the window is `#talents`.
 - `hurtTarget` (F) includes `meUnit` and uses 40 yards.
 - `tools/talents.mjs` checks it all.
+
+## The clock (sprint 9)
+
+- `js/clock.js` (`Clock`): `EVENTS` (kind, timers, gather and run length),
+  each event goes `soon` → `gather` → `on` → `done` on game time (so
+  `?speed` applies). `gather` books people (`p.event`), `begin` starts it,
+  `finish` records `results` (8 kept), posts `[Events]` lines and plans the
+  next of that kind. `crowd(n)` tops up town folk with newcomers.
+- Emberdeep: `booked()` hands the event's party to `dungeon.start` (by
+  roster name, `people.spawn(x, z, frac, kind, name)`) when the healer goes
+  in while it is under way; `runOver` reports a real clear or wipe.
+- Tusk hunt and tournament are real fights: hunters get `p.mob` = Old Tusk;
+  the bracket uses `people.duelPair`, and `endDuel` sets `p.duelResult`.
+- `people.free()` skips anyone with `p.event`; event people are held in
+  place by keeping their `wait` up.
+- Bands: `G.BANDS`, `G.bandLevel(zone, S, extra)`, `people.relevel(p, zone)`
+  when someone enters or leaves Greenhollow or joins the dungeon. Greenhollow
+  dings stop at the top of the band. The zone toast shows the band.
+- UI: `#tracker` under the fame meter, `#events` window (`toggleEvents`,
+  `drawEvents` twice a second). The board is `world.board` (`buildWorld`).
+- `main.js` renamed its frame timer to `frameClock`; `clock` is the events.
+- `tools/clock.mjs` checks it all.
 
 ## Things worth knowing
 

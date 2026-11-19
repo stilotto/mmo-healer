@@ -272,3 +272,12 @@ export function cantLearn(S, id) {
 }
 export function learn(S, id) { const why = cantLearn(S, id); if (why) return why; S.talents = S.talents || {}; S.talents[id] = rank(S, id) + 1; return ''; }
 export function resetTalents(S) { S.talents = {}; }
+
+// Zones have fixed level bands (the city has everyone, so it still follows
+// the healer). Elites and bosses sit a level or two above the band.
+export const BANDS = { green: [1, 6], dungeon: [5, 10] };
+export function bandLevel(zone, S, extra = 0) {
+  const b = BANDS[zone];
+  if (!b) return Math.max(1, S.level + Math.floor(Math.random() * 3) - 1 + extra);
+  return b[0] + Math.floor(Math.random() * (b[1] - b[0] + 1)) + extra;
+}

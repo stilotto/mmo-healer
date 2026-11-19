@@ -4,6 +4,7 @@
 import { makeMob, animateMob, makePlate, MOBS } from './figure.js';
 import { CAMPS, collide, WALL_R } from './world.js';
 import { swimming } from './water.js';
+import { bandLevel } from './game.js';
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 
@@ -13,7 +14,7 @@ export class Mobs {
     for (const c of CAMPS) for (let i = 0; i < c.n; i++) this.spawn(c);
   }
   spawn(camp, old) {
-    const def = MOBS[camp.kind], level = Math.max(1, this.ctx.S.level + Math.floor(rnd(-1, 2)) + (def.elite ? 1 : 0));
+    const def = MOBS[camp.kind], level = bandLevel('green', this.ctx.S, def.elite ? 2 : 0);
     const a = Math.random() * 6.283, d = Math.sqrt(Math.random()) * camp.r;
     const m = old || { camp, kind: camp.kind, def, fig: makeMob(camp.kind) };
     if (m.plate) { m.fig.group.remove(m.plate.sprite); m.plate.sprite.material.map.dispose(); }

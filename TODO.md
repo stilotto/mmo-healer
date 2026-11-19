@@ -132,10 +132,18 @@ is weakest. Sprints 4 to 8 are the game; 9 onward is more of it.
    glow. Paper doll: the healer in 3D, turning (drag to spin), slots around
    it, hover a bag item to try it on, stats beside it (power, spirit, mana
    regen, haste, mana, average item level, fame).
-9. **The clock.** An events board by the fountain and a tracker under the
-   minimap: parties forming, Old Tusk hunts, duelling tournaments, raid
-   pulls. Events run whether you go or not, and report how they went.
-   Zones get fixed level bands instead of matching the healer's level.
+9. **The clock: built.** An events board by the fountain (click it, the
+   tracker under the minimap, or /events) and a tracker of the next three.
+   Four events on repeating timers (first ones 1.5 to 5 minutes in):
+   Emberdeep run (a named tank and four gather at the portal and go in; if
+   you follow while it is under way they are the party inside, otherwise it
+   resolves without you, about 30% clears, and survivors come back hurt),
+   Old Tusk hunt (four gather at the camp and really fight Old Tusk: the
+   result is what happens), duelling tournament (four in the ring, semis
+   and a final, real duels), Shattered Spire raid (eight go in, mostly
+   wipe). Each posts to chat and to the board's "How it went". Zones have
+   fixed level bands: Greenhollow 1 to 6 (Old Tusk 8), Emberdeep 5 to 10
+   (Cinderjaw 11); the city still follows your level.
 10. **Crowds.** The Shattered Spire: a 20-person raid with two bosses, raid
    frames, Circle (group heal) and Cleanse.
 11. **Sides.** Bloodsand Pit: two teams, flags, heal one side or both; the
@@ -145,8 +153,7 @@ is weakest. Sprints 4 to 8 are the game; 9 onward is more of it.
 
 ## Agreed after sprint 8 (owner), order not yet set
 
-Proposed order: the pond (built), talents (built), then the clock
-(sprint 9 above) and the rest; the stats tab later. Confirm with the owner.
+Proposed order: the pond (built), talents (built), the clock (built), then the rest; the stats tab later. Confirm with the owner.
 
 - **The pond: built.** The Greenhollow pond is water. Wading in the
   shallow ring (4.5 yards): 25% slower, sunk to the knees, splashes and
