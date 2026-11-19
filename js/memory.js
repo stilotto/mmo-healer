@@ -106,6 +106,7 @@ export const LINES = {
     rez: ['{who} got rezzed at {where} by {me}, nobody even asked', 'someone rezzed {who} at {where}. was that {me}?', 'free rez at {where} apparently'],
     boss: ['Emberdeep got cleared and the party says a stranger healed them', 'Cinderjaw is down. party had no healer. or did they?', 'was {me} in Emberdeep just now?'],
     wipe: ['Emberdeep wiped again. even {me} could not save them', 'another wipe in Emberdeep. where was {me}?'],
+    fish: ['did {me} really pull Old Glimmerfin out of {where}?', 'someone caught Old Glimmerfin at {where}. I have been fishing there for YEARS', 'Old Glimmerfin is real?? {me} has it', 'heard {me} landed Old Glimmerfin. the healer. fishing.'],
     letdie: ['{who} died at {where} with {me} standing right there', 'lol {me} watched {who} die at {where}', 'heals are not free I guess. ask {who}'],
   },
   ask: ['is {me} on?', 'anyone seen {me} today?', 'LF {me}, will pay in thanks', 'how do I get {me} to heal me', 'is {me} real or a rumour?'],

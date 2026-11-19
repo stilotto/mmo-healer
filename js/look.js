@@ -52,7 +52,7 @@ export function makeLook(name, { scene, renderer, camera, world }) {
     if (!o.isMesh || o.userData.looked) return;
     o.userData.looked = true;
     o.material = Array.isArray(o.material) ? o.material.map(fix) : fix(o.material);
-    if (L.shadows && !o.material.isMeshBasicMaterial && o.material.visible !== false) { o.castShadow = true; o.receiveShadow = true; }
+    if (L.shadows && !o.material.isMeshBasicMaterial && o.material.visible !== false) { o.castShadow = !o.userData.flat; o.receiveShadow = !o.userData.noShade; }
   });
   sweep();
 

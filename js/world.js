@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { canvasTex, mergeParts, at, SHAPES as SH } from './figure.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import * as TX from './textures.js';
+import { addWater, keepOut } from './water.js';
 
 // A storybook fir: three stacked cones in a unit box (radius 1, height 1).
 const firGeo = () => mergeGeometries([[1, 0.55, -0.2], [0.76, 0.5, 0.1], [0.5, 0.42, 0.33]].map(([r, h, y]) => new THREE.ConeGeometry(r, h, 8).translate(0, y, 0).toNonIndexed()));
@@ -42,6 +43,7 @@ const mesh = (g, m, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(g, m); o.
 
 export function collide(p, r) {
   if (p.x > 500) return collideDungeon(p, r);
+  if (!p.swims) keepOut(p, r);        // only the healer goes into the water
   for (const c of colliders) {
     if (c.r) {
       const dx = p.x - c.x, dz = p.z - c.z, d = Math.hypot(dx, dz), m = c.r + r;
@@ -115,7 +117,7 @@ export function buildWorld(scene) {
     }
   });
   cob.wrapS = cob.wrapT = THREE.RepeatWrapping; cob.repeat.set(26, 26);
-  const flat = (geo, m, y, x = 0, z = 0) => { const o = mesh(geo, m, x, y, z); o.rotation.x = -Math.PI / 2; scene.add(o); return o; };
+  const flat = (geo, m, y, x = 0, z = 0) => { const o = mesh(geo, m, x, y, z); o.rotation.x = -Math.PI / 2; o.userData.flat = true; scene.add(o); return o; };   // flat: no shadow cast
   flat(new THREE.CircleGeometry(600, 40), new THREE.MeshLambertMaterial({ map: TX.grass() }), -0.05);
   flat(new THREE.CircleGeometry(WALL_R, 48), new THREE.MeshLambertMaterial({ map: cob }), 0);
   flat(new THREE.RingGeometry(9, 10.5, 40), L(0x8a7a5a), 0.02);
@@ -361,9 +363,7 @@ function buildZone(scene, { L, mesh, flat, leaf, stone, stoneD }) {
   mapShapes.push({ t: 'c', x: 9, z: -88, r: 3, c: '#ffd24a' });
 
   // Pond
-  flat(new THREE.CircleGeometry(16, 28), new THREE.MeshLambertMaterial({ color: 0x4f9ac8, emissive: 0x0a2a44 }), 0.04, -66, -138);
-  flat(new THREE.RingGeometry(16, 17.5, 28), L(0x8a9a5a), 0.035, -66, -138);
-  colliders.push({ x: -66, z: -138, r: 15.5 }); mapShapes.push({ t: 'c', x: -66, z: -138, r: 16, c: '#4f9ac8' });
+  addWater(scene, { name: 'the pond', x: -66, z: -138, r: 16, wade: 4.5, fish: true }, mapShapes);
 
   // Farm
   { const g = new THREE.Group(); g.position.set(74, 0, -108); g.rotation.y = -0.5; scene.add(g);

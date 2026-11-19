@@ -105,6 +105,12 @@ export class Social {
     const p = friend || pick(d.party);
     this.later(rnd(2, 4), () => d.active && this.ctx.chat('c-party', `[Party] ${p.name}: ${pick([`oh nice, ${this.me} is here`, `it is ${this.me}! we might live`, `${this.me}, you healing us again?`, `do NOT kick ${this.me}`])}`));
   }
+  // The healer lands Old Glimmerfin: fame, gossip, and envy from the bank.
+  fished(where) {
+    this.fame(3); M.deed(this.S, 'fish', '', where, this.t);
+    for (const p of this.ctx.people.list.filter(p => p.fishing && !p.dead).slice(0, 2))
+      this.later(rnd(1.5, 3.5), () => !p.gone && this.say(p, pick(['WHAT. that is Old Glimmerfin', 'ten years I have sat at this pond', 'no way. NO WAY.', 'can I at least touch it?'])));
+  }
   boss(seen) { if (seen) { this.fame(6); M.deed(this.S, 'boss', '', 'Emberdeep', this.t); } }
   wipe() { M.deed(this.S, 'wipe', '', 'Emberdeep', this.t); }
 

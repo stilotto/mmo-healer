@@ -3,13 +3,14 @@
 // third person all the way into first person.
 import * as THREE from 'three';
 import { collide } from './world.js';
+import { waterAt, WADE_SPEED, SWIM_SPEED } from './water.js';
 
 const ray = new THREE.Raycaster(), head = new THREE.Vector3(), dir = new THREE.Vector3();
 
 export class Player {
   constructor(camera, dom, blockers) {
     Object.assign(this, { camera, blockers, x: 0, z: 19, y: 0, vy: 0, yaw: Math.PI, camOff: 0, pitch: 0.28, dist: 11, lastDist: 11,
-      moving: false, speed: 0, L: false, R: false, auto: false, stick: null, onClick: null, enabled: false, look: false, unlockAt: 0, dom });
+      moving: false, speed: 0, swims: true, water: '', sink: 0, ghost: false, L: false, R: false, auto: false, stick: null, onClick: null, enabled: false, look: false, unlockAt: 0, dom });
     this.keys = new Set();
     const typing = e => e.target.tagName === 'INPUT';
     addEventListener('keydown', e => {
@@ -91,22 +92,29 @@ export class Player {
     const m = Math.hypot(f, s);
     this.moving = m > 0.15 || this.y > 0;
     if (m > 0.15) {
-      const sp = (f < -0.1 ? 4.2 : 7) * (this.speedMul || 1) * (this.gearSpeed || 1) * Math.min(1, m) / m * dt;
+      const wet = this.water === 'swim' ? SWIM_SPEED : this.water === 'wade' && this.y === 0 ? WADE_SPEED : 1;
+      const sp = (f < -0.1 ? 4.2 : 7) * wet * (this.speedMul || 1) * (this.gearSpeed || 1) * Math.min(1, m) / m * dt;
       const sn = Math.sin(this.yaw), cs = Math.cos(this.yaw);
       this.x += (sn * f + cs * s) * sp; this.z += (cs * f - sn * s) * sp;
       collide(this, 0.5);
       if (!this.L && this.camOff) { this.camOff = Math.atan2(Math.sin(this.camOff), Math.cos(this.camOff)); this.camOff *= Math.max(0, 1 - dt * 4); }
     }
     this.speed = m > 0.15 ? 1 : 0; this.back = f < -0.1;
-    if (K('Space') && this.y === 0) this.vy = 7.5;
+    // Water: wading slows you and sinks you to the knees; deep water to the shoulders.
+    const w = this.ghost ? null : waterAt(this.x, this.z);
+    this.water = w ? w.mode : ''; this.waterBody = w ? w.b : null;
+    const want = w && !this.dead ? w.sink : 0;
+    this.sink += (want - this.sink) * Math.min(1, dt * 4);
+    if (K('Space') && this.y === 0 && this.water !== 'swim') this.vy = 7.5;
     if (this.y > 0 || this.vy > 0) { this.y += this.vy * dt; this.vy -= 22 * dt; if (this.y <= 0) { this.y = 0; this.vy = 0; } }
 
     // Camera
     const a = this.yaw + this.camOff, cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
-    head.set(this.x, this.y + 1.75, this.z);
+    head.set(this.x, this.y + 1.75 - this.sink, this.z);
     if (this.dist === 0) {
-      this.camera.position.set(this.x + Math.sin(a) * 0.2, this.y + 1.7, this.z + Math.cos(a) * 0.2);
-      this.camera.lookAt(this.x + Math.sin(a) * cp * 10, this.y + 1.7 - sp * 10, this.z + Math.cos(a) * cp * 10);
+      const ey = this.y + 1.7 - this.sink;
+      this.camera.position.set(this.x + Math.sin(a) * 0.2, ey, this.z + Math.cos(a) * 0.2);
+      this.camera.lookAt(this.x + Math.sin(a) * cp * 10, ey - sp * 10, this.z + Math.cos(a) * cp * 10);
     } else {
       dir.set(-Math.sin(a) * cp, sp, -Math.cos(a) * cp);
       let d = this.dist;

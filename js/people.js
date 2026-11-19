@@ -4,6 +4,7 @@
 // nobody heals them. None of them asked for a healer.
 import { makeFigure, animate, makePlate, CLASSES } from './figure.js';
 import { POI, CAMPS, collide } from './world.js';
+import { WATERS } from './water.js';
 import { npcMaxHp } from './game.js';
 import { NAMES, KINDS, known, bond } from './memory.js';
 
@@ -13,7 +14,9 @@ const GENERAL = ['LF healer for Emberdeep, have tank and 3 dps', 'WTS 20 copper 
   'LF guild, casual, I bring snacks', 'who keeps healing people in the duelling ring', 'that healer is not even in our party lol',
   'Bloodsand Pit queue is 40 minutes', 'tank LFG, will not pull the whole room this time', 'can someone explain what spirit does'];
 const ZONECHAT = ['where do I find Bristle Boars', 'south of the farm', 'Old Tusk is up, need 3 more', 'do NOT solo Old Tusk', 'these wolves hit hard',
-  'anyone else getting random heals out here?', 'boar tusks will not drop for me', 'is there a graveyard closer than town', 'LFG Old Tusk', 'slimes give terrible xp'];
+  'anyone else getting random heals out here?', 'boar tusks will not drop for me', 'is there a graveyard closer than town', 'anyone fishing at the pond?', 'can you swim in the pond? asking for a friend', 'LFG Old Tusk', 'slimes give terrible xp'];
+const FISHTALK = ['anyone else fishing?', 'the fish are not biting today', 'got one!', 'this is the only quiet spot in Greenhollow', 'they say Old Glimmerfin lives in here',
+  'fishing beats boars', 'shh, you will scare the fish', 'my bags are full of Mudfin', 'is it true a healer caught Old Glimmerfin?', 'brb, fishing'];
 const HURT = ['could use a heal', 'ow', 'anyone got a bandage?', 'need heals', 'low hp, brb'];
 const THANKS = ['ty!', 'thanks!', 'oh nice, thx', 'ty healer', 'where did that heal come from?', 'cheers', 'you are the best', '<3', 'thx, who are you?'];
 const SAVED = ['that heal saved me', 'omg ty', 'clutch heal!', 'I was dead for sure. ty', 'marry me, healer'];
@@ -62,7 +65,7 @@ export class People {
     return p;
   }
 
-  remove(p) { p.gone = true; this.used.delete(p.name); this.scene.remove(p.fig.group); p.plate.sprite.material.map.dispose(); this.list.splice(this.list.indexOf(p), 1); }
+  remove(p) { this.stopFish(p); p.gone = true; this.used.delete(p.name); this.scene.remove(p.fig.group); p.plate.sprite.material.map.dispose(); this.list.splice(this.list.indexOf(p), 1); }
 
   hub() { return this.list.filter(p => p.zone === 'hub' && !p.fading); }
   green() { return this.list.filter(p => p.zone === 'green' && !p.fading); }
@@ -115,6 +118,7 @@ export class People {
     const mobs = this.ctx.mobs.list;
     if (p.hp < p.maxHp * 0.45 && Math.random() < 0.85) { p.resting = true; p.state = 'idle'; p.wait = rnd(7, 12); return; }
     p.resting = false;
+    if (Math.random() < 0.08 && this.goFish(p)) return;
     if (!p.quest) { p.turnIn = false; this.go(p, POI.camp, 2.5); p.atCamp = true; return; }
     if (p.quest.done >= p.quest.need) { p.turnIn = true; this.go(p, POI.camp, 2.5); p.atCamp = true; return; }
     let c = mobs.filter(m => m.state !== 'dead' && m.attackers.size < (m.def.elite ? 4 : 2) && (!m.def.elite || m.attackers.size > 0 || Math.random() < 0.15));
@@ -124,6 +128,30 @@ export class People {
     const m = c[Math.floor(Math.random() * Math.min(4, c.length))];
     if (!m) { this.go(p, POI.camp, 6); return; }
     p.mob = m; p.state = 'hunt'; p.stuck = 0;
+  }
+
+  // Fishing on the bank of a fishing water. A few of the roster at a time.
+  goFish(p, now) {
+    if (!this.ctx.fishing || this.list.filter(q => q.fishAt).length >= 3) return false;
+    const taken = new Set(this.list.map(q => q.fishAt && q.fishAt.spot));
+    const b = pick(WATERS.filter(b => b.fish)); if (!b) return false;
+    const spot = pick(b.spots.filter(s => !taken.has(s))); if (!spot) return false;
+    p.fishAt = { spot, b }; p.mob = null;
+    if (now) { p.x = spot.x; p.z = spot.z; this.sitFish(p); }
+    else this.go(p, spot, 0.2);
+    return true;
+  }
+  sitFish(p) {
+    p.state = 'idle'; p.fishing = true; p.resting = false; p.wait = rnd(50, 110);
+    p.yaw = Math.atan2(p.fishAt.spot.fx - p.x, p.fishAt.spot.fz - p.z);
+    this.ctx.fishing.attach(p, p.fishAt.spot, p.fishAt.b);
+  }
+  stopFish(p) { if (!p.fishAt) return; p.fishing = false; p.fishAt = null; if (this.ctx.fishing) this.ctx.fishing.detach(p); }
+  // A fisher's float went under: up comes a fish, or nothing.
+  fishBite(p, got) {
+    if (got) { p.anim = 'cheer'; p.animT = 1.2; if (Math.random() < 0.3) this.say(p, pick(['got one!', 'Mudfin. again.', 'ooh, a Lanternfin', 'nice', 'tiny one, back you go'])); }
+    else if (Math.random() < 0.2) this.say(p, pick(['missed it', 'argh', 'so close']));
+    else if (Math.random() < 0.08) this.say(p, pick(FISHTALK));
   }
 
   startDuel() {
@@ -153,12 +181,13 @@ export class People {
       if (p.ward.amt <= 0) p.ward = null;
       if (!dmg) { this.ctx.float(p, 'Absorbed', 'xp'); return; }
     }
-    p.hp -= dmg; p.hurtAt = this.t; p.resting = false; this.ctx.float(p, '-' + dmg, big ? 'dmg big' : 'dmg');
+    p.hp -= dmg; p.hurtAt = this.t; p.resting = false; this.stopFish(p); this.ctx.float(p, '-' + dmg, big ? 'dmg big' : 'dmg');
     if (p.hp <= 0) return this.kill(p, by);
     if (p.state !== 'hunt' || !p.mob || p.mob.state === 'dead') { p.mob = by; p.state = 'hunt'; p.path = null; p.stuck = 0; }
     if (p.hp < p.maxHp * 0.25 && !p.cried && this.near(p)) { p.cried = true; this.say(p, (this.ctx.social && this.ctx.social.cry(p)) || pick(['HELP', 'heals!!', 'I am going down', 'so dead'])); }
   }
   kill(p, by) {
+    this.stopFish(p);
     p.hp = 0; p.dead = true; p.state = 'dead'; p.deadT = 80; p.hots = []; p.dots = []; p.ward = null; p.mob = null; p.path = null; p.cried = false;
     if (p.zone === 'dungeon') p.deadT = 1e9;
     if (this.ctx.zone() === p.zone) this.ctx.chat('c-yell', `${p.name} has been slain by ${by.name}.`);
@@ -208,6 +237,10 @@ export class People {
       const here = ctx.zone(), f = here === 'green' ? this.green().filter(p => !p.dead) : this.free();
       if (f.length) { const p = pick(f), g = here !== 'dungeon' && ctx.social && ctx.social.general(p); this.say(p, g || pick(here === 'green' ? ZONECHAT : GENERAL), 'gen'); }
     }
+    if (!this.fishInit && ctx.fishing) {     // a couple of people are already at the pond
+      this.fishInit = true;
+      for (const p of this.green().filter(p => !p.dead).slice(0, 2)) this.goFish(p, true);
+    }
     if ((this.popT -= dt) <= 0) {       // keep Greenhollow busy: new faces walk out of the gate
       this.popT = rnd(8, 14);
       if (this.green().length < GREEN_POP) { const p = this.spawn(POI.gateOut.x + rnd(-1, 1), POI.gateOut.z - 2, 1); p.zone = 'green'; }
@@ -247,6 +280,7 @@ export class People {
           else if (p.duel) { p.duel.ready = true; p.state = 'duel'; if (p.duel.foe.duel && p.duel.foe.duel.ready && this.near(p)) ctx.chat('c-sys', `${p.duel.foe.name} has challenged ${p.name} to a duel.`); }
           else {
             p.state = 'idle'; p.wait = p.train ? rnd(8, 18) : rnd(4, 14); if (p.dest.face) p.yaw = Math.atan2(p.dest.face.fx - p.x, p.dest.face.fz - p.z);
+            if (p.fishAt && !p.fishing) this.sitFish(p);
             if (p.zone === 'green' && p.atCamp) {
               p.atCamp = false; p.wait = rnd(2, 5); p.yaw = Math.atan2(POI.warden.x - p.x, POI.warden.z - p.z);
               if (p.turnIn) {
@@ -297,9 +331,10 @@ export class People {
       } else {
         if (p.train) anim = 'attack';
         if (p.resting) anim = 'sit';
+        if (p.fishing) anim = 'fishsit';
         if ((p.wait -= dt) <= 0) {
           if (p.zone === 'dungeon') p.wait = 1e9;
-          else if (p.zone === 'green') { if (p.goHome) { p.goHome = false; this.through(p, false); } else this.thinkGreen(p); }
+          else if (p.zone === 'green') { this.stopFish(p); if (p.goHome) { p.goHome = false; this.through(p, false); } else this.thinkGreen(p); }
           else if (p.hp < p.maxHp * 0.5 && Math.random() < 0.3) { this.say(p, pick(HURT)); p.wait = rnd(5, 10); }
           else this.think(p);
         }

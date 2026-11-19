@@ -23,7 +23,7 @@ export const WARD_TIME = 15, WARD_LOCK = 12;
 export const THREAT_SOLO = 0.6, THREAT_TANKED = 1.0, THREAT_PER_HEAL = 0.5, TAUNT_BACK = 4;
 export const GCD = 1.2;
 export const SLOTS = ['Staff', 'Hood', 'Robe', 'Gloves', 'Boots', 'Ring', 'Trinket'];
-export const SLOT_ICON = { Staff: '🪄', Hood: '🎓', Robe: '🥋', Gloves: '🧤', Boots: '🥾', Ring: '💍', Trinket: '🔮' };
+export const SLOT_ICON = { Staff: '🪄', Hood: '🎓', Robe: '🥋', Gloves: '🧤', Boots: '🥾', Ring: '💍', Trinket: '🔮', Fish: '🐟', Junk: '👢' };
 export const RARITY = ['Common', 'Uncommon', 'Rare', 'Epic'];
 export const RARITY_COLOR = ['#dddddd', '#1eff00', '#6aa5ff', '#c77dff'];
 const R_WEIGHT = [60, 28, 10, 2], R_MULT = [1, 1.35, 1.8, 2.4];
@@ -162,13 +162,13 @@ export function addItem(S, it) {
   S.bag.push(it); return true;
 }
 export function equipItem(S, i) {
-  const it = S.bag[i]; if (!it) return;
+  const it = S.bag[i]; if (!it || it.kind) return;
   const old = S.equip[it.slot];
   S.equip[it.slot] = it;
   if (old) S.bag[i] = old; else S.bag.splice(i, 1);
 }
 export function sellItem(S, i) { const it = S.bag[i]; if (!it) return 0; S.bag.splice(i, 1); S.coins += it.value; return it.value; }
-export function itemScore(it) { return it ? it.power * 2 + it.spirit + it.mana / 4 + it.haste * 3 + (it.fx ? 8 : 0) : 0; }
+export function itemScore(it) { return it && !it.kind ? it.power * 2 + it.spirit + it.mana / 4 + it.haste * 3 + (it.fx ? 8 : 0) : 0; }
 
 // The quartermaster: four pieces of gear (restocked when you level), a
 // restock for a fee, and bigger bags.
@@ -203,3 +203,25 @@ export function healEstimate(S, sp) {
 }
 export const knows = (S, sp) => !sp.lvl || S.level >= sp.lvl;
 export const manaCost = (S, sp) => sp.id === 'revive' && perk(S, 'rez') ? Math.round(sp.mana / 2) : sp.id === 'flash' && hasFx(S, 'thrift') ? Math.round(sp.mana * 0.7) : sp.mana;
+
+// Fishing. A side activity: fish restore mana when you sit and eat them (or
+// sell to Pim), now and then the line brings up junk or a piece of gear, and
+// once in a long while Old Glimmerfin, a named fish people talk about.
+export const FISH = [
+  { name: 'Reed Perch', q: 0, restore: 0.3, value: 2, w: 40 },
+  { name: 'Mudfin', q: 0, restore: 0.3, value: 2, w: 30 },
+  { name: 'Speckled Dace', q: 1, restore: 0.5, value: 6, w: 14 },
+  { name: 'Lanternfin', q: 2, restore: 0.75, value: 14, w: 5 },
+];
+export const GLIMMERFIN = { name: 'Old Glimmerfin', q: 3, restore: 1, value: 90, named: true };
+const JUNK = ['Waterlogged Boot', 'Rusty Hook', 'Tangle of Pondweed', 'Somebody\'s Lost Spoon'];
+export const EAT_TIME = 6;
+// What comes up on the hook: { kind: 'fish' | 'named' | 'junk' | 'gear', item }.
+export function fishCatch(S, r = Math.random()) {
+  if (r < 0.02) return { kind: 'named', item: { ...GLIMMERFIN, kind: 'fish', slot: 'Fish', ilvl: S.level } };
+  if (r < 0.08) { const it = rollItem(S.level, null, 1); return { kind: 'gear', item: it }; }
+  if (r < 0.18) return { kind: 'junk', item: { kind: 'junk', slot: 'Junk', name: pick(JUNK), q: 0, ilvl: 1, value: 1 } };
+  let w = Math.random() * FISH.reduce((a, f) => a + f.w, 0), f = FISH[0];
+  for (const x of FISH) { if ((w -= x.w) < 0) { f = x; break; } }
+  return { kind: 'fish', item: { kind: 'fish', slot: 'Fish', name: f.name, q: f.q, restore: f.restore, ilvl: S.level, value: f.value + Math.floor(S.level / 3) } };
+}

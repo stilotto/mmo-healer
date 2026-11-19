@@ -31,6 +31,8 @@ export function init(state, handlers) {
   mk('Tab', () => H.tab(), 'Next target (Tab, Shift+Tab goes back)');
   mk('Hurt', () => H.hurt(), 'Target the most hurt person nearby (F)');
   mk('Drink', () => H.drink(), 'Sit and drink to restore mana (Z). Moving or casting stands you up.');
+  mk('Fish', () => H.fish(), 'Fish from the water\'s edge (G). Click when the float dips.');
+  bar.lastChild.id = 'fishbtn'; bar.lastChild.style.display = 'none';
   mk('Bag', toggleBag, 'Character and bag (B)');
   mk('View', () => H.view(), 'First or third person (V)');
   mk('Mouse', () => H.look(), 'Mouse-look on or off (X). Esc frees the cursor.');
@@ -41,6 +43,8 @@ export function init(state, handlers) {
   $('pframe').onclick = () => H.self();
 }
 
+let canFish = false;
+export function fishable(on) { if (on === undefined) return canFish; canFish = on; $('fishbtn').style.display = on ? '' : 'none'; }
 export function err(text) { const e = $('err'); e.textContent = text; e.style.opacity = 1; errT = 1.6; sfx('err'); }
 export function toast(text, color) { const e = $('toast'); e.textContent = text; e.style.color = color || ''; e.style.opacity = 1; toastT = 2.6; }
 export function zone(name) { $('zone').textContent = name; toast(name); }
@@ -65,6 +69,10 @@ function tip(html, ev) {
   t.style.left = Math.max(4, Math.min(w - 196, r.left - 60)) + 'px'; t.style.top = ''; t.style.bottom = (h - r.top + 6) + 'px';
 }
 function itemTip(it, cmp) {
+  if (it.kind === 'fish') return `<div class="n" style="color:${qcol(it)}">${esc(it.name)}</div><div class="m">${it.named ? 'Named fish' : 'Fish'}</div>` +
+    `<div style="color:#8ad8ff">Click to sit and eat: restores ${Math.round(it.restore * 100)}% of your mana over ${6} seconds.</div>` +
+    (it.named ? '<div style="color:#ffc070">The pond\'s oldest resident. People will talk.</div>' : '') + `<div class="m">Sells for ${it.value}c (Shift+click)</div>`;
+  if (it.kind === 'junk') return `<div class="n">${esc(it.name)}</div><div class="m">Junk. Click to sell for ${it.value}c.</div>`;
   const line = (k, label, mult = 1) => {
     if (!it[k] && !(cmp && cmp[k])) return '';
     const d = cmp ? (it[k] || 0) - (cmp[k] || 0) : 0;
@@ -76,7 +84,7 @@ function itemTip(it, cmp) {
     (it.unique ? `<div class="m">From ${UNIQUES[it.unique].boss}</div>` : '') + `<div class="m">Sells for ${it.value}c</div>`;
 }
 
-export function tipItem(it, e) { tip(it ? itemTip(it, S.equip[it.slot]) : '', e); }
+export function tipItem(it, e) { tip(it ? itemTip(it, it.kind ? null : S.equip[it.slot]) : '', e); }
 let bagOpen = false, shopOpen = false, doll = null;
 export function toggleBag() { bagOpen = !bagOpen; if (bagOpen && !doll) { doll = makeDoll($('dollc')); doll.show(S.equip); } if (doll) doll.preview(null); if (!bagOpen) shopOpen = false; $('bag').style.display = bagOpen ? 'block' : 'none'; tip(); if (bagOpen) drawBag(); H.panel(bagOpen); }
 export function openShop() { shopOpen = true; if (!bagOpen) toggleBag(); else drawBag(); }
@@ -114,11 +122,12 @@ export function drawBag() {
   for (let i = 0; i < bagSize(S); i++) {
     const it = S.bag[i], d = el('div', 'it ' + qcls(it), it ? SLOT_ICON[it.slot] + (itemScore(it) > itemScore(S.equip[it.slot]) ? '<small style="color:#1eff00">▲</small>' : '') : '');
     if (it) {
-      d.onpointerenter = e => { tip(itemTip(it, S.equip[it.slot]), e); if (doll) doll.preview(it); };
+      d.onpointerenter = e => { tip(itemTip(it, it.kind ? null : S.equip[it.slot]), e); if (doll && !it.kind) doll.preview(it); };
       d.onpointerleave = () => { tip(); if (doll) doll.preview(null); };
       d.onclick = e => {
         const dbl = Date.now() - lastTap < 350 && e.pointerType === 'touch'; lastTap = Date.now();
-        if (e.shiftKey || dbl) { const v = sellItem(S, i); chat('c-loot', `You sell ${it.name} for ${v}c.`); }
+        if (e.shiftKey || dbl || it.kind === 'junk') { const v = sellItem(S, i); chat('c-loot', `You sell ${it.name} for ${v}c.`); }
+        else if (it.kind === 'fish') { tip(); H.eat(i); return; }
         else { equipItem(S, i); sfx('equip'); H.dressed(); }
         tip(); if (doll) { doll.preview(null); doll.show(S.equip); } drawBag(); H.changed();
       };
@@ -145,7 +154,7 @@ export function update(dt, v) {
   const st = v.stats;
   setBar('php', v.me.hp / v.me.maxHp, `${Math.ceil(v.me.hp)} / ${v.me.maxHp}`);
   $('pframe').classList.toggle('sel', v.target === v.me); $('pframe').classList.toggle('combat', !!v.combat);
-  const ps = v.drinking ? 'Drinking' + (v.me.hots.length ? ' · ❋' : '') : (v.me.hots.length ? '❋ Renew' : '') + (v.me.ward ? ' ◈' : '') + (v.me.surge ? ' ⚡ Surge' : '');
+  const ps = v.drinking ? (v.eating ? 'Eating' : 'Drinking') + (v.me.hots.length ? ' · ❋' : '') : (v.me.hots.length ? '❋ Renew' : '') + (v.me.ward ? ' ◈' : '') + (v.me.surge ? ' ⚡ Surge' : '');
   if ($('psub').textContent !== ps) $('psub').textContent = ps;
   frames(v); boss(v);
   setBar('pmp', S.mana / st.maxMana, `${Math.floor(S.mana)} / ${st.maxMana}`);

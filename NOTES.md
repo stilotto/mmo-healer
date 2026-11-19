@@ -63,10 +63,13 @@ Sprints 1 to 8 in `TODO.md` are built and on `main`:
 - Sprint 8: loot in the world, Need or Greed, item effects, boss uniques,
   gear on the figure and the paper doll.
 
-Next: agreed after sprint 8 (see "Agreed after sprint 8" in `TODO.md`): the
-pond (wading, swimming, fishing), a three-section talent tree, and later a
-stats tab. The order is only proposed (pond, talents, then sprint 9, The
-clock); confirm it with the owner, then wait for their go.
+- The pond (after sprint 8): wading, swimming, fishing, and water as a
+  reusable system.
+
+Next: agreed after sprint 8 (see "Agreed after sprint 8" in `TODO.md`): a
+three-section talent tree, and later a stats tab. The order is only
+proposed (talents, then sprint 9, The clock); confirm it with the owner,
+then wait for their go.
 The owner liked the paper doll.
 Nothing has had a hands-on balance pass beyond the owner's first play.
 
@@ -262,6 +265,37 @@ Nothing has had a hands-on balance pass beyond the owner's first play.
   the first time the window opens and drawn only while it is open.
 - `tools/sprint8.mjs` checks drops and pick-up, a heal's drop, uniques,
   gear meshes and stride, crashing a roll, the doll window and Old Tusk.
+
+## The pond (water and fishing)
+
+- `js/water.js` is the water system. `addWater(scene, spec, mapShapes)`
+  takes a circle `{ x, z, r }` or a rectangle `{ x0, z0, x1, z1 }`, plus
+  `wade` (width of the shallow band; make it wider than the body for water
+  that is shallow all through) and `fish`. It draws the surface, the bank,
+  the drifting glints and the minimap shape, and for fishing water it makes
+  bank `spots`. Only the pond uses it so far (`buildZone` in `world.js`).
+- `waterAt(x, z)` gives `{ b, d, mode: 'wade' | 'swim', sink }` or null.
+  `world.collide` calls `keepOut` for anyone without `swims` (people and
+  monsters walk round water); the player has `swims: true`.
+- `player.js` sets `player.water`, `player.sink` (eased) and slows you;
+  `main.js` lowers the figure by `sink`, picks the `swim`/`tread`/`fish`
+  animations, blocks casting (and drinking, eating) in deep water, and makes
+  splashes and rings (`ripple`). `mobs.js` drops anyone who is `swimming`.
+- Water surfaces carry `userData.noShade` (no shadows on water) and flat
+  ground pieces carry `userData.flat` (they cast none); `look.js` reads both.
+  A fir's shadow on the pond was the owner's "dark triangle".
+- `js/fishing.js` (`Fishing`): the healer's rod (left hand), float and line;
+  states `cast`, `wait`, `bite`; `reel()`; `blocked` comes from `main.js`.
+  It also draws the tackle for people who fish: `people.js` sends a few
+  green people to bank spots (`goFish`, `sitFish`, `stopFish`), two start
+  there, and `fishBite` makes them cheer or talk.
+- Catches are rules in `game.js` (`fishCatch`, `FISH`, `GLIMMERFIN`).
+  Fish and junk are bag items with `kind` ('fish' or 'junk') and `slot`
+  'Fish' or 'Junk'; they never equip. Clicking a fish eats it (`eat` in
+  `main.js`: a `meal` adds mana while you sit); clicking junk sells it.
+  `S.fishCaught` and `S.glimmer` are counted for the stats tab later.
+  Landing Old Glimmerfin calls `social.fished` (fame 3, a `fish` deed).
+- `tools/pond.mjs` checks all of it.
 
 ## Things worth knowing
 

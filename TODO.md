@@ -145,22 +145,23 @@ is weakest. Sprints 4 to 8 are the game; 9 onward is more of it.
 
 ## Agreed after sprint 8 (owner), order not yet set
 
-Proposed order: the pond next (small), then talents, then the clock
+Proposed order: the pond (built), then talents, then the clock
 (sprint 9 above) and the rest; the stats tab later. Confirm with the owner.
 
-- **The pond (small sprint).** The Greenhollow pond is solid today: you
-  walk round it. Make it water.
-  - Wading in the shallow ring: a little slower, figure sunk to the knees,
-    splashes as you move.
-  - Swimming in the deep middle: sunk to the shoulders, slow, no casting
-    (the genre's usual rule). Monsters do not follow you in.
-  - People fish: a few of the roster sit on the bank with rods and chat.
-  - The healer fishes: stand at the edge, cast, watch the float, click
-    when it dips. Catches: fish that restore mana like a drink or sell to
-    Pim, now and then an odd item, and a rare named fish people gossip
-    about. A side activity; healing stays the game.
-  - Fix while there: a dark blue triangle drawn on the pond surface (seen
-    in the owner's screenshot, near the top left of the water).
+- **The pond: built.** The Greenhollow pond is water. Wading in the
+  shallow ring (4.5 yards): 25% slower, sunk to the knees, splashes and
+  rings. Swimming in the deep middle: 45% slower, sunk to the shoulders, a
+  swim stroke, no casting or jumping, and monsters give up on you. People
+  and monsters walk round it. Two or three of the roster sit on the bank
+  with rods, catch things and chat. The healer fishes from the bank or the
+  shallows (G or the Fish button, shown near the water): watch the float,
+  click when it dips (1.6 seconds), too soon comes up empty, moving stops
+  it. Catches: four fish (eat one from the bag to sit and get 30 to 75% of
+  your mana back over 6 seconds, or sell), junk, now and then gear, and
+  Old Glimmerfin (2%): fame and General chat gossip. The dark triangle
+  was a fir's shadow on the water; water no longer takes shadows.
+  Water is a system now: `addWater` in `js/water.js` makes any circle or
+  rectangle of water with all of the above.
 - **Talent tree.** Three sections (owner). Talents can unlock spells,
   improve existing ones, or do other creative things; propose the ideas
   when the sprint starts. First sketch, not agreed: Mending (direct heals),

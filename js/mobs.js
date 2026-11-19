@@ -3,6 +3,7 @@
 // They ignore the healer.
 import { makeMob, animateMob, makePlate, MOBS } from './figure.js';
 import { CAMPS, collide, WALL_R } from './world.js';
+import { swimming } from './water.js';
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 
@@ -48,7 +49,7 @@ export class Mobs {
       m.plate.sprite.visible = true; g.scale.setScalar(Math.max(0.01, m.grow));
       if (m.state === 'fight') {
         let f = m.foe;
-        if (!f || f.dead || f.gone || Math.hypot(f.x - m.camp.x, f.z - m.camp.z) > m.camp.r + 45 || Math.hypot(f.x, f.z) < WALL_R + 4) {   // the town is safe
+        if (!f || f.dead || f.gone || Math.hypot(f.x - m.camp.x, f.z - m.camp.z) > m.camp.r + 45 || Math.hypot(f.x, f.z) < WALL_R + 4 || swimming(f)) {   // the town is safe, and they do not swim
           m.attackers.delete(f); f = m.foe = [...m.attackers].find(a => !a.dead && !a.gone) || null;
           if (!f) { m.state = 'idle'; m.wait = 1; m.attackers.clear(); }
         }
@@ -74,7 +75,7 @@ export class Mobs {
           m.look = 1;
           if (Math.random() < 0.12) {
             const me = this.ctx.me, v = folk.find(p => p.zone === 'green' && !p.dead && !p.fading && Math.hypot(p.x - m.x, p.z - m.z) < 7)
-              || (!me.dead && !(me.faded > 0) && Math.hypot(me.x - m.x, me.z - m.z) < 7 ? me : null);     // the healer is fair game too
+              || (!me.dead && !(me.faded > 0) && !swimming(me) && Math.hypot(me.x - m.x, me.z - m.z) < 7 ? me : null);     // the healer is fair game too
             if (v) { m.foe = v; m.attackers.add(v); m.state = 'fight'; if (v === me) this.ctx.aggroed(m); }
           }
         }

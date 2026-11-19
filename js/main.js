@@ -15,6 +15,8 @@ import { makeLook } from './look.js';
 import { Sparkles } from './fx.js';
 import * as Chat from './chat.js';
 import { Social } from './social.js';
+import { Fishing } from './fishing.js';
+import { ripple, updateWater, SURFACE } from './water.js';
 
 const canvas = document.getElementById('view');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -47,6 +49,7 @@ let mobs, dungeon, zoneNow = 'hub';
 // The healer as a unit, so F1 or a click on your own frame targets yourself.
 const meUnit = { isMe: true, name: '', cls: 'Healer', level: 1, hp: 100, maxHp: 100, x: 0, z: 0, hots: [], dots: [], ward: null, dead: false, faded: 0, lastHit: -99 };
 let social, loot, emo = null;      // emo: the healer's emote animation
+let fishing, meal = null, splashT = 0, lastWater = '';
 let drinking = 0, wardLock = new WeakMap(), ghost = false, corpse = null, cds = {};
 
 // Threat. Healing someone a monster is fighting adds to that monster's
@@ -142,6 +145,7 @@ function tabTarget(back) {
 
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 player.onClick = (x, y) => {
+  if (fishing && fishing.state === 'bite') { fishing.reel(); return; }
   ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
   const hit = ray.intersectObjects([vendor.hit, ...people.list.map(p => p.fig.hit)], false)[0];
   if (hit && hit.object === vendor.hit) {
@@ -156,6 +160,7 @@ player.onKey = e => {
   if (fk) { e.preventDefault(); if (fk[1] === '1') setTarget(meUnit); else pickFrame(+fk[1] - 2); return; }
   if (e.code === 'Tab') tabTarget(e.shiftKey);
   else if (e.code === 'KeyZ') toggleDrink();
+  else if (e.code === 'KeyG') fish();
   else if (e.code === 'Digit4' || e.code === 'Numpad4') cast(3);
   else if (e.code === 'Digit5' || e.code === 'Numpad5') cast(4);
   else if (e.code === 'Digit6' || e.code === 'Numpad6') cast(5);
@@ -183,13 +188,44 @@ function toggleDrink() {
   if (drinking) { drinking = 0; return; }
   if (meUnit.dead) return UI.err('You are dead');
   if (inCombat()) return UI.err("Can't drink in combat");
+  if (player.water) return UI.err('Find dry land to sit and drink');
   if (casting || player.moving) return UI.err("Can't do that right now");
   drinking = 0.001;
+}
+// Fishing: G or the Fish button casts; pressing again (or a click) reels in.
+function fish() { if (fishing.active) fishing.reel(); else fishing.start(); }
+function fishBlocked(soft) {
+  if (meUnit.dead) return 'You are dead';
+  if (inCombat()) return soft ? 'combat' : "Can't fish in combat";
+  if (player.water === 'swim') return "Can't fish while swimming";
+  if (casting || drinking || player.moving) return soft ? 'busy' : "Can't do that right now";
+  return '';
+}
+function caught(res, b) {
+  const it = res.item;
+  if (S.bag.length >= G.bagSize(S)) { UI.err('Your bag is full'); UI.chat('c-sys', `You land ${it.name}, but your bag is full, so you let it go.`); return; }
+  S.bag.push(it); S.fishCaught = (S.fishCaught || 0) + 1; UI.sfx('loot');
+  if (res.kind === 'named') { S.glimmer = (S.glimmer || 0) + 1; UI.toast(it.name + '!', G.RARITY_COLOR[3]); UI.chatHtml('c-loot', `You catch ${UI.itemLink(it)}! People will hear about this.`); social.fished(b.name); }
+  else if (res.kind === 'gear') UI.chatHtml('c-loot', `Something heavy on the line... you reel in ${UI.itemLink(it)}.`);
+  else UI.chatHtml('c-loot', `You catch ${UI.itemLink(it)}.`);
+  UI.drawBag(); G.save(S);
+}
+// Eating a fish: sit and get a share of your mana back over a few seconds.
+function eat(i) {
+  const it = S.bag[i]; if (!it || it.kind !== 'fish') return;
+  if (meUnit.dead) return UI.err('You are dead');
+  if (inCombat()) return UI.err("Can't eat in combat");
+  if (player.water) return UI.err('Find dry land to sit and eat');
+  if (casting || player.moving) return UI.err("Can't do that right now");
+  S.bag.splice(i, 1); fishing.stop();
+  meal = { left: G.EAT_TIME, rate: G.stats(S).maxMana * it.restore / G.EAT_TIME };
+  drinking = 1.001; UI.chat('c-sys', `You sit down and eat the ${it.name}.`); UI.drawBag(); G.save(S);
 }
 function cast(i) {
   const sp = G.SPELLS[i];
   if (!G.knows(S, sp)) return UI.err(`${sp.name} is learned at level ${sp.lvl}`);
   if (meUnit.dead) return UI.err(ghost ? 'You are a spirit' : 'You are dead');
+  if (player.water === 'swim') return UI.err("Can't cast while swimming");
   if (casting || gcd > 0) return UI.err('Not ready yet');
   if ((cds[sp.id] || 0) > T) return UI.err(`${sp.name} is not ready yet`);
   if (sp.self) { if (S.mana < G.manaCost(S, sp)) return UI.err('Not enough mana'); drinking = 0; gcd = gcdMax = G.gcdTime(S); return land(sp, meUnit); }
@@ -308,6 +344,10 @@ function start(name) {
   people.ctx.social = dungeon.ctx.social = social;
   loot = new Loot(scene, { S, me: meUnit, ghost: () => ghost, sfx: UI.sfx, err: UI.err, chat: UI.chat, chatHtml: UI.chatHtml, link: UI.itemLink, tip: UI.tipItem,
     later: (s, f) => social.later(s, f), take: pickup, spark: (x, z, c) => fx.emit(x, 0.5, z, { n: 1, color: c, spread: 0.3, up: 1.4, jitter: 0.2, life: 1.2 }) });
+  fishing = new Fishing(scene, { S, player, fig: me, err: UI.err, chat: UI.chat, sfx: UI.sfx, caught, blocked: fishBlocked,
+    splash: (x, z, n) => fx.emit(x, SURFACE + 0.1, z, { n, color: 0xdff4ff, spread: 0.3, up: 1.8, jitter: 1, life: 0.7 }),
+    npcCatch: (p, got) => people.fishBite(p, got) });
+  people.ctx.fishing = fishing;
   dungeon.ctx.roomLoot = d => { if (Math.random() < 0.6) { const m = d.mobs.find(m => m.room === d.room); loot.startRoll(G.rollItem(S.level + 1, null, 1), d.alive(), m ? 'The ' + m.name : 'The pack'); } };
   mobs.ctx.killed = m => {           // Old Tusk leaves something behind if you were there
     if (m.kind !== 'tusk' || zoneNow !== 'green' || meUnit.dead || distTo(m) > 60) return;
@@ -319,12 +359,12 @@ function start(name) {
     who: a => social.who(a), fame: () => social.fameInfo(), gquit: () => social.gquit(), act: a => social.act(a), changed: () => G.save(S),
     target: n => { const p = n && social.find(n, true); if (p) setTarget(p); else UI.err(n ? `No one called ${n} is here` : 'Usage: /target <name>'); },
     roll: k => loot.choose(k), opened: () => { player.keys.clear(); } });
-  UI.init(S, { dressed, cast, release, returnToLife, drink: toggleDrink, self: () => setTarget(meUnit), pick: pickFrame, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
+  UI.init(S, { dressed, cast, fish, eat, release, returnToLife, drink: toggleDrink, self: () => setTarget(meUnit), pick: pickFrame, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
     panel: open => { if (open) player.free(); else if (S.look) player.lock(); } });
   player.look = !!S.look; UI.setLook(player.look, false);
   player.enabled = true; G.save(S);
   look.onLower = n => UI.chat('c-sys', ['', 'Graphics: soft glow turned off to keep things smooth.', 'Graphics: shadows turned off to keep things smooth.', 'Graphics: resolution lowered to keep things smooth.'][n]);
-  window.game = { me: meUnit, get corpse() { return corpse; }, get casting() { return casting; }, S, people, mobs, dungeon, player, DUN, scene, renderer, cast, tabTarget, hurtTarget, toggleLook, UI, G, Chat, get social() { return social; }, get loot() { return loot; }, fig: me, dressed, get target() { return target; }, set target(p) { target = p; } };
+  window.game = { me: meUnit, get corpse() { return corpse; }, get casting() { return casting; }, S, people, mobs, dungeon, player, DUN, scene, renderer, cast, tabTarget, hurtTarget, toggleLook, UI, G, Chat, get social() { return social; }, get loot() { return loot; }, get fishing() { return fishing; }, get meal() { return meal; }, eat, fish, get T() { return T; }, fig: me, dressed, get target() { return target; }, set target(p) { target = p; } };
 }
 const nameBox = document.getElementById('cname'); nameBox.value = S.name || '';
 document.getElementById('enter').onclick = () => start(nameBox.value.trim().slice(0, 12));
@@ -349,6 +389,7 @@ const SPEED = Math.max(1, Math.min(20, +new URLSearchParams(location.search).get
 function step(dt) {
   T += dt; frame++;
   world.update(dt, T);
+  player.dead = meUnit.dead && !ghost; player.ghost = ghost;
   player.update(dt);
   { const st0 = G.stats(S); meUnit.name = S.name; meUnit.level = S.level; meUnit.x = player.x; meUnit.z = player.z;
     if (meUnit.maxHp !== st0.maxHp) { meUnit.hp = meUnit.maxHp = st0.maxHp; }
@@ -361,6 +402,23 @@ function step(dt) {
   if (!meUnit.dead && !inCombat() && T - meUnit.lastHit > 5 && meUnit.hp < meUnit.maxHp) meUnit.hp = Math.min(meUnit.maxHp, meUnit.hp + meUnit.maxHp * (drinking > 1 ? 0.06 : 0.02) * dt);
   if (drinking && (player.moving || casting)) drinking = 0;
   if (drinking) drinking += dt;
+  if (meal && (!drinking || (meal.left -= dt) <= 0)) meal = null;
+  updateWater(dt, T);
+  // In the water: splashes as you move, rings when you stand, a tip the first time.
+  if (player.water !== lastWater) {
+    if (player.water && !lastWater) { fx.emit(player.x, SURFACE + 0.1, player.z, { n: 14, color: 0xdff4ff, spread: 0.4, up: 2, jitter: 1, life: 0.7 }); ripple(player.x, player.z, 1.6, 0.45); }
+    if (player.water === 'swim') { if (casting) { casting = null; gcd = 0; UI.err("Can't cast while swimming"); }
+      if (!S.seenSwim) { S.seenSwim = true; UI.chat('c-sys', 'Deep water: you swim slowly and cannot cast, but monsters will not follow you in.'); } }
+    lastWater = player.water;
+  }
+  if (player.water) {
+    splashT -= dt;
+    if (player.speed && splashT <= 0) { splashT = player.water === 'swim' ? 0.4 : 0.2; fx.emit(player.x, SURFACE + 0.1, player.z, { n: 3, color: 0xdff4ff, spread: 0.35, up: 1.3, jitter: 0.8, life: 0.6 }); ripple(player.x, player.z, player.water === 'swim' ? 1.4 : 0.9, 0.5); }
+    else if (!player.speed && splashT <= -1.4) { splashT = 0; ripple(player.x, player.z, 1, 0.3); }
+  }
+  fishing.update(dt, T);
+  { const can = !!(fishing.active || (!meUnit.dead && fishing.spot()));
+    if (can !== UI.fishable()) { UI.fishable(can); if (can && !S.seenBank) { S.seenBank = true; UI.chat('c-sys', 'You could fish here. Press G or the Fish button, then click when the float dips.'); } } }
   people.update(dt, T);
   social.update(dt, T);
   loot.update(dt, T);
@@ -376,7 +434,7 @@ function step(dt) {
   const z = player.x > 500 ? 'dungeon' : inGreen(player) ? 'green' : 'hub';
   if (z !== zoneNow) { zoneNow = z; UI.zone(ZONE_NAME[z]); world.mood(z === 'dungeon'); look.mood(z === 'dungeon'); if (z === 'green' && !S.seenGreen) { S.seenGreen = true; UI.chat('c-sys', 'People out here can die. Press 3 to Revive the fallen (5 second cast).'); } }
   const st = G.stats(S);
-  S.mana = Math.min(st.maxMana, S.mana + (st.regen + (drinking > 1 ? st.maxMana * 0.08 * (G.hasFx(S, 'spring') ? 2 : 1) : 0)) * dt);   // drinking: about 12 s from empty
+  S.mana = Math.min(st.maxMana, S.mana + (st.regen + (meal ? meal.rate : 0) + (drinking > 1 ? st.maxMana * 0.08 * (G.hasFx(S, 'spring') ? 2 : 1) : 0)) * dt);   // drinking: about 12 s from empty
   if (gcd > 0) gcd -= dt;
   if (target && (target.gone || target.fading)) target = null;
   if (casting && !player.firstPerson) {   // light gathers at the staff while casting
@@ -389,9 +447,9 @@ function step(dt) {
     else if (casting.target.gone || casting.target.fading) casting = null;
     else if (casting.t >= casting.dur) { const c = casting; casting = null; land(c.spell, c.target); }
   }
-  me.group.position.set(player.x, player.y + (ghost ? 0.3 + Math.sin(T * 2) * 0.1 : 0), player.z); me.group.rotation.y = player.yaw; me.group.visible = !player.firstPerson;
+  me.group.position.set(player.x, player.y - player.sink + (ghost ? 0.3 + Math.sin(T * 2) * 0.1 : 0), player.z); me.group.rotation.y = player.yaw; me.group.visible = !player.firstPerson;
   if (emo && (player.moving || casting || drinking || meUnit.dead || (emo.t -= dt) <= 0)) emo = null;
-  animate(me, meUnit.dead && !ghost ? 'dead' : casting ? 'cast' : drinking ? 'sit' : player.speed ? 'walk' : emo ? emo.mode : 'idle', T, player.back ? 0.7 : 1.15);
+  animate(me, meUnit.dead && !ghost ? 'dead' : casting ? 'cast' : drinking ? 'sit' : player.water === 'swim' ? (player.speed ? 'swim' : 'tread') : fishing.active ? 'fish' : player.speed ? 'walk' : emo ? emo.mode : 'idle', T, player.back ? 0.7 : 1.15);
 
   ring.visible = !!target;
   if (target) { ring.position.set(target.x, 0.06, target.z); ring.scale.setScalar(1 + Math.sin(T * 5) * 0.06); }
@@ -404,7 +462,7 @@ function step(dt) {
   if (UI.isShopOpen() && Math.hypot(VX - player.x, VZ - player.z) > 11) UI.closeShop();
   const sp = spots.find(s => Math.hypot(s.x - player.x, s.z - player.z) < s.r + 0.6) || null;
   if (sp !== lastSpot) { lastSpot = sp; if (sp) UI.chat('c-sys', sp.msg); }
-  UI.hint(sp ? sp.msg : S.healed > 150 ? '' : !target ? 'Find someone hurt and press Tab to target them' :
+  UI.hint(fishing.active ? fishing.hint() : sp ? sp.msg : S.healed > 150 ? '' : !target ? 'Find someone hurt and press Tab to target them' :
     target.dead ? 'Press 3 to Revive (stand still)' : target.hp >= target.maxHp ? `${target.name} is at full health. Tab to someone hurt (red or yellow bar)` : 'Press 1 to cast Mend (stand still), or 2 for Renew');
 
   const inDun = zoneNow === 'dungeon' && dungeon.active;
@@ -412,7 +470,7 @@ function step(dt) {
   if (inDun) list = dungeon.party.filter(p => !p.gone);
   else list = people.list.filter(p => p.grow >= 1 && !p.fading && (p.dead || p.hp < p.maxHp) && distTo(p) < 40)
     .sort((a, b) => (a.dead ? 1.5 : a.hp / a.maxHp) - (b.dead ? 1.5 : b.hp / b.maxHp));
-  UI.update(dt, { stats: st, combat: inCombat(), cds, T, target, dist: target ? distTo(target) : 0, casting, gcd, gcdMax, project, dt, me: meUnit, drinking, list, party: inDun, distOf: distTo,
+  UI.update(dt, { stats: st, combat: inCombat(), cds, T, target, dist: target ? distTo(target) : 0, casting, gcd, gcdMax, project, dt, me: meUnit, drinking, eating: !!meal, list, party: inDun, distOf: distTo,
     boss: inDun ? dungeon.bossInfo() : null, moodOf: p => p.isMe ? '' : social.label(p) });
   if (frame % 4 === 0) UI.drawMap(player, player.yaw, people.list, target, corpse, zoneNow === 'dungeon' ? dungeon.mobs : mobs.list, loot.drops);
   if ((saveT += dt) > 15) { saveT = 0; G.save(S); }

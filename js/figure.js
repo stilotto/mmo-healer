@@ -119,8 +119,12 @@ export function animate(f, mode, t, k = 1) {
   f.armL.rotation.z = f.armR.rotation.z = f.body.rotation.y = 0;
   if (mode === 'dead') { f.legL.rotation.x = f.legR.rotation.x = 0; f.armL.rotation.x = f.armR.rotation.x = -0.3; f.body.position.y = 0.22; f.body.rotation.x = -Math.PI / 2; return; }
   if (mode === 'sit') { f.legL.rotation.x = f.legR.rotation.x = -1.5; f.armL.rotation.x = f.armR.rotation.x = -0.5; f.body.position.y = -0.48; f.body.rotation.x = 0; return; }
+  if (mode === 'fishsit') { f.legL.rotation.x = f.legR.rotation.x = -1.5; f.armL.rotation.x = -1.05 + Math.sin(p * 1.3) * 0.03; f.armR.rotation.x = -0.4; f.body.position.y = -0.48; f.body.rotation.x = 0; return; }
   if (mode === 'walk') { l = Math.sin(p * 9 * k) * 0.7; aL = l * 0.7; aR = -l * 0.7; y = Math.abs(Math.cos(p * 9 * k)) * 0.04; }
   else if (mode === 'attack') { const s = (p * 1.6) % 1; aR = s < 0.3 ? -2.4 * (s / 0.3) : -2.4 * (1 - (s - 0.3) / 0.7); aL = -0.4; lean = 0.1; l = 0.15; }
+  else if (mode === 'swim') { const b = Math.sin(p * 5 * k); aL = -1.7 + b * 0.8; aR = -1.7 - b * 0.8; zL = -0.35; zR = 0.35; l = Math.sin(p * 10 * k) * 0.35; lean = 0.45; y = b * 0.03; }
+  else if (mode === 'tread') { const b = Math.sin(p * 3); aL = aR = -1.2 + b * 0.25; zL = -0.7; zR = 0.7; l = b * 0.3; y = b * 0.025; }
+  else if (mode === 'fish') { aL = -1.05 + Math.sin(p * 1.3) * 0.03; aR = 0.05; l = 0; y = Math.sin(p * 1.5) * 0.008; }
   else if (mode === 'cast') { aL = aR = -1.9 + Math.sin(p * 10) * 0.12; }
   else if (mode === 'cheer') { aL = aR = -2.9; y = Math.abs(Math.sin(p * 8)) * 0.35; }
   else if (mode === 'wave') { aR = -2.7; zR = 0.25 + Math.sin(p * 11) * 0.35; aL = 0.05; }
@@ -131,6 +135,17 @@ export function animate(f, mode, t, k = 1) {
   f.armL.rotation.x = aL; f.armR.rotation.x = aR;
   f.armL.rotation.z = zL; f.armR.rotation.z = zR;
   f.body.position.y = y; f.body.rotation.x = lean; f.body.rotation.y = turn;
+}
+
+// A fishing rod for the left hand: the cane points forward and up while the
+// arm is held out (animate 'fish'). `tip` is an empty at the end of the cane.
+const ROD_DIR = new THREE.Vector3(0, -0.38, 0.92).normalize();
+export function makeRod() {
+  const g = new THREE.Group();
+  const geo = cached('rod', () => [[S.cyl(0.018, 0.03, 2.4, 5), 0x8a6a3a, at(0, 1.2, 0)], [S.cyl(0.05, 0.05, 0.1, 8), 0x3a3a3a, at(0, 0.32, 0.04, 0, 0, Math.PI / 2)]]);
+  const cane = new THREE.Mesh(geo, vmat); cane.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), ROD_DIR); g.add(cane);
+  const tip = new THREE.Object3D(); tip.position.copy(ROD_DIR).multiplyScalar(2.4); g.add(tip);
+  g.userData.tip = tip; return g;
 }
 
 export function canvasTex(w, h, draw) {
