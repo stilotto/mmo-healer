@@ -115,16 +115,23 @@ is weakest. Sprints 4 to 8 are the game; 9 onward is more of it.
    /who, /who <name> (shows their record), /target, /roll, /fame,
    /leave and /join general or zone, /gquit, /help. People nearby answer.
    Not built from the original idea: the rival healer and the inn room.
-8. **Loot that matters.** Drops in the world with a beam per rarity, picked
-   up by walking over them. Need or greed rolls you can crash. Rare and
-   above carry an effect that changes play. Gear shows on the character.
-   A boss uniques checklist.
-   Paper doll (owner, after sprint 6): the character window shows the
-   healer in 3D in the middle, slowly turning (drag to spin). Slots around
-   the figure in the genre's usual layout: head, robe, trinket on the left;
-   gloves, boots, ring on the right; staff below. Hovering a bag item
-   previews it on the figure. Stats beside it (power, spirit, mana regen,
-   haste, average item level). Slot borders in rarity colours.
+8. **Loot that matters: built.** Loot lies on the ground at the giver's
+   feet (or the boss's body) with a beam in its rarity's colour (taller for
+   better, a gold pillar for uniques) and a mark on the minimap; walk over it
+   to pick it up. Drops last five minutes. In Emberdeep the party rolls Need
+   or Greed on what each pack leaves and on Cinderjaw's unique; a roll
+   window (or /need, /greed, /pass) lets the healer crash it, and the party
+   has opinions (a Need win counts against you with those who needed it).
+   Rare and Epic gear carries one of nine effects (echo heal, Renew bloom,
+   mana back on crits, a ward on low Mends, quicker Revive, shorter Fade,
+   Flash while moving, faster drinking, cheaper Flash). Six boss uniques
+   with their own effects: four from Cinderjaw (won by roll), two from Old
+   Tusk (dropped when it dies near you), tracked in the character window.
+   Gear shows on the healer (hood or circlet, mantle and stole, gloves,
+   boots, staff crescent, ring, charm) in rarity colours; Epic and unique
+   glow. Paper doll: the healer in 3D, turning (drag to spin), slots around
+   it, hover a bag item to try it on, stats beside it (power, spirit, mana
+   regen, haste, mana, average item level, fame).
 9. **The clock.** An events board by the fountain and a tracker under the
    minimap: parties forming, Old Tusk hunts, duelling tournaments, raid
    pulls. Events run whether you go or not, and report how they went.

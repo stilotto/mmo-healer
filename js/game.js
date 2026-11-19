@@ -32,6 +32,45 @@ const PRE = [['Frayed', 'Worn', 'Plain', 'Patched', 'Dusty'], ['Sturdy', 'Mossy'
 const BASE = { Staff: ['Staff', 'Crook', 'Rod'], Hood: ['Hood', 'Cowl', 'Circlet'], Robe: ['Robe', 'Vestment', 'Tunic'],
   Gloves: ['Gloves', 'Wraps', 'Mitts'], Boots: ['Boots', 'Sandals', 'Slippers'], Ring: ['Ring', 'Band', 'Loop'],
   Trinket: ['Charm', 'Bell', 'Locket', 'Censer'] };
+// Effects carried by Rare and Epic gear. Only one of each counts.
+export const EFFECTS = {
+  echo: 'Mend also heals the most hurt person near your target for 35% as much.',
+  bloom: 'When Renew ends it blooms, healing three ticks at once.',
+  clarity: 'Critical heals give back 40% of their mana.',
+  aegis: 'Mend on someone below 35% health also wards them a little.',
+  swiftrez: 'Revive takes 3 seconds instead of 5.',
+  veil: 'Fade comes back after 18 seconds instead of 30.',
+  glide: 'You can move while casting Flash.',
+  spring: 'Drinking restores mana twice as fast.',
+  thrift: 'Flash costs 30% less mana.',
+  // boss uniques only
+  surge: 'Each heal you land has a 15% chance to make your next Mend instant.',
+  ashguard: 'Monsters need 30% more threat before they turn on you.',
+  mercy: 'Heals on someone below 25% health are 25% stronger.',
+  beacon: 'Renew lasts half as long again.',
+  tusk: 'Fade also heals you for 20% of your health.',
+  stride: 'You run 15% faster.',
+};
+const COMMON_FX = ['echo', 'bloom', 'clarity', 'aegis', 'swiftrez', 'veil', 'glide', 'spring', 'thrift'];
+// Boss uniques: fixed names and effects, one of each to collect.
+export const UNIQUES = {
+  emberfang: { name: 'Emberfang Charm', slot: 'Trinket', fx: 'surge', boss: 'Cinderjaw', stats: ['power', 'haste'] },
+  ashmantle: { name: 'Ashmantle Vestment', slot: 'Robe', fx: 'ashguard', boss: 'Cinderjaw', stats: ['power', 'spirit'] },
+  houndtooth: { name: 'Houndtooth Band', slot: 'Ring', fx: 'mercy', boss: 'Cinderjaw', stats: ['power', 'mana'] },
+  kindled: { name: 'Kindled Crook', slot: 'Staff', fx: 'beacon', boss: 'Cinderjaw', stats: ['power', 'spirit'] },
+  tuskbone: { name: 'Tuskbone Locket', slot: 'Trinket', fx: 'tusk', boss: 'Old Tusk', stats: ['power', 'mana'] },
+  bristle: { name: 'Bristlehide Boots', slot: 'Boots', fx: 'stride', boss: 'Old Tusk', stats: ['power', 'haste'] },
+};
+export function makeUnique(id, ilvl) {
+  const u = UNIQUES[id], it = { slot: u.slot, q: 3, ilvl, power: 0, spirit: 0, mana: 0, haste: 0, unique: id, fx: u.fx, name: u.name };
+  let budget = Math.round((3 + ilvl * 2.2) * 2.5 * (u.slot === 'Staff' || u.slot === 'Robe' ? 1.3 : 1));
+  it.power = Math.round(budget * 0.6); budget -= it.power;
+  const e = u.stats[1]; it[e] = e === 'mana' ? budget * 4 : e === 'haste' ? Math.max(1, Math.round(budget / 3)) : budget;
+  it.value = Math.round((2 + ilvl) * 5);
+  return it;
+}
+export const hasFx = (S, id) => SLOTS.some(k => S.equip[k] && S.equip[k].fx === id);
+export const avgIlvl = S => Math.round(SLOTS.reduce((a, k) => a + (S.equip[k] ? S.equip[k].ilvl : 0), 0) / SLOTS.length * 10) / 10;
 const SUF = ['of the Dawn', 'of Mercy', 'of the Well', 'of Quick Hands', 'of the Kind Word', 'of Second Chances'];
 
 const SAVE = 'mmoHealer1';
@@ -61,7 +100,7 @@ export function stats(S) {
   };
 }
 
-export function castTime(S, sp) { return sp.cast * (1 - stats(S).haste); }
+export function castTime(S, sp) { return (sp.id === 'revive' && hasFx(S, 'swiftrez') ? 3 : sp.cast) * (1 - stats(S).haste); }
 export function gcdTime(S) { return GCD * (1 - stats(S).haste); }
 
 // How much a spell heals. Mend returns one amount; Renew a tick amount.
@@ -72,7 +111,7 @@ export function healAmount(S, sp) {
     return { amount: Math.round((k[0] + p * k[1]) * (0.92 + Math.random() * 0.16) * (crit ? 1.6 : 1)), crit };
   }
   if (sp.id === 'ward') return { absorb: Math.round(25 + p * 2.4) };
-  return { tick: Math.round((20 + p * 2.0) / 6), ticks: 6, every: 1.5 };
+  return { tick: Math.round((20 + p * 2.0) / 6), ticks: hasFx(S, 'beacon') ? 9 : 6, every: 1.5 };
 }
 
 export function npcMaxHp(level) { return 60 + 25 * level; }
@@ -111,6 +150,7 @@ export function rollItem(ilvl, slot, minQ = 0) {
     budget -= part;
     it[e] = e === 'mana' ? part * 4 : e === 'haste' ? Math.max(1, Math.round(part / 3)) : part;
   });
+  if (q >= 2) it.fx = pick(COMMON_FX);
   it.name = pick(PRE[q]) + ' ' + pick(BASE[slot]) + (q >= 1 ? ' ' + pick(SUF) : '');
   it.value = Math.round((2 + ilvl) * R_MULT[q] * 2);
   return it;
@@ -128,7 +168,7 @@ export function equipItem(S, i) {
   if (old) S.bag[i] = old; else S.bag.splice(i, 1);
 }
 export function sellItem(S, i) { const it = S.bag[i]; if (!it) return 0; S.bag.splice(i, 1); S.coins += it.value; return it.value; }
-export function itemScore(it) { return it ? it.power * 2 + it.spirit + it.mana / 4 + it.haste * 3 : 0; }
+export function itemScore(it) { return it ? it.power * 2 + it.spirit + it.mana / 4 + it.haste * 3 + (it.fx ? 8 : 0) : 0; }
 
 // The quartermaster: four pieces of gear (restocked when you level), a
 // restock for a fee, and bigger bags.
@@ -162,4 +202,4 @@ export function healEstimate(S, sp) {
   return sp.id === 'mend' ? 30 + p * 2.2 : sp.id === 'flash' ? 22 + p * 1.6 : 0;
 }
 export const knows = (S, sp) => !sp.lvl || S.level >= sp.lvl;
-export const manaCost = (S, sp) => sp.id === 'revive' && perk(S, 'rez') ? Math.round(sp.mana / 2) : sp.mana;
+export const manaCost = (S, sp) => sp.id === 'revive' && perk(S, 'rez') ? Math.round(sp.mana / 2) : sp.id === 'flash' && hasFx(S, 'thrift') ? Math.round(sp.mana * 0.7) : sp.mana;

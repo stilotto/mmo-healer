@@ -10,20 +10,22 @@
  "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
-  "./js/chat.js": "./js/chat.js?v=20261118231203",
-  "./js/dungeon.js": "./js/dungeon.js?v=20261118231203",
-  "./js/figure.js": "./js/figure.js?v=20261118231203",
-  "./js/fx.js": "./js/fx.js?v=20261118231203",
-  "./js/game.js": "./js/game.js?v=20261118231203",
-  "./js/look.js": "./js/look.js?v=20261118231203",
-  "./js/memory.js": "./js/memory.js?v=20261118231203",
-  "./js/mobs.js": "./js/mobs.js?v=20261118231203",
-  "./js/people.js": "./js/people.js?v=20261118231203",
-  "./js/player.js": "./js/player.js?v=20261118231203",
-  "./js/social.js": "./js/social.js?v=20261118231203",
-  "./js/textures.js": "./js/textures.js?v=20261118231203",
-  "./js/ui.js": "./js/ui.js?v=20261118231203",
-  "./js/world.js": "./js/world.js?v=20261118231203"
+  "./js/chat.js": "./js/chat.js?v=20261119122401",
+  "./js/doll.js": "./js/doll.js?v=20261119122401",
+  "./js/dungeon.js": "./js/dungeon.js?v=20261119122401",
+  "./js/figure.js": "./js/figure.js?v=20261119122401",
+  "./js/fx.js": "./js/fx.js?v=20261119122401",
+  "./js/game.js": "./js/game.js?v=20261119122401",
+  "./js/look.js": "./js/look.js?v=20261119122401",
+  "./js/loot.js": "./js/loot.js?v=20261119122401",
+  "./js/memory.js": "./js/memory.js?v=20261119122401",
+  "./js/mobs.js": "./js/mobs.js?v=20261119122401",
+  "./js/people.js": "./js/people.js?v=20261119122401",
+  "./js/player.js": "./js/player.js?v=20261119122401",
+  "./js/social.js": "./js/social.js?v=20261119122401",
+  "./js/textures.js": "./js/textures.js?v=20261119122401",
+  "./js/ui.js": "./js/ui.js?v=20261119122401",
+  "./js/world.js": "./js/world.js?v=20261119122401"
  }
 }</script>
 <style>
@@ -107,7 +109,20 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
 #floats{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .fl{position:absolute;left:0;top:0;font:800 22px 'Nunito Sans',sans-serif;color:#5dff6a;-webkit-text-stroke:1px #062a0a;text-shadow:0 2px 3px rgba(0,0,0,.7);white-space:nowrap;will-change:transform,opacity}
 .fl.crit{font-size:30px;color:#c8ff4a}.fl.hit{color:#ffe14a;-webkit-text-stroke:1px #3a2a00;font-size:20px}.fl.dmg{color:#ff5a4a;-webkit-text-stroke:1px #3a0a06;font-size:18px}.fl.dmg.big{font-size:28px;color:#ff3a2a}.fl.xp{color:#d0a8ff;-webkit-text-stroke:1px #2a0a4a;font-size:16px}
-#bag{position:absolute;right:8px;bottom:70px;width:292px;background:var(--panel);border:1px solid var(--gold);border-radius:6px;padding:8px;display:none}
+#bag{position:absolute;right:8px;bottom:70px;width:540px;max-height:calc(100% - 80px);overflow:auto;background:var(--panel);border:1px solid var(--gold);border-radius:6px;padding:8px;display:none;z-index:4}
+#cols{display:flex;gap:12px;align-items:flex-start}
+#dollbox{display:grid;grid-template-columns:38px 130px 38px;gap:5px;flex:none}
+.dslots{display:flex;flex-direction:column;gap:12px;margin-top:22px}
+#dollc{width:130px;height:200px;display:block;cursor:grab;border-radius:6px;background:radial-gradient(ellipse at 50% 40%,#3a3a50,#141418 75%)}
+#ds{display:flex;justify-content:center;margin-top:5px}#ds .it{width:38px}
+#side{flex:1;min-width:0}
+.qu{border-color:#ffa030;color:#ffb050;box-shadow:0 0 6px #ffa03088}
+#roll{position:absolute;z-index:5;right:8px;top:184px;width:224px;background:var(--panel);border:1px solid var(--gold);border-radius:6px;padding:6px 8px;display:none;text-align:center}
+#roll .h{font:600 12px Cinzel,serif;color:var(--gold)}#roll .h small{font:10px 'Nunito Sans',sans-serif;color:#aaa}
+#roll .n{font-size:13px;margin:4px 0;cursor:default}
+#roll .tm{height:4px;background:#000a;border-radius:2px;margin-bottom:6px;overflow:hidden}#roll .tm i{display:block;height:100%;background:var(--gold);width:100%}
+#roll button{font:700 12px 'Nunito Sans',sans-serif;padding:4px 10px;margin:0 2px;border-radius:4px;border:1px solid var(--gold);background:linear-gradient(#3a5a8a,#1a2a4a);color:#fff;cursor:pointer}
+#roll button[data-k=pass]{background:#333}#roll button:disabled{opacity:.35;cursor:default}
 #bag h3{margin:0 0 4px;font:600 14px Cinzel,serif;color:var(--gold);display:flex;justify-content:space-between}
 #bag h3 b{cursor:pointer;color:#ccc}
 #bag .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:6px}
@@ -143,7 +158,9 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
   .frame{width:150px}#tframe{left:164px}
   #boss{width:200px;top:60px}
   #mini{top:62px}#mini,#mini canvas{width:84px}#mini canvas{height:84px}
-  #bag{right:4px;left:4px;width:auto;bottom:74px}
+  #bag{right:4px;left:4px;width:auto;top:56px;bottom:auto;max-height:calc(100% - 64px);background:rgba(14,12,10,.96)}
+  #cols{flex-direction:column;align-items:center}#side{width:100%}
+  #roll{top:150px;width:200px}
   #castbar{width:180px}
   .slot.locked,#lookbtn{display:none}.slot{width:46px;height:46px}
   #actions{flex-wrap:wrap;max-width:212px;justify-content:flex-end}
@@ -168,9 +185,13 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
   <div id="cross"></div>
   <div id="bag"><h3><span>Character</span><b id="bagx">✕</b></h3>
     <div id="shop"><h3 style="margin-top:0"><span>Pim the Quartermaster</span></h3><div class="grid" id="wares"></div></div>
-    <div class="grid" id="equip"></div><div id="stats"></div>
+    <div id="cols"><div id="dollbox"><div class="dslots" id="dl"></div><div><canvas id="dollc" title="Drag to turn"></canvas><div id="ds"></div></div><div class="dslots" id="dr"></div></div>
+    <div id="side"><div id="stats"></div>
     <h3 style="margin-top:6px"><span>Bag</span><span id="coins" style="font:12px 'Nunito Sans'"></span></h3>
-    <div class="grid" id="items"></div><div class="m" style="font-size:11px;color:#999">Click to equip. Shift-click or double-tap to sell.</div></div>
+    <div class="grid" id="items"></div><div class="m" style="font-size:11px;color:#999">Click to equip (hover to try it on). Shift-click or double-tap to sell.</div>
+    <h3 style="margin-top:6px"><span>Boss uniques</span><span id="ucount" style="font:12px 'Nunito Sans'"></span></h3><div class="grid" id="uniq"></div></div></div></div>
+  <div id="roll"><div class="h">Roll for loot <small>(not your party)</small></div><div class="n"></div><div class="tm"><i></i></div>
+    <button data-k="need">Need</button><button data-k="greed">Greed</button><button data-k="pass">Pass</button></div>
   <div id="tip"></div>
   <div id="death"><div id="dtext"></div><button id="dbtn"></button></div>
   <div id="bottom">
@@ -187,6 +208,6 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
   <p class="keys"><b>WASD</b> move and turn · <b>Q/E</b> strafe · <b>right-drag</b> steer · <b>left-drag</b> or <b>arrow keys</b> look (up and down too) · <b>wheel</b> zoom (all the way in for first person, or <b>V</b>) · <b>Tab</b> next target · <b>F</b> most hurt · <b>1, 2</b> heal · <b>3</b> revive · <b>B</b> bag · <b>Enter</b> chat (<b>/help</b>) · <b>Space</b> jump · <b>X</b> mouse-look (the mouse steers, A and D strafe, Esc frees the cursor)</p>
   <a href="https://stilotto.github.io/">More games from Stilotto</a>
 </div></div>
-<script type="module" src="js/main.js?v=20261118231203"></script>
+<script type="module" src="js/main.js?v=20261119122401"></script>
 </body>
 </html>

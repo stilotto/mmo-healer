@@ -58,11 +58,11 @@ export function rec(S, name) {
   return S.rec[name] || (S.rec[name] = { h: 0, s: 0, r: 0, d: 0, w: 0 });
 }
 export const known = (S, name) => S.rec && S.rec[name];
-export function bond(r) { return r ? r.h * 0.5 + r.s * 3 + r.r * 5 + r.w * 0.5 - r.d * 4 : 0; }
+export function bond(r) { return r ? r.h * 0.5 + r.s * 3 + r.r * 5 + r.w * 0.5 - r.d * 4 - (r.n || 0) * 2 : 0; }
 // stranger, met, knows (waves at you), friend (whispers, calls your name), grudge.
 export function mood(r) {
   const b = bond(r);
-  if (!r || (b < 1 && !r.d)) return 'stranger';
+  if (!r || (b < 1 && !r.d && !r.n)) return 'stranger';
   if (b <= -2) return 'grudge';
   return b >= 12 ? 'friend' : b >= 5 ? 'knows' : 'met';
 }

@@ -29,7 +29,7 @@ export class Mobs {
     if (m.state === 'dead') return true;
     m.attackers.add(by); if (!m.foe || m.foe.dead || m.foe.gone) m.foe = by; m.state = 'fight';
     m.hp -= dmg; this.ctx.float(m, String(dmg), 'hit');
-    if (m.hp <= 0) { m.hp = 0; m.state = 'dead'; m.deadT = rnd(20, 30); m.foe = null; m.attackers.clear(); return true; }
+    if (m.hp <= 0) { m.hp = 0; m.state = 'dead'; m.deadT = rnd(20, 30); m.foe = null; m.attackers.clear(); if (this.ctx.killed) this.ctx.killed(m); return true; }
     return false;
   }
   update(dt, t) {

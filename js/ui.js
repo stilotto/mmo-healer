@@ -1,6 +1,7 @@
 // The heads-up display: unit frames, action bar, cast bar, chat, minimap,
 // floating numbers, the bag, and the few sounds (all made in code).
-import { SPELLS, healEstimate, knows, SLOTS, SLOT_ICON, RARITY, RARITY_COLOR, bagSize, stats, xpNeed, itemScore, equipItem, sellItem, stock, price, buy, restock, restockCost, buyBag, bagCost } from './game.js';
+import { SPELLS, healEstimate, knows, SLOTS, SLOT_ICON, RARITY, RARITY_COLOR, bagSize, stats, xpNeed, itemScore, equipItem, sellItem, stock, price, buy, restock, restockCost, buyBag, bagCost, EFFECTS, UNIQUES, avgIlvl } from './game.js';
+import { makeDoll } from './doll.js';
 import { CLASSES } from './figure.js';
 import { mapShapes, WALL_R, ZONE, DUN } from './world.js';
 import { chat, chatHtml } from './chat.js';
@@ -44,7 +45,8 @@ export function err(text) { const e = $('err'); e.textContent = text; e.style.op
 export function toast(text, color) { const e = $('toast'); e.textContent = text; e.style.color = color || ''; e.style.opacity = 1; toastT = 2.6; }
 export function zone(name) { $('zone').textContent = name; toast(name); }
 export function hint(text) { const h = $('hint'); if (h.textContent !== text) h.textContent = text; }
-export function itemLink(it) { return `<b style="color:${RARITY_COLOR[it.q]}">[${esc(it.name)}]</b>`; }
+const qcol = it => it.unique ? '#ffa030' : RARITY_COLOR[it.q], qcls = it => it ? (it.unique ? 'qu' : 'q' + it.q) : '';
+export function itemLink(it) { return `<b style="color:${qcol(it)}">[${esc(it.name)}]</b>`; }
 
 // Combat text: numbers pop out over the unit, drift up and sideways, and fade.
 // Damage to monsters is yellow, damage to people red, heals green with a +.
@@ -68,12 +70,15 @@ function itemTip(it, cmp) {
     const d = cmp ? (it[k] || 0) - (cmp[k] || 0) : 0;
     return `<div>+${it[k] || 0} ${label}${d ? ` <span class="${d > 0 ? 'g' : 'r'}">(${d > 0 ? '+' : ''}${d})</span>` : ''}</div>`;
   };
-  return `<div class="n" style="color:${RARITY_COLOR[it.q]}">${esc(it.name)}</div><div class="m">${RARITY[it.q]} ${it.slot} · item level ${it.ilvl}</div>` +
-    line('power', 'Healing Power') + line('spirit', 'Spirit') + line('mana', 'Mana') + line('haste', 'Haste') + `<div class="m">Sells for ${it.value}c</div>`;
+  return `<div class="n" style="color:${qcol(it)}">${esc(it.name)}</div><div class="m">${it.unique ? 'Unique' : RARITY[it.q]} ${it.slot} · item level ${it.ilvl}</div>` +
+    line('power', 'Healing Power') + line('spirit', 'Spirit') + line('mana', 'Mana') + line('haste', 'Haste') +
+    (it.fx ? `<div style="color:#ffc070">Equip: ${EFFECTS[it.fx]}</div>` : '') + (cmp && cmp.fx && cmp.fx !== it.fx ? `<div class="r">Replaces: ${EFFECTS[cmp.fx]}</div>` : '') +
+    (it.unique ? `<div class="m">From ${UNIQUES[it.unique].boss}</div>` : '') + `<div class="m">Sells for ${it.value}c</div>`;
 }
 
-let bagOpen = false, shopOpen = false;
-export function toggleBag() { bagOpen = !bagOpen; if (!bagOpen) shopOpen = false; $('bag').style.display = bagOpen ? 'block' : 'none'; tip(); if (bagOpen) drawBag(); H.panel(bagOpen); }
+export function tipItem(it, e) { tip(it ? itemTip(it, S.equip[it.slot]) : '', e); }
+let bagOpen = false, shopOpen = false, doll = null;
+export function toggleBag() { bagOpen = !bagOpen; if (bagOpen && !doll) { doll = makeDoll($('dollc')); doll.show(S.equip); } if (doll) doll.preview(null); if (!bagOpen) shopOpen = false; $('bag').style.display = bagOpen ? 'block' : 'none'; tip(); if (bagOpen) drawBag(); H.panel(bagOpen); }
 export function openShop() { shopOpen = true; if (!bagOpen) toggleBag(); else drawBag(); }
 export function closeShop() { if (shopOpen) { shopOpen = false; if (bagOpen) toggleBag(); } }
 export const isShopOpen = () => shopOpen;
@@ -94,29 +99,43 @@ function drawShop() {
 export function drawBag() {
   if (!bagOpen) return;
   drawShop();
-  const eq = $('equip'), bg = $('items'); eq.innerHTML = ''; bg.innerHTML = '';
-  for (const k of SLOTS) {
-    const it = S.equip[k], d = el('div', 'it ' + (it ? 'q' + it.q : ''), (it ? SLOT_ICON[k] : `<span style="opacity:.25">${SLOT_ICON[k]}</span>`));
-    d.onpointerenter = e => tip(it ? itemTip(it) : `<div class="m">${k}: empty</div>`, e); d.onpointerleave = () => tip();
-    eq.append(d);
+  const bg = $('items'); bg.innerHTML = '';
+  // Paper doll slots: head, robe, trinket on the left; gloves, boots, ring on the right; staff below.
+  const lay = { dl: ['Hood', 'Robe', 'Trinket'], dr: ['Gloves', 'Boots', 'Ring'], ds: ['Staff'] };
+  for (const col in lay) {
+    const box = $(col); box.innerHTML = '';
+    for (const k of lay[col]) {
+      const it = S.equip[k], d = el('div', 'it ' + qcls(it), (it ? SLOT_ICON[k] : `<span style="opacity:.25">${SLOT_ICON[k]}</span>`));
+      d.onpointerenter = e => tip(it ? itemTip(it) : `<div class="m">${k}: empty</div>`, e); d.onpointerleave = () => tip();
+      box.append(d);
+    }
   }
   let lastTap = 0;
   for (let i = 0; i < bagSize(S); i++) {
-    const it = S.bag[i], d = el('div', 'it ' + (it ? 'q' + it.q : ''), it ? SLOT_ICON[it.slot] + (itemScore(it) > itemScore(S.equip[it.slot]) ? '<small style="color:#1eff00">▲</small>' : '') : '');
+    const it = S.bag[i], d = el('div', 'it ' + qcls(it), it ? SLOT_ICON[it.slot] + (itemScore(it) > itemScore(S.equip[it.slot]) ? '<small style="color:#1eff00">▲</small>' : '') : '');
     if (it) {
-      d.onpointerenter = e => tip(itemTip(it, S.equip[it.slot]), e); d.onpointerleave = () => tip();
+      d.onpointerenter = e => { tip(itemTip(it, S.equip[it.slot]), e); if (doll) doll.preview(it); };
+      d.onpointerleave = () => { tip(); if (doll) doll.preview(null); };
       d.onclick = e => {
         const dbl = Date.now() - lastTap < 350 && e.pointerType === 'touch'; lastTap = Date.now();
         if (e.shiftKey || dbl) { const v = sellItem(S, i); chat('c-loot', `You sell ${it.name} for ${v}c.`); }
-        else { equipItem(S, i); sfx('equip'); }
-        tip(); drawBag(); H.changed();
+        else { equipItem(S, i); sfx('equip'); H.dressed(); }
+        tip(); if (doll) { doll.preview(null); doll.show(S.equip); } drawBag(); H.changed();
       };
     }
     bg.append(d);
   }
   const st = stats(S);
-  $('stats').innerHTML = `Level ${S.level} Healer · Power <b>${st.power}</b> · Mana <b>${st.maxMana}</b><br>Spirit <b>${st.spirit}</b> (${st.regen.toFixed(1)}/s) · Haste <b>${st.hasteRaw}%</b> · Healed <b>${Math.round(S.healed)}</b><br>Fame <b>${Math.floor(S.fame)}</b> (${FAME[fameTier(S)].name})${S.guild ? ` · &lt;${esc(S.guild)}&gt;` : ''}`;
+  $('stats').innerHTML = `<b style="color:var(--gold)">${esc(S.name)}</b>, level ${S.level} healer<br>Healing power <b>${st.power}</b><br>Spirit <b>${st.spirit}</b> · Mana regen <b>${st.regen.toFixed(1)}/s</b><br>` +
+    `Haste <b>${st.hasteRaw}%</b> · Mana <b>${st.maxMana}</b><br>Average item level <b>${avgIlvl(S)}</b><br>Fame <b>${Math.floor(S.fame)}</b> (${FAME[fameTier(S)].name})${S.guild ? `<br>&lt;${esc(S.guild)}&gt;` : ''}`;
   $('coins').textContent = S.coins + ' copper';
+  const u = $('uniq'); u.innerHTML = ''; S.uniques = S.uniques || {};
+  for (const id in UNIQUES) {
+    const q = UNIQUES[id], got = S.uniques[id], d = el('div', 'it ' + (got ? 'qu' : ''), got ? SLOT_ICON[q.slot] : '<span style="opacity:.35">?</span>');
+    d.onpointerenter = e => tip(`<div class="n" style="color:${got ? '#ffa030' : '#888'}">${got ? q.name : '???'}</div><div class="m">${q.slot} · from ${q.boss}</div><div style="color:#ffc070">${EFFECTS[q.fx]}</div>${got ? '' : '<div class="m">Not found yet</div>'}`, e);
+    d.onpointerleave = () => tip(); u.append(d);
+  }
+  $('ucount').textContent = Object.keys(S.uniques).filter(k => UNIQUES[k]).length + ' / ' + Object.keys(UNIQUES).length;
 }
 
 const setBar = (id, frac, text) => { $(id).style.transform = `scaleX(${Math.max(0, Math.min(1, frac))})`; if (text !== undefined) { const t = $(id + 't'); if (t && t.textContent !== text) t.textContent = text; } };
@@ -126,7 +145,7 @@ export function update(dt, v) {
   const st = v.stats;
   setBar('php', v.me.hp / v.me.maxHp, `${Math.ceil(v.me.hp)} / ${v.me.maxHp}`);
   $('pframe').classList.toggle('sel', v.target === v.me); $('pframe').classList.toggle('combat', !!v.combat);
-  const ps = v.drinking ? 'Drinking' + (v.me.hots.length ? ' · ❋' : '') : (v.me.hots.length ? '❋ Renew' : '') + (v.me.ward ? ' ◈' : '');
+  const ps = v.drinking ? 'Drinking' + (v.me.hots.length ? ' · ❋' : '') : (v.me.hots.length ? '❋ Renew' : '') + (v.me.ward ? ' ◈' : '') + (v.me.surge ? ' ⚡ Surge' : '');
   if ($('psub').textContent !== ps) $('psub').textContent = ps;
   frames(v); boss(v);
   setBar('pmp', S.mana / st.maxMana, `${Math.floor(S.mana)} / ${st.maxMana}`);
@@ -149,6 +168,7 @@ export function update(dt, v) {
     slots[i].querySelector('.cd').style.height = Math.max(own, v.gcd > 0 ? v.gcd / v.gcdMax : 0) * 100 + '%';
   });
   fame();
+  if (bagOpen && doll) doll.render(dt);
   const need = xpNeed(S.level); $('xp').firstElementChild.style.width = (S.xp / need * 100) + '%'; $('xp').lastElementChild.textContent = `${S.xp} / ${need} XP`;
   if (errT > 0 && (errT -= dt) <= 0) $('err').style.opacity = 0;
   if (toastT > 0 && (toastT -= dt) <= 0) $('toast').style.opacity = 0;
@@ -174,7 +194,7 @@ function fame() {
   $('fame').title = `Fame ${Math.floor(S.fame)}` + (FAME[i + 1] ? `. Next: ${FAME[i + 1].name} at ${b}` : '');
 }
 
-export function drawMap(me, yaw, people, target, corpse, mobs) {
+export function drawMap(me, yaw, people, target, corpse, mobs, drops = []) {
   const c = $('map'), x = c.getContext('2d'), W = c.width, k = W / 2 / 48;
   x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = '#3f5c30'; x.fillRect(0, 0, W, W);
   x.translate(W / 2 - me.x * k, W / 2 - me.z * k); x.scale(k, k);
@@ -192,6 +212,7 @@ export function drawMap(me, yaw, people, target, corpse, mobs) {
     else { x.fillStyle = '#2a2018'; x.fillRect(s.x - 5, s.z - 1.5, 10, 3); }
   }
   for (const m of mobs) if (m.state !== 'dead') { x.fillStyle = m.def.elite ? '#ffb040' : '#b02a20'; x.beginPath(); x.arc(m.x, m.z, m.def.elite ? 2 : 1.1, 0, 7); x.fill(); }
+  for (const d of drops) { x.fillStyle = d.it.unique ? '#ffa030' : RARITY_COLOR[d.it.q]; x.strokeStyle = '#000'; x.lineWidth = 0.4; x.beginPath(); x.moveTo(d.x, d.z - 2); x.lineTo(d.x + 1.5, d.z); x.lineTo(d.x, d.z + 2); x.lineTo(d.x - 1.5, d.z); x.closePath(); x.fill(); x.stroke(); }
   if (corpse) { x.fillStyle = '#fff2a8'; x.strokeStyle = '#000'; x.lineWidth = 0.6; x.beginPath(); x.arc(corpse.x, corpse.z, 2.6, 0, 7); x.fill(); x.stroke(); }
   for (const p of people) {
     x.fillStyle = p.dead ? '#888' : p.hp < p.maxHp * 0.5 ? '#ff5a4a' : p.hp < p.maxHp ? '#ffd24a' : '#7fe38a';

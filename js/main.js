@@ -7,7 +7,8 @@ import { buildWorld, spots, mapShapes, POI, inGreen } from './world.js';
 import { Mobs } from './mobs.js';
 import { Dungeon } from './dungeon.js';
 import { DUN } from './world.js';
-import { makeFigure, animate, makePlate } from './figure.js';
+import { makeFigure, animate, makePlate, dress } from './figure.js';
+import { Loot } from './loot.js';
 import { People } from './people.js';
 import { Player } from './player.js';
 import { makeLook } from './look.js';
@@ -45,7 +46,7 @@ let S = G.load() || G.newState(''); S.deeds = [];
 let mobs, dungeon, zoneNow = 'hub';
 // The healer as a unit, so F1 or a click on your own frame targets yourself.
 const meUnit = { isMe: true, name: '', cls: 'Healer', level: 1, hp: 100, maxHp: 100, x: 0, z: 0, hots: [], dots: [], ward: null, dead: false, faded: 0, lastHit: -99 };
-let social, emo = null;      // emo: the healer's emote animation
+let social, loot, emo = null;      // emo: the healer's emote animation
 let drinking = 0, wardLock = new WeakMap(), ghost = false, corpse = null, cds = {};
 
 // Threat. Healing someone a monster is fighting adds to that monster's
@@ -58,7 +59,7 @@ function addThreat(unit, amt) {
   for (const m of allMobs()) {
     if (m.state !== 'fight' || m.foe === meUnit || !(m.foe === unit || m.attackers.has(unit))) continue;
     m.ht = (m.ht || 0) + amt * G.THREAT_PER_HEAL;
-    if (m.ht > m.maxHp * (tanked ? G.THREAT_TANKED : G.THREAT_SOLO)) { m.foe = meUnit; m.attackers.add(meUnit); aggroed(m); if (tanked) m.tauntAt = T + G.TAUNT_BACK; }
+    if (m.ht > m.maxHp * (tanked ? G.THREAT_TANKED : G.THREAT_SOLO) * (G.hasFx(S, 'ashguard') ? 1.3 : 1)) { m.foe = meUnit; m.attackers.add(meUnit); aggroed(m); if (tanked) m.tauntAt = T + G.TAUNT_BACK; }
   }
 }
 function aggroed(m) { UI.float(m, '!', 'dmg big'); if (!meUnit.lastAggro || T - meUnit.lastAggro > 6) { meUnit.lastAggro = T; UI.chat('c-yell', `${m.name} turns on you!`); UI.sfx('err'); } }
@@ -198,15 +199,18 @@ function cast(i) {
   if (sp.id !== 'revive' && target.dead) return UI.err('Target is dead. Press 3 to Revive');
   if (distTo(target) > sp.range) return UI.err('Out of range');
   if (S.mana < G.manaCost(S, sp)) return UI.err('Not enough mana');
-  if (sp.cast && player.moving) return UI.err("Can't do that while moving");
+  const glide = sp.id === 'flash' && G.hasFx(S, 'glide');
+  if (sp.cast && player.moving && !glide && !(sp.id === 'mend' && meUnit.surge)) return UI.err("Can't do that while moving");
   drinking = 0;
   gcd = gcdMax = G.gcdTime(S);
+  if (sp.id === 'mend' && meUnit.surge) { meUnit.surge = false; return land(sp, target); }   // Emberfang: an instant Mend
   if (sp.cast) { casting = { spell: sp, target, t: 0, dur: G.castTime(S, sp) }; UI.sfx('cast'); }
   else land(sp, target);
 }
 function land(sp, t) {
   if (sp.id === 'fade') {
-    S.mana -= G.manaCost(S, sp); cds.fade = T + sp.cd; meUnit.faded = 3;
+    S.mana -= G.manaCost(S, sp); cds.fade = T + (G.hasFx(S, 'veil') ? 18 : sp.cd); meUnit.faded = 3;
+    if (G.hasFx(S, 'tusk')) { const e = Math.min(meUnit.maxHp - meUnit.hp, Math.round(meUnit.maxHp * 0.2)); meUnit.hp += e; if (e) UI.float(meUnit, '+' + e, ''); }
     for (const m of [...mobs.list, ...dungeon.mobs]) { m.ht = 0; m.attackers.delete(meUnit); if (m.foe === meUnit) m.foe = [...m.attackers].find(a => !a.dead && !a.gone) || (zoneNow === 'dungeon' ? dungeon.tank() : null) || null; }
     fx.emit(player.x, 1, player.z, { n: 30, color: 0x9ab0ff, spread: 0.6, up: 0.6, jitter: 1.4, life: 1 }); UI.sfx('equip'); return;
   }
@@ -221,20 +225,47 @@ function land(sp, t) {
   if (t.isMe) {           // healing yourself: no thanks, no experience
     if (h.amount) { const e = Math.min(h.amount, t.maxHp - t.hp); t.hp += e; UI.float(t, '+' + h.amount, h.crit ? 'crit' : ''); beam(t); burst(t, 0xa8ff8a, 20); UI.sfx('heal'); }
     else if (h.absorb) { t.ward = { amt: h.absorb, t: G.WARD_TIME }; wardLock.set(t, T + G.WARD_LOCK); beam(t, 0x9ac8ff); UI.sfx('heal'); }
-    else { t.hots = t.hots.filter(x => x.id !== sp.id); t.hots.push({ id: sp.id, tick: h.tick, left: h.ticks, every: h.every, t: h.every }); beam(t, 0x7dffa0); UI.sfx('heal'); }
+    else { t.hots = t.hots.filter(x => x.id !== sp.id); t.hots.push({ id: sp.id, tick: h.tick, left: h.ticks, every: h.every, t: h.every, bloom: G.hasFx(S, 'bloom') }); beam(t, 0x7dffa0); UI.sfx('heal'); }
     return;
   }
   if (sp.id === 'ward') {
     t.ward = { amt: h.absorb, t: G.WARD_TIME }; wardLock.set(t, T + G.WARD_LOCK);
     beam(t, 0x9ac8ff); burst(t, 0xb8d8ff, 22); UI.sfx('heal'); UI.float(t, 'Ward', 'xp');
     if (t.zone === 'dungeon') dungeon.noticed(t);
-    addThreat(t, h.absorb * 0.5); social.healed(t, 0, false);
+    addThreat(t, h.absorb * 0.5); social.healed(t, 0, false); procs(sp, t, h);
     return;
   }
-  if (sp.id === 'flash') { beam(t, 0xfff2a8); burst(t, 0xfff2a8, 20, 3); UI.sfx('heal'); const e = people.heal(t, h.amount, h.crit); addThreat(t, e); earn(e, t); return; }
-  if (sp.id === 'mend') { beam(t); burst(t, 0xa8ff8a, 26); burst(t, 0xfff2a8, 10, 3); UI.sfx('heal'); const e = people.heal(t, h.amount, h.crit); addThreat(t, e); earn(e, t); }
-  else { t.hots = t.hots.filter(x => x.id !== sp.id); t.hots.push({ id: sp.id, tick: h.tick, left: h.ticks, every: h.every, t: h.every }); beam(t, 0x7dffa0); burst(t, 0x7dffc0, 18); UI.sfx('heal'); social.healed(t, 0, false); }
+  if (h.amount && G.hasFx(S, 'mercy') && t.hp < t.maxHp * 0.25) h.amount = Math.round(h.amount * 1.25);
+  const low = t.hp < t.maxHp * 0.35;
+  if (sp.id === 'flash') { beam(t, 0xfff2a8); burst(t, 0xfff2a8, 20, 3); UI.sfx('heal'); const e = people.heal(t, h.amount, h.crit); addThreat(t, e); earn(e, t); }
+  else if (sp.id === 'mend') {
+    beam(t); burst(t, 0xa8ff8a, 26); burst(t, 0xfff2a8, 10, 3); UI.sfx('heal'); const e = people.heal(t, h.amount, h.crit); addThreat(t, e); earn(e, t);
+    if (low && G.hasFx(S, 'aegis') && !t.ward) { t.ward = { amt: Math.round(h.amount * 0.3), t: G.WARD_TIME }; UI.float(t, 'Ward', 'xp'); }
+    if (G.hasFx(S, 'echo')) {     // a smaller heal jumps to the most hurt person close by
+      const o = people.list.filter(q => q !== t && !q.dead && !q.fading && q.grow >= 1 && q.hp < q.maxHp && Math.hypot(q.x - t.x, q.z - t.z) < 10).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+      if (o) { beam(o, 0xc8ffb0); const e2 = people.heal(o, Math.round(h.amount * 0.35), false, true); addThreat(o, e2); earn(e2, o); }
+    }
+  }
+  else { t.hots = t.hots.filter(x => x.id !== sp.id); t.hots.push({ id: sp.id, tick: h.tick, left: h.ticks, every: h.every, t: h.every, bloom: G.hasFx(S, 'bloom') }); beam(t, 0x7dffa0); burst(t, 0x7dffc0, 18); UI.sfx('heal'); social.healed(t, 0, false); }
+  procs(sp, t, h);
 }
+// Effects that fire after a heal lands on someone else.
+function procs(sp, t, h) {
+  if (h.crit && G.hasFx(S, 'clarity')) { S.mana += G.manaCost(S, sp) * 0.4; UI.float(meUnit, 'Clarity', 'xp'); }
+  if (G.hasFx(S, 'surge') && !meUnit.surge && Math.random() < 0.15) { meUnit.surge = true; UI.chat('c-heal', 'Surge: your next Mend is instant.'); UI.sfx('tick'); }
+}
+// Picking up a drop from the ground.
+function pickup(it) {
+  if (!G.addItem(S, it)) return false;
+  UI.chatHtml('c-loot', `You receive loot: ${UI.itemLink(it)}`); UI.toast(it.name, it.unique ? '#ffa030' : G.RARITY_COLOR[it.q]); UI.sfx('loot');
+  if (it.unique) { S.uniques = S.uniques || {}; if (!S.uniques[it.unique]) { S.uniques[it.unique] = true; UI.chat('c-sys', `New boss unique! ${Object.keys(S.uniques).length} of ${Object.keys(G.UNIQUES).length} found. See the list in your character window (B).`); } }
+  UI.drawBag(); G.save(S); return true;
+}
+function uniqueFrom(boss) {          // prefer ones you have not found yet
+  const ids = Object.keys(G.UNIQUES).filter(k => G.UNIQUES[k].boss === boss), fresh = ids.filter(k => !(S.uniques || {})[k]);
+  const pool = fresh.length && Math.random() < 0.7 ? fresh : ids; return pool[Math.floor(Math.random() * pool.length)];
+}
+function dressed() { dress(me, S.equip); player.gearSpeed = G.hasFx(S, 'stride') ? 1.15 : 1; }
 function earn(eff, t) {
   const r = G.reward(S, eff, t);
   if (r.xp) UI.float(t, '+' + r.xp + ' xp', 'xp');
@@ -244,9 +275,8 @@ function earn(eff, t) {
     setTimeout(() => { const f = people.free(); if (f.length) people.say(f[0], 'gratz'); }, 1500);
   }
   if (r.item) {
-    const kept = G.addItem(S, r.item);
-    UI.chatHtml('c-loot', `${t.name} tosses you ${UI.itemLink(r.item)}${kept ? '' : ' (bag full: sold)'}`);
-    UI.toast(r.item.name, G.RARITY_COLOR[r.item.q]); UI.sfx('loot');
+    loot.drop(t.x !== undefined ? t.x : player.x, t.z !== undefined ? t.z : player.z, r.item);
+    UI.chatHtml('c-loot', `${t.name} drops ${UI.itemLink(r.item)} for you.${S.seenDrop ? '' : ' Walk over it to pick it up.'}`); S.seenDrop = true;
   } else if (r.coins) { S.coins += r.coins; UI.chat('c-loot', `${t.name} tips you ${r.coins} copper.`); }
   if (r.item || r.coins || r.levels) { UI.drawBag(); G.save(S); }
 }
@@ -266,8 +296,9 @@ function start(name) {
     bossLoot(helped) {
       const xp = Math.round(G.xpNeed(S.level) * 0.4); S.xp += xp; UI.chat('c-heal', `You gain ${xp} experience for the fall of Cinderjaw.`);
       const drops = [G.rollItem(S.level + 2, null, 2)]; if (Math.random() < 0.4) drops.push(G.rollItem(S.level + 1, null, 1));
-      for (const it of drops) { const kept = G.addItem(S, it); UI.chatHtml('c-loot', `While the party argues over loot, you pocket ${UI.itemLink(it)}${kept ? '' : ' (bag full: sold)'}`); }
-      UI.toast(drops[0].name, G.RARITY_COLOR[drops[0].q]); UI.sfx('loot');
+      const b = dungeon.mobs.find(m => m.def.boss) || player;
+      for (const it of drops) { loot.drop(b.x + 2, b.z, it); UI.chatHtml('c-loot', `While the party gathers round, ${UI.itemLink(it)} rolls out of Cinderjaw's jaws, away from them.`); }
+      loot.startRoll(G.makeUnique(uniqueFrom('Cinderjaw'), S.level + 2), dungeon.alive(), 'Cinderjaw');
       social.boss(helped); S.bosses = (S.bosses || 0) + 1; earn(0.0001, { maxHp: 1e9, level: S.level, name: '' }); UI.drawBag(); G.save(S);
     } });
   for (const f of dungeon.art.fires) fx.source(f.position.x, f.position.y + 0.4, f.position.z, 8, { color: 0xff7a2a, spread: 0.2, up: 1.5, jitter: 0.2, life: 1.1 }, 40);
@@ -275,16 +306,25 @@ function start(name) {
   people.ctx.dungeon = dungeon;
   social = new Social({ S, people, me: meUnit, chat: UI.chat, chatHtml: UI.chatHtml, eye: () => player, zone: () => zoneNow, toast: UI.toast, sfx: UI.sfx, changed: () => G.save(S) });
   people.ctx.social = dungeon.ctx.social = social;
+  loot = new Loot(scene, { S, me: meUnit, ghost: () => ghost, sfx: UI.sfx, err: UI.err, chat: UI.chat, chatHtml: UI.chatHtml, link: UI.itemLink, tip: UI.tipItem,
+    later: (s, f) => social.later(s, f), take: pickup, spark: (x, z, c) => fx.emit(x, 0.5, z, { n: 1, color: c, spread: 0.3, up: 1.4, jitter: 0.2, life: 1.2 }) });
+  dungeon.ctx.roomLoot = d => { if (Math.random() < 0.6) { const m = d.mobs.find(m => m.room === d.room); loot.startRoll(G.rollItem(S.level + 1, null, 1), d.alive(), m ? 'The ' + m.name : 'The pack'); } };
+  mobs.ctx.killed = m => {           // Old Tusk leaves something behind if you were there
+    if (m.kind !== 'tusk' || zoneNow !== 'green' || meUnit.dead || distTo(m) > 60) return;
+    const it = Math.random() < 0.45 ? G.makeUnique(uniqueFrom('Old Tusk'), S.level + 2) : Math.random() < 0.6 ? G.rollItem(S.level + 1, null, 1) : null;
+    if (it) { loot.drop(m.x, m.z, it); UI.chatHtml('c-loot', `Old Tusk falls. ${UI.itemLink(it)} lies where it fell.`); }
+  };
+  dressed();
   Chat.init(S, { say: (t, y) => social.talk(t, y), emote: doEmote, whisper: (n, t) => social.whisper(n, t), reply: t => social.reply(t), guild: t => social.guildSay(t),
     who: a => social.who(a), fame: () => social.fameInfo(), gquit: () => social.gquit(), act: a => social.act(a), changed: () => G.save(S),
     target: n => { const p = n && social.find(n, true); if (p) setTarget(p); else UI.err(n ? `No one called ${n} is here` : 'Usage: /target <name>'); },
-    opened: () => { player.keys.clear(); } });
-  UI.init(S, { cast, release, returnToLife, drink: toggleDrink, self: () => setTarget(meUnit), pick: pickFrame, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
+    roll: k => loot.choose(k), opened: () => { player.keys.clear(); } });
+  UI.init(S, { dressed, cast, release, returnToLife, drink: toggleDrink, self: () => setTarget(meUnit), pick: pickFrame, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
     panel: open => { if (open) player.free(); else if (S.look) player.lock(); } });
   player.look = !!S.look; UI.setLook(player.look, false);
   player.enabled = true; G.save(S);
   look.onLower = n => UI.chat('c-sys', ['', 'Graphics: soft glow turned off to keep things smooth.', 'Graphics: shadows turned off to keep things smooth.', 'Graphics: resolution lowered to keep things smooth.'][n]);
-  window.game = { me: meUnit, get corpse() { return corpse; }, get casting() { return casting; }, S, people, mobs, dungeon, player, DUN, scene, renderer, cast, tabTarget, hurtTarget, toggleLook, UI, G, Chat, get social() { return social; }, get target() { return target; }, set target(p) { target = p; } };
+  window.game = { me: meUnit, get corpse() { return corpse; }, get casting() { return casting; }, S, people, mobs, dungeon, player, DUN, scene, renderer, cast, tabTarget, hurtTarget, toggleLook, UI, G, Chat, get social() { return social; }, get loot() { return loot; }, fig: me, dressed, get target() { return target; }, set target(p) { target = p; } };
 }
 const nameBox = document.getElementById('cname'); nameBox.value = S.name || '';
 document.getElementById('enter').onclick = () => start(nameBox.value.trim().slice(0, 12));
@@ -312,7 +352,7 @@ function step(dt) {
   player.update(dt);
   { const st0 = G.stats(S); meUnit.name = S.name; meUnit.level = S.level; meUnit.x = player.x; meUnit.z = player.z;
     if (meUnit.maxHp !== st0.maxHp) { meUnit.hp = meUnit.maxHp = st0.maxHp; }
-    for (let h = meUnit.hots.length - 1; h >= 0; h--) { const o = meUnit.hots[h]; if ((o.t -= dt) <= 0) { o.t += o.every; o.left--; meUnit.hp = Math.min(meUnit.maxHp, meUnit.hp + o.tick); UI.float(meUnit, '+' + o.tick, ''); if (o.left <= 0) meUnit.hots.splice(h, 1); } }
+    for (let h = meUnit.hots.length - 1; h >= 0; h--) { const o = meUnit.hots[h]; if ((o.t -= dt) <= 0) { o.t += o.every; o.left--; const k = o.left <= 0 && o.bloom ? o.tick * 3 : o.tick; meUnit.hp = Math.min(meUnit.maxHp, meUnit.hp + k); UI.float(meUnit, '+' + k, ''); if (o.left <= 0) meUnit.hots.splice(h, 1); } }
     if (meUnit.ward && (meUnit.ward.t -= dt) <= 0) meUnit.ward = null; }
   if (meUnit.faded > 0) meUnit.faded -= dt;
   if (meUnit.dead && !ghost && corpse) { player.x = corpse.x; player.z = corpse.z; }     // lying where you fell
@@ -323,6 +363,7 @@ function step(dt) {
   if (drinking) drinking += dt;
   people.update(dt, T);
   social.update(dt, T);
+  loot.update(dt, T);
   mobs.update(dt, T);
   dungeon.update(dt, T);
   // Portals: into Emberdeep from town, and back out again.
@@ -335,7 +376,7 @@ function step(dt) {
   const z = player.x > 500 ? 'dungeon' : inGreen(player) ? 'green' : 'hub';
   if (z !== zoneNow) { zoneNow = z; UI.zone(ZONE_NAME[z]); world.mood(z === 'dungeon'); look.mood(z === 'dungeon'); if (z === 'green' && !S.seenGreen) { S.seenGreen = true; UI.chat('c-sys', 'People out here can die. Press 3 to Revive the fallen (5 second cast).'); } }
   const st = G.stats(S);
-  S.mana = Math.min(st.maxMana, S.mana + (st.regen + (drinking > 1 ? st.maxMana * 0.08 : 0)) * dt);   // drinking: about 12 s from empty
+  S.mana = Math.min(st.maxMana, S.mana + (st.regen + (drinking > 1 ? st.maxMana * 0.08 * (G.hasFx(S, 'spring') ? 2 : 1) : 0)) * dt);   // drinking: about 12 s from empty
   if (gcd > 0) gcd -= dt;
   if (target && (target.gone || target.fading)) target = null;
   if (casting && !player.firstPerson) {   // light gathers at the staff while casting
@@ -344,7 +385,7 @@ function step(dt) {
   }
   if (casting) {
     casting.t += dt;
-    if (player.moving) { casting = null; gcd = 0; UI.err('Interrupted'); }
+    if (player.moving && !(casting.spell.id === 'flash' && G.hasFx(S, 'glide'))) { casting = null; gcd = 0; UI.err('Interrupted'); }
     else if (casting.target.gone || casting.target.fading) casting = null;
     else if (casting.t >= casting.dur) { const c = casting; casting = null; land(c.spell, c.target); }
   }
@@ -373,7 +414,7 @@ function step(dt) {
     .sort((a, b) => (a.dead ? 1.5 : a.hp / a.maxHp) - (b.dead ? 1.5 : b.hp / b.maxHp));
   UI.update(dt, { stats: st, combat: inCombat(), cds, T, target, dist: target ? distTo(target) : 0, casting, gcd, gcdMax, project, dt, me: meUnit, drinking, list, party: inDun, distOf: distTo,
     boss: inDun ? dungeon.bossInfo() : null, moodOf: p => p.isMe ? '' : social.label(p) });
-  if (frame % 4 === 0) UI.drawMap(player, player.yaw, people.list, target, corpse, zoneNow === 'dungeon' ? dungeon.mobs : mobs.list);
+  if (frame % 4 === 0) UI.drawMap(player, player.yaw, people.list, target, corpse, zoneNow === 'dungeon' ? dungeon.mobs : mobs.list, loot.drops);
   if ((saveT += dt) > 15) { saveT = 0; G.save(S); }
 }
 tick();

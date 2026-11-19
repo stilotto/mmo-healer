@@ -45,7 +45,7 @@ Loot drops are key to the fun.
 
 ## Where things stand (end of the first long session)
 
-Sprints 1 to 7 in `TODO.md` are built and on `main`:
+Sprints 1 to 8 in `TODO.md` are built and on `main`:
 - Lanternrest (the hub), Greenhollow (the questing zone through the north
   gate) and Emberdeep (a dungeon through the orange portal), all in the
   Storybook look the owner chose.
@@ -60,8 +60,10 @@ Sprints 1 to 7 in `TODO.md` are built and on `main`:
 - Sprint 7: the roster, memory, fame, gossip, guilds, and the chat box with
   slash commands (the owner chose to fold the chat box into sprint 7).
 
-Next: sprint 8, Loot that matters, including the paper doll. Wait for the
-owner's go.
+- Sprint 8: loot in the world, Need or Greed, item effects, boss uniques,
+  gear on the figure and the paper doll.
+
+Next: sprint 9, The clock. Wait for the owner's go.
 Nothing has had a hands-on balance pass beyond the owner's first play.
 
 `fable notes.md` holds the longer-term plan and opinions it came from.
@@ -233,6 +235,30 @@ Nothing has had a hands-on balance pass beyond the owner's first play.
 - `tools/sprint7.mjs` checks the roster, records, waves, the chat box,
   commands, whispers, tabs, gossip, the guild invite and letting someone die.
 
+## Loot that matters (sprint 8)
+
+- `js/loot.js` (`Loot`): `drop(x, z, item)` puts a sack and beam in the
+  world; `update` sparkles, expires (300 s) and picks up within 1.7 yards
+  through `ctx.take` (`pickup` in `main.js`, which also records uniques in
+  `S.uniques`). `G.reward` items now go to `loot.drop`, not the bag.
+- Rolls: `startRoll(item, party, from)` queues one; `choose(kind)` is the
+  healer's pick (the #roll panel or /need, /greed, /pass). Party picks come
+  in over a few seconds; Need beats Greed. A healer Need win adds `n` to
+  the record of each person who needed (in `bond`, -2 each).
+  Hooks: `dungeon.ctx.roomLoot` after each pack (60%), `bossLoot` for
+  Cinderjaw's unique, `mobs.ctx.killed` for Old Tusk.
+- Effects: `G.EFFECTS`, `G.hasFx(S, id)` (one of each counts). Most are
+  applied in `main.js` (`land`, `procs`, `cast`, the cast loop, drinking,
+  Fade, `addThreat`); `swiftrez` and `beacon` in `game.js`; `bloom` is a
+  flag on the hot (`people.js` and the healer's own hots); `stride` sets
+  `player.gearSpeed`. `G.UNIQUES` and `G.makeUnique(id, ilvl)`.
+- `figure.js dress(fig, equip)` adds gear meshes to the sockets, body and
+  legs (`fig.gear`); `dressed()` in `main.js` redresses the healer.
+- `js/doll.js`: a second small WebGL renderer for the paper doll, created
+  the first time the window opens and drawn only while it is open.
+- `tools/sprint8.mjs` checks drops and pick-up, a heal's drop, uniques,
+  gear meshes and stride, crashing a roll, the doll window and Old Tusk.
+
 ## Things worth knowing
 
 - Coordinates: x east, z south, y up, one unit about a yard. The wall radius
@@ -244,4 +270,5 @@ Nothing has had a hands-on balance pass beyond the owner's first play.
 - The sandbox cannot reach the CDN; `tools/shot.mjs` serves three.js from a
   local npm copy (the whole `build/` folder, since the module imports
   `three.core.js`).
-- Coins have no use yet. Bag is 14 slots; overflow is auto-sold.
+- Coins buy gear and bags from Pim. Bag is 14 slots; a drop stays on the
+  ground while the bag is full.

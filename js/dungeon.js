@@ -212,7 +212,7 @@ export class Dungeon {
     else if (this.phase === 'fight') {
       if (!mobs.length) {
         if (room.mobs[0] === 'boss') return this.victory();
-        this.phase = 'rest'; this.timer = 0; this.asked = false; this.party_say('rest');
+        this.phase = 'rest'; this.timer = 0; this.asked = false; this.party_say('rest'); if (ctx.roomLoot) ctx.roomLoot(this);
         for (const p of alive) { p.mob = null; p.state = 'idle'; p.resting = true; }
       } else for (const p of alive) if (p.state !== 'hunt' || !p.mob || p.mob.state === 'dead') {
         p.mob = (p.tank ? mobs.find(m => m.foe !== p) : null) || pick(mobs); p.state = 'hunt'; p.path = null; p.resting = false;

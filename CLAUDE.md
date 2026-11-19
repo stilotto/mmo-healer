@@ -32,7 +32,8 @@ know from the big MMOs: unit frames, action bar, tab targeting, cast bar.
   (Greenhollow, monsters, Revive), `tools/sprint3.mjs` (the dungeon run),
   `tools/sprint5.mjs` (frames, Flash, Ward, drink, boss frame) and
   `tools/sprint6.mjs` (threat, Fade, death, ghost run) and `tools/sprint7.mjs`
-  (roster, memory, fame, chat box and commands) work the same way. `?speed=N` runs the world faster for tests.
+  (roster, memory, fame, chat box and commands) and `tools/sprint8.mjs` (drops,
+  rolls, effects, uniques, paper doll) work the same way. `?speed=N` runs the world faster for tests.
   `tools/looks.mjs` renders the `?look=` samples; `tools/figures.mjs` lines up
   every calling for checking the people models.
 - `js/game.js` is the rules (no DOM, no three.js).

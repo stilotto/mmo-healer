@@ -63,7 +63,7 @@ const HELP = [
   '/w <name> <text> whispers someone, /r answers the last whisper.',
   '/wave, /cheer, /bow, /dance, /sit (aim them at your target).',
   '/who, or /who <name> to see what they remember. /target <name>.',
-  '/roll [max], /fame, /leave general, /join general (also zone), /gquit.',
+  '/need, /greed, /pass on a loot roll. /roll [max], /fame, /leave general, /join general (also zone), /gquit.',
 ];
 const EMOTES = ['wave', 'cheer', 'bow', 'dance', 'sit', 'laugh', 'thank'];
 const ALIAS = { s: 'say', y: 'yell', sh: 'yell', w: 'whisper', tell: 'whisper', t: 'whisper', r: 'reply', g: 'guild', tar: 'target', ty: 'thank', lol: 'laugh', '?': 'help' };
@@ -83,6 +83,7 @@ export function send(v) {
   if (cmd === 'target') return H.target(arg);
   if (cmd === 'roll') { const n = Math.max(2, Math.min(1e6, parseInt(arg) || 100)); return chat('c-sys', `${S.name} rolls ${1 + Math.floor(Math.random() * n)} (1-${n}).`); }
   if (cmd === 'fame') return H.fame();
+  if (cmd === 'need' || cmd === 'greed' || cmd === 'pass') return H.roll(cmd);
   if (cmd === 'gquit') return H.gquit();
   if (cmd === 'accept') return H.act('accept');
   if (cmd === 'leave' || cmd === 'join') {

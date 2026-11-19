@@ -231,7 +231,7 @@ export class People {
       }
       for (let h = p.hots.length - 1; h >= 0; h--) {
         const hot = p.hots[h];
-        if ((hot.t -= dt) <= 0) { hot.t += hot.every; hot.left--; ctx.onHot(p, hot.tick); if (hot.left <= 0) p.hots.splice(h, 1); }
+        if ((hot.t -= dt) <= 0) { hot.t += hot.every; hot.left--; ctx.onHot(p, hot.left <= 0 && hot.bloom ? hot.tick * 3 : hot.tick); if (hot.left <= 0) p.hots.splice(h, 1); }
       }
       if (p.resting) p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.05 * dt);
       else if (!p.duel && p.state !== 'hunt' && t - p.hurtAt > 25 && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.003 * dt);

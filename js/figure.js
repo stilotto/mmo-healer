@@ -233,3 +233,35 @@ export function animateMob(f, mode, t) {
   f.legs.forEach((l, i) => { l.rotation.x = (i % 3 === 0 ? sw : -sw); });
   if (mode === 'attack') { const k = (p * 1.4) % 1; b.position.z = k < 0.25 ? k * 2.4 : 0.6 * (1 - (k - 0.25) / 0.75); }
 }
+
+// Gear on the body: the healer's equipped items, drawn over the figure in
+// rarity colours (bosses' uniques in gold). Epic and unique pieces glow.
+const GEAR_C = [0x8a7a66, 0x3f9a4a, 0x3a6ad8, 0x9a4ad8], UNIQUE_C = 0xe0902a;
+const gearMats = new Map();
+function gearMat(it, k = 1) {
+  const c = it.unique ? UNIQUE_C : GEAR_C[it.q], key = c + ':' + k + ':' + (it.q >= 3);
+  if (!gearMats.has(key)) gearMats.set(key, new THREE.MeshLambertMaterial({ color: _c.set(c).multiplyScalar(k).getHex(), emissive: it.q >= 3 ? _c.set(c).multiplyScalar(0.35).getHex() : 0x000000 }));
+  return gearMats.get(key);
+}
+const gm = (geo, m, x, y, z, rx = 0, ry = 0, rz = 0, sx = 1, sy = sx, sz = sx) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); o.scale.set(sx, sy, sz); return o; };
+export function dress(f, equip) {
+  for (const o of f.gear || []) { if (o.parent) o.parent.remove(o); o.geometry.dispose(); }
+  f.gear = [];
+  const put = (parent, o) => { parent.add(o); f.gear.push(o); };
+  const it = k => equip && equip[k];
+  let g;
+  if ((g = it('Hood'))) {
+    if (/Circlet/.test(g.name)) { put(f.head, gm(new THREE.TorusGeometry(0.255, 0.035, 6, 20), gearMat(g), 0, 0.1, 0, Math.PI / 2 - 0.15)); put(f.head, gm(S.sph(0.05, 8, 6), gearMat(g, 1.5), 0, 0.13, 0.25)); }
+    else { put(f.head, gm(S.cap(0.315, 1.95), gearMat(g), 0, -0.01, -0.02, -0.55)); put(f.head, gm(S.sph(0.21), gearMat(g), 0, -0.17, -0.21, 0, 0, 0, 1.3, 0.7, 1)); }
+  }
+  if ((g = it('Robe'))) {
+    for (const s of [-1, 1]) put(f.body, gm(S.sph(0.17), gearMat(g), s * 0.3, 1.42, 0, 0, 0, 0, 1.05, 0.62, 1.05));
+    put(f.body, gm(S.box(0.13, 0.95, 0.03), gearMat(g, 0.85), 0, 0.82, 0.27, -0.06));
+    put(f.body, gm(S.cyl(0.29, 0.3, 0.07, 14), gearMat(g, 0.7), 0, 0.8, 0));
+  }
+  if ((g = it('Gloves'))) for (const h of [f.sockets.handR, f.sockets.handL]) put(h, gm(S.sph(0.105, 8, 6), gearMat(g), 0, 0, 0));
+  if ((g = it('Boots'))) for (const l of [f.legL, f.legR]) { put(l, gm(S.sph(0.145, 8, 6), gearMat(g), 0, -0.66, 0.05, 0, 0, 0, 0.9, 0.62, 1.3)); put(l, gm(S.cyl(0.11, 0.11, 0.2, 8), gearMat(g, 0.85), 0, -0.5, 0)); }
+  if ((g = it('Staff'))) { put(f.sockets.handR, gm(new THREE.TorusGeometry(0.17, 0.03, 6, 16, Math.PI * 1.5), gearMat(g), 0, 1.27, 0.06, 0, 0, Math.PI * 1.25)); put(f.sockets.handR, gm(S.cyl(0.05, 0.05, 0.5, 6), gearMat(g, 0.8), 0, 0.85, 0.06)); }
+  if ((g = it('Ring'))) put(f.sockets.handL, gm(S.sph(0.04, 6, 4), gearMat(g, 1.4), 0.07, 0.02, 0.04));
+  if ((g = it('Trinket'))) { put(f.body, gm(S.sph(0.065, 8, 6), gearMat(g, 1.3), 0.14, 0.72, 0.27)); put(f.body, gm(S.cyl(0.008, 0.008, 0.1, 4), gearMat(g, 0.6), 0.14, 0.8, 0.27)); }
+}
