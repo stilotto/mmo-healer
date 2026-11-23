@@ -78,8 +78,8 @@ Sprints 1 to 8 in `TODO.md` are built and on `main`:
 `TODO.md` was cleaned up after sprint 10: "The plan" lists sprints 12 to 17
 in the agreed order (Sides, Polish, the rival, airship and second zone,
 second dungeon, town services). Wait for the owner's go on each. The owner
-now plays with a mouse and keyboard on a dock; ask about making mouse-look
-the default. On a Chromebook without a dock, Shift+1 to 6 stand in for
+now plays with a mouse and keyboard on a dock and wants the mouse kept as
+it is (mouse-look stays off by default). On a Chromebook without a dock, Shift+1 to 6 stand in for
 F1 to F6, and Low graphics (Help window, /graphics low or `?quality=low`)
 keeps it smooth.
 

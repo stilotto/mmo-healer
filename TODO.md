@@ -36,8 +36,6 @@ paid? Build whichever answer is weakest.
 
 - Hands-on balance pass: XP curve, loot pace, mana, raid difficulty. Send
   notes from play at any time.
-- Mouse-look as the default: the owner now plays with a mouse and keyboard
-  (Chromebook on a dock). Ask whether to switch the default.
 
 ## Ideas (not placed)
 
@@ -75,3 +73,5 @@ paid? Build whichever answer is weakest.
 - Sprint 10, crowds: the Shattered Spire raid from level 5 (twenty raiders,
   the Shardwarden and the Hollow Regent, raid frames, four uniques).
 - Sprint 11: help window, graphics and mouse-look settings, Shift+1 to 6.
+- Decided: mouse-look stays off by default. The owner tried a real mouse and
+  the current scheme (hold a button to steer) matches their muscle memory.
