@@ -71,7 +71,9 @@ Sprints 1 to 8 in `TODO.md` are built and on `main`:
 - Sprint 9, the clock: events board, tracker, four scheduled events, zone
   level bands.
 
-Next: proposed only: sprint 10 (Crowds: the raid), the stats tab, and the
+- Sprint 10, Crowds: the Shattered Spire raid.
+
+Next: proposed only: sprint 11 (Sides: Bloodsand Pit), the stats tab, and the
 open ideas in `TODO.md` (graveyard, rival healer). Confirm with the owner,
 then wait for their go. On a Chromebook, F1 to F6 need Search plus the top
 row (or the "top-row keys as function keys" setting); the owner knows.
@@ -341,6 +343,31 @@ Nothing has had a hands-on balance pass beyond the owner's first play.
   `drawEvents` twice a second). The board is `world.board` (`buildWorld`).
 - `main.js` renamed its frame timer to `frameClock`; `clock` is the events.
 - `tools/clock.mjs` checks it all.
+
+## The raid (sprint 10)
+
+- `RAID` in `world.js` (built at `RX` = 2000; anything past x 1500 is the
+  raid, `instanceAt(x)` picks the rects for collision and the minimap).
+  `world.mood('spire')` is the dusk sky.
+- `js/raid.js`: `buildRaid` (floors, low parapets, pillars, floating
+  crystals, a cloud sea below) and `Raid`, built like `Dungeon`: phases
+  gather, move, pull, fight, rest (after the Shardwarden), done or wipe
+  (four or fewer alive, or no tank in a fight). Party members have
+  `p.tank` ('main' or 'off'), `p.healer` (with `p.mana`), `p.reach` (ranged
+  stand back; `people.js` hunt uses `p.reach` and the mob's `def.size`).
+- Bosses are custom models (`makeGolem`, `makeRegent` from a Warlock
+  figure); Shades are wolves. `bossTick` does the raid-wide cast (on the
+  boss frame through `bossInfo`) and the cleansable dots (`splinter`,
+  `wither`). Boss health = the raid's damage per second times 105 and 130.
+- `main.js`: zone 'raid', `inst()` for the instance you are in, the level
+  gate (`RAID_LEVEL`), `raidLoot` (experience, two rolls, `social.raid`
+  fame 8 and a `raid` deed), the unique effects (prism in `game.js`; facet,
+  crown, grave in `main.js`; `people.revive(p, frac)`).
+- UI: `#raidf` raid frames (`raidFrames` in `ui.js`), shown instead of the
+  five frames while `v.raid`.
+- Clock: `booked(kind)` and `runOver(won, x, kind)` serve both instances;
+  a run you joined ends when it really ends.
+- `tools/raid.mjs` plays one raid with no healer and one with a scripted one.
 
 ## Things worth knowing
 

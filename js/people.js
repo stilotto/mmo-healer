@@ -199,12 +199,12 @@ export class People {
   kill(p, by) {
     this.stopFish(p);
     p.hp = 0; p.dead = true; p.state = 'dead'; p.deadT = 80; p.hots = []; p.dots = []; p.ward = null; p.mob = null; p.path = null; p.cried = false;
-    if (p.zone === 'dungeon') p.deadT = 1e9;
+    if (p.zone === 'dungeon' || p.zone === 'raid') p.deadT = 1e9;
     if (this.ctx.zone() === p.zone) this.ctx.chat('c-yell', `${p.name} has been slain by ${by.name}.`);
     if (this.ctx.social) this.ctx.social.died(p);
   }
-  revive(p) {
-    p.dead = false; p.hp = Math.round(p.maxHp * 0.35); p.state = 'idle'; p.wait = 4; p.hurtAt = this.t; p.resting = false;
+  revive(p, frac = 0.35) {
+    p.dead = false; p.hp = Math.round(p.maxHp * frac); p.state = 'idle'; p.wait = 4; p.hurtAt = this.t; p.resting = false;
     p.anim = 'cheer'; p.animT = 2; if (!(this.ctx.social && this.ctx.social.revived(p))) this.say(p, pick(REZ));
   }
 
@@ -216,6 +216,7 @@ export class People {
     this.ctx.float(p, '+' + amount, crit ? 'crit' : '');
     if (eff > 0) {
       if (p.zone === 'dungeon') this.ctx.dungeon.noticed(p);
+      if (p.zone === 'raid' && this.ctx.raid) this.ctx.raid.noticed(p);
       if (p.duel && !p.duel.healed) { p.duel.healed = true; if (Math.random() < 0.7) this.say(p.duel.foe, pick(['hey! no outside heals!', 'who is healing ' + p.name + '??', 'that is cheating', 'ref!'])); }
       if (!p.duel && !quiet && this.ctx.social && this.ctx.social.healed(p, eff, low && this.t - p.hurtAt < 5)) return eff;
       if (!p.duel && this.t > p.thankAt && (p.hp >= p.maxHp || eff > p.maxHp * 0.3) && !quiet) {
@@ -245,7 +246,7 @@ export class People {
     if ((this.chatT -= dt) <= 0) {
       this.chatT = rnd(5, 12);
       const here = ctx.zone(), f = here === 'green' ? this.green().filter(p => !p.dead) : this.free();
-      if (f.length) { const p = pick(f), g = here !== 'dungeon' && ctx.social && ctx.social.general(p); this.say(p, g || pick(here === 'green' ? ZONECHAT : GENERAL), 'gen'); }
+      if (f.length) { const p = pick(f), g = here !== 'dungeon' && here !== 'raid' && ctx.social && ctx.social.general(p); this.say(p, g || pick(here === 'green' ? ZONECHAT : GENERAL), 'gen'); }
     }
     if (!this.fishInit && ctx.fishing) {     // a couple of people are already at the pond
       this.fishInit = true;
@@ -313,9 +314,9 @@ export class People {
         else {
           const dx = m.x - p.x, dz = m.z - p.z, d = Math.hypot(dx, dz);
           p.yaw = Math.atan2(dx, dz);
-          if (d > 1.9) { const sp = 5.5 * dt; p.x += dx / d * sp; p.z += dz / d * sp; collide(p, 0.5); anim = 'walk'; }
+          if (d > (p.reach || 1.9) + ((m.def && m.def.size) || 0)) { const sp = 5.5 * dt; p.x += dx / d * sp; p.z += dz / d * sp; collide(p, 0.5); anim = 'walk'; }
           else {
-            anim = 'attack';
+            anim = p.reach ? 'cast' : 'attack';       // ranged callings stand back and cast
             if ((p.swing -= dt) <= 0) {
               p.swing = rnd(1.3, 1.9);
               if ((m.owner || ctx.mobs).hurt(m, Math.round((11 + 4.5 * p.level) * rnd(0.8, 1.25)), p)) {
@@ -343,7 +344,7 @@ export class People {
         if (p.resting) anim = 'sit';
         if (p.fishing) anim = 'fishsit';
         if ((p.wait -= dt) <= 0) {
-          if (p.zone === 'dungeon') p.wait = 1e9;
+          if (p.zone === 'dungeon' || p.zone === 'raid') p.wait = 1e9;
           else if (p.zone === 'green') { this.stopFish(p); if (p.goHome) { p.goHome = false; this.through(p, false); } else this.thinkGreen(p); }
           else if (p.hp < p.maxHp * 0.5 && Math.random() < 0.3) { this.say(p, pick(HURT)); p.wait = rnd(5, 10); }
           else this.think(p);

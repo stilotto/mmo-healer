@@ -54,6 +54,10 @@ export const EFFECTS = {
   beacon: 'Renew lasts half as long again.',
   tusk: 'Fade also heals you for 20% of your health.',
   stride: 'You run 15% faster.',
+  prism: 'Circle heals 20% more.',
+  facet: 'Cleanse also heals the target for 10% of their health.',
+  crown: 'Mend has a 20% chance to also place Renew on the target.',
+  grave: 'Revive brings people back with 70% of their health.',
 };
 const COMMON_FX = ['echo', 'bloom', 'clarity', 'aegis', 'swiftrez', 'veil', 'glide', 'spring', 'thrift'];
 // Boss uniques: fixed names and effects, one of each to collect.
@@ -64,6 +68,10 @@ export const UNIQUES = {
   kindled: { name: 'Kindled Crook', slot: 'Staff', fx: 'beacon', boss: 'Cinderjaw', stats: ['power', 'spirit'] },
   tuskbone: { name: 'Tuskbone Locket', slot: 'Trinket', fx: 'tusk', boss: 'Old Tusk', stats: ['power', 'mana'] },
   bristle: { name: 'Bristlehide Boots', slot: 'Boots', fx: 'stride', boss: 'Old Tusk', stats: ['power', 'haste'] },
+  shardglass: { name: 'Shardglass Circlet', slot: 'Hood', fx: 'prism', boss: 'The Shardwarden', stats: ['power', 'haste'] },
+  splinter: { name: 'Splintered Prism', slot: 'Trinket', fx: 'facet', boss: 'The Shardwarden', stats: ['power', 'spirit'] },
+  hollowcrook: { name: 'Crook of the Hollow Crown', slot: 'Staff', fx: 'crown', boss: 'The Hollow Regent', stats: ['power', 'spirit'] },
+  gravelight: { name: 'Gravelight Band', slot: 'Ring', fx: 'grave', boss: 'The Hollow Regent', stats: ['power', 'mana'] },
 };
 export function makeUnique(id, ilvl) {
   const u = UNIQUES[id], it = { slot: u.slot, q: 3, ilvl, power: 0, spirit: 0, mana: 0, haste: 0, unique: id, fx: u.fx, name: u.name };
@@ -111,7 +119,7 @@ export function gcdTime(S) { return GCD * (1 - stats(S).haste); }
 export function healAmount(S, sp) {
   const p = stats(S).power * (perk(S, 'heal') ? 1.05 : 1);
   if (sp.id === 'mend' || sp.id === 'flash' || sp.id === 'circle') {
-    const crit = Math.random() < 0.12 + (sp.id === 'circle' ? 0 : 0.05 * rank(S, 'steady')), k = sp.id === 'flash' ? [22, 1.6] : sp.id === 'circle' ? [16, 1.1] : [30, 2.2];
+    const crit = Math.random() < 0.12 + (sp.id === 'circle' ? 0 : 0.05 * rank(S, 'steady')), k = sp.id === 'flash' ? [22, 1.6] : sp.id === 'circle' ? (hasFx(S, 'prism') ? [19, 1.32] : [16, 1.1]) : [30, 2.2];
     return { amount: Math.round((k[0] + p * k[1]) * (0.92 + Math.random() * 0.16) * (crit ? 1.6 : 1)), crit };
   }
   if (sp.id === 'ward') return { absorb: Math.round((25 + p * 2.4) * (1 + 0.1 * rank(S, 'thick'))) };
@@ -275,7 +283,7 @@ export function resetTalents(S) { S.talents = {}; }
 
 // Zones have fixed level bands (the city has everyone, so it still follows
 // the healer). Elites and bosses sit a level or two above the band.
-export const BANDS = { green: [1, 6], dungeon: [5, 10] };
+export const BANDS = { green: [1, 6], dungeon: [5, 10], raid: [7, 11] };
 export function bandLevel(zone, S, extra = 0) {
   const b = BANDS[zone];
   if (!b) return Math.max(1, S.level + Math.floor(Math.random() * 3) - 1 + extra);

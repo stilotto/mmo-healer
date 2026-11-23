@@ -144,8 +144,22 @@ is weakest. Sprints 4 to 8 are the game; 9 onward is more of it.
    wipe). Each posts to chat and to the board's "How it went". Zones have
    fixed level bands: Greenhollow 1 to 6 (Old Tusk 8), Emberdeep 5 to 10
    (Cinderjaw 11); the city still follows your level.
-10. **Crowds.** The Shattered Spire: a 20-person raid with two bosses, raid
-   frames, Circle (group heal) and Cleanse.
+10. **Crowds: built.** The Shattered Spire through the purple portal, from
+   level 5 (raid band 7 to 11, bosses 13). Twenty raiders: two Knights
+   tanking, two Druid healers who heal the tanks until they run out of mana
+   (about a minute, then "OOM!!"), sixteen damage dealers (ranged ones stand
+   back). The Shardwarden (Shard Storm: 14% of everyone's health every 15 to
+   19 s, with a cast bar; Splinter bleeds on three; faster at 30%) and the
+   Hollow Regent (Hollow Pulse 17%; Wither on two; three Shades at 66% and
+   33% that chase the damage dealers until the off-tank picks them up;
+   enrage at 15%). Boss health is sized to the raid's damage (about two
+   minutes each). Raid frames: four groups of five, click to target. Each
+   boss: half a level of experience, a Rare (Shardwarden) or Epic (Regent)
+   roll and a unique roll among six of the raid. Four new uniques: Shardglass
+   Circlet (Circle +20%), Splintered Prism (Cleanse heals 10%), Crook of the
+   Hollow Crown (Mend may add Renew), Gravelight Band (Revive at 70%).
+   Followed in from the events board, the raiders who gathered are inside.
+   Circle and Cleanse come from talents (agreed in the talent sprint).
 11. **Sides.** Bloodsand Pit: two teams, flags, heal one side or both; the
     other side hunts you.
 12. **More world.** Working airship to a second zone, a second dungeon,
@@ -198,6 +212,10 @@ figures (sprint 4).
 
 ## Open (ideas, not yet placed)
 
+- A help window with every control (keys, mouse, touch, slash commands),
+  opened from a Help button and /help, for the owner and other players.
+  With it, an in-game graphics setting (and a /graphics low command) so
+  nobody needs to remember `?quality=low` in the address.
 - A real graveyard: ghosts rise in a small Greenhollow churchyard (and one
   near Lanternrest) instead of at the quest camp or fountain, with a spirit
   keeper figure, headstones and a soft light. Maybe the keeper offers to

@@ -6,7 +6,8 @@ import * as UI from './ui.js';
 import { buildWorld, spots, mapShapes, POI, inGreen } from './world.js';
 import { Mobs } from './mobs.js';
 import { Dungeon } from './dungeon.js';
-import { DUN } from './world.js';
+import { DUN, RAID } from './world.js';
+import { Raid, RAID_LEVEL } from './raid.js';
 import { makeFigure, animate, makePlate, dress } from './figure.js';
 import { Loot } from './loot.js';
 import { People } from './people.js';
@@ -51,16 +52,17 @@ let mobs, dungeon, zoneNow = 'hub';
 // The healer as a unit, so F1 or a click on your own frame targets yourself.
 const meUnit = { isMe: true, name: '', cls: 'Healer', level: 1, hp: 100, maxHp: 100, x: 0, z: 0, hots: [], dots: [], ward: null, dead: false, faded: 0, lastHit: -99 };
 let social, loot, emo = null;      // emo: the healer's emote animation
-let clock, lastCast = -99, fishing, meal = null, splashT = 0, lastWater = '';
+let raid, raidNag = 0, clock, lastCast = -99, fishing, meal = null, splashT = 0, lastWater = '';
 let drinking = 0, wardLock = new WeakMap(), ghost = false, corpse = null, cds = {};
 
 // Threat. Healing someone a monster is fighting adds to that monster's
 // threat on you; past a share of its health it turns on you. In Emberdeep
 // the tank taunts it back a few seconds later.
-const allMobs = () => zoneNow === 'dungeon' ? dungeon.mobs : mobs.list;
+const allMobs = () => zoneNow === 'dungeon' ? dungeon.mobs : zoneNow === 'raid' ? raid.mobs : mobs.list;
+const inst = () => zoneNow === 'raid' ? raid : zoneNow === 'dungeon' ? dungeon : null;      // the instance you are in
 function addThreat(unit, amt) {
   if (!amt || meUnit.dead || meUnit.faded > 0) return;
-  const tanked = zoneNow === 'dungeon' && dungeon.tank() && !dungeon.tank().dead;
+  const tanked = !!(inst() && inst().tank() && !inst().tank().dead);
   for (const m of allMobs()) {
     if (m.state !== 'fight' || m.foe === meUnit || !(m.foe === unit || m.attackers.has(unit))) continue;
     m.ht = (m.ht || 0) + amt * G.THREAT_PER_HEAL * (1 - 0.1 * G.rank(S, 'quiet'));
@@ -80,13 +82,13 @@ function hurtMe(dmg, by, big) {
 function die(by) {
   meUnit.hp = 0; meUnit.dead = true; meUnit.hots = []; meUnit.dots = []; meUnit.ward = null; casting = null; drinking = 0;
   corpse = { x: player.x, z: player.z, zone: zoneNow };
-  for (const m of [...mobs.list, ...dungeon.mobs]) { m.attackers.delete(meUnit); if (m.foe === meUnit) m.foe = null; m.ht = 0; }
+  for (const m of [...mobs.list, ...dungeon.mobs, ...raid.mobs]) { m.attackers.delete(meUnit); if (m.foe === meUnit) m.foe = null; m.ht = 0; }
   UI.chat('c-yell', `You have been slain by ${by.name}.`); UI.sfx('err'); UI.death('dead');
 }
 function release() {         // become a ghost at the nearest safe spot and run back
   if (!meUnit.dead || ghost) return;
   ghost = true; player.speedMul = 1.35 * (G.rank(S, 'swift') ? 1.3 : 1); target = null;
-  const g = corpse.zone === 'dungeon' ? DUN.start : corpse.zone === 'green' ? POI.camp : POI.fountain;
+  const g = corpse.zone === 'raid' ? RAID.start : corpse.zone === 'dungeon' ? DUN.start : corpse.zone === 'green' ? POI.camp : POI.fountain;
   player.x = g.x; player.z = g.z + (corpse.zone === 'hub' ? 0 : 2);
   setGhost(true); UI.death('ghost'); UI.chat('c-sys', 'You are a spirit. Run back to your body, marked by a pillar of light, to return to life.');
 }
@@ -108,7 +110,7 @@ const meMats = new Map();
 function setGhost(on) { me.group.traverse(o => { if (!o.isMesh || o === me.hit) return; if (!meMats.has(o)) meMats.set(o, o.material); o.material = on && o.material.vertexColors ? ghostMat : meMats.get(o); }); }
 const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 30, 12, 1, true), new THREE.MeshBasicMaterial({ color: 0xfff2a8, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
 pillar.visible = false; scene.add(pillar);
-const ZONE_NAME = { hub: 'Lanternrest', green: 'Greenhollow', dungeon: 'Emberdeep' };
+const ZONE_NAME = { hub: 'Lanternrest', green: 'Greenhollow', dungeon: 'Emberdeep', raid: 'The Shattered Spire' };
 let people, target = null, casting = null, gcd = 0, gcdMax = 1, started = false, tabSeen = new Set(), tabAt = 0, lastSpot = null, saveT = 0, frame = 0;
 
 const ring = new THREE.Mesh(new THREE.RingGeometry(0.75, 0.95, 28), new THREE.MeshBasicMaterial({ color: 0x4dff5a, transparent: true, opacity: 0.9, depthWrite: false }));
@@ -265,7 +267,7 @@ function cast(i) {
 }
 function fadeAway() {
   meUnit.faded = 3;
-  for (const m of [...mobs.list, ...dungeon.mobs]) { m.ht = 0; m.attackers.delete(meUnit); if (m.foe === meUnit) m.foe = [...m.attackers].find(a => !a.dead && !a.gone) || (zoneNow === 'dungeon' ? dungeon.tank() : null) || null; }
+  for (const m of [...mobs.list, ...dungeon.mobs, ...raid.mobs]) { m.ht = 0; m.attackers.delete(meUnit); if (m.foe === meUnit) m.foe = [...m.attackers].find(a => !a.dead && !a.gone) || (inst() ? inst().tank() : null) || null; }
   fx.emit(player.x, 1, player.z, { n: 30, color: 0x9ab0ff, spread: 0.6, up: 0.6, jitter: 1.4, life: 1 });
 }
 function land(sp, t) {
@@ -279,12 +281,13 @@ function land(sp, t) {
   if (S.mana < G.manaCost(S, sp)) return UI.err('Not enough mana');
   S.mana -= G.manaCost(S, sp);
   if (sp.id === 'revive') {
-    people.revive(t); beam(t, 0xffd76a); burst(t, 0xffd76a, 50, 3.2); fx.emit(t.x, 0.3, t.z, { n: 30, color: 0xfff2a8, spread: 1.2, up: 0.4, jitter: 2.4, life: 0.9 }); UI.sfx('level'); UI.chat('c-heal', `You bring ${t.name} back to life.`);
+    people.revive(t, G.hasFx(S, 'grave') ? 0.7 : 0.35); beam(t, 0xffd76a); burst(t, 0xffd76a, 50, 3.2); fx.emit(t.x, 0.3, t.z, { n: 30, color: 0xfff2a8, spread: 1.2, up: 0.4, jitter: 2.4, life: 0.9 }); UI.sfx('level'); UI.chat('c-heal', `You bring ${t.name} back to life.`);
     UI.float(t, 'Revived', 'crit'); earn(t.maxHp, t); return;
   }
   if (sp.id === 'cleanse') {
     const n = (t.dots || []).length; t.dots = []; beam(t, 0x9affe0); burst(t, 0xc8fff0, 22); UI.sfx('heal'); UI.float(t, 'Cleansed', 'xp');
-    if (!t.isMe) { addThreat(t, 10 * n); social.healed(t, 0, false); if (t.zone === 'dungeon') dungeon.noticed(t); }
+    if (G.hasFx(S, 'facet')) { const amt = Math.round(t.maxHp * 0.1); if (t.isMe) t.hp = Math.min(t.maxHp, t.hp + amt); else { const e = people.heal(t, amt, false, true); addThreat(t, e); earn(e, t); } }
+    if (!t.isMe) { addThreat(t, 10 * n); social.healed(t, 0, false); if (t.zone === 'dungeon') dungeon.noticed(t); if (t.zone === 'raid') raid.noticed(t); }
     return;
   }
   if (sp.id === 'circle') {         // everyone near the target, the target first
@@ -308,7 +311,7 @@ function land(sp, t) {
   if (sp.id === 'ward') {
     t.ward = { amt: h.absorb, t: G.WARD_TIME }; wardLock.set(t, T + G.WARD_LOCK);
     beam(t, 0x9ac8ff); burst(t, 0xb8d8ff, 22); UI.sfx('heal'); UI.float(t, 'Ward', 'xp');
-    if (t.zone === 'dungeon') dungeon.noticed(t);
+    if (t.zone === 'dungeon') dungeon.noticed(t); if (t.zone === 'raid') raid.noticed(t);
     addThreat(t, h.absorb * 0.5); social.healed(t, 0, false); procs(sp, t, h);
     return;
   }
@@ -318,6 +321,7 @@ function land(sp, t) {
   else if (sp.id === 'mend') {
     beam(t); burst(t, 0xa8ff8a, 26); burst(t, 0xfff2a8, 10, 3); UI.sfx('heal'); const e = people.heal(t, h.amount, h.crit); addThreat(t, e); earn(e, t);
     if (h.amount > e && G.rank(S, 'overflow')) { t.hots = t.hots.filter(x => x.id !== 'overflow'); t.hots.push({ id: 'overflow', tick: Math.max(1, Math.round((h.amount - e) * 0.5 / 3)), left: 3, every: 2, t: 2 }); }
+    if (G.hasFx(S, 'crown') && Math.random() < 0.2) { const r = G.SPELLS[1], hr = G.healAmount(S, r); t.hots = t.hots.filter(x => x.id !== 'renew'); t.hots.push({ id: 'renew', tick: hr.tick, left: hr.ticks, every: hr.every, t: hr.every, bloom: G.hasFx(S, 'bloom') }); UI.float(t, 'Crown', 'xp'); }
     if (low && G.hasFx(S, 'aegis') && !t.ward) { t.ward = { amt: Math.round(h.amount * 0.3), t: G.WARD_TIME }; UI.float(t, 'Ward', 'xp'); }
     if (G.hasFx(S, 'echo')) {     // a smaller heal jumps to the most hurt person close by
       const o = people.list.filter(q => q !== t && !q.dead && !q.fading && q.grow >= 1 && q.hp < q.maxHp && Math.hypot(q.x - t.x, q.z - t.z) < 10).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
@@ -341,6 +345,15 @@ function pickup(it) {
   UI.chatHtml('c-loot', `You receive loot: ${UI.itemLink(it)}`); UI.toast(it.name, it.unique ? '#ffa030' : G.RARITY_COLOR[it.q]); UI.sfx('loot');
   if (it.unique) { S.uniques = S.uniques || {}; if (!S.uniques[it.unique]) { S.uniques[it.unique] = true; UI.chat('c-sys', `New boss unique! ${Object.keys(S.uniques).length} of ${Object.keys(G.UNIQUES).length} found. See the list in your character window (B).`); } }
   UI.drawBag(); G.save(S); return true;
+}
+// A raid boss falls: experience, a Rare-or-better roll for a few of the raid, and a unique roll.
+function raidLoot(m, r) {
+  const xp = Math.round(G.xpNeed(S.level) * 0.5); S.xp += xp; UI.chat('c-heal', `You gain ${xp} experience for the fall of ${m.name}.`);
+  const who = r.alive().sort(() => Math.random() - 0.5).slice(0, 6), ilvl = G.BANDS.raid[1] + 2;
+  loot.startRoll(G.rollItem(ilvl, null, m.kind === 'regent' ? 3 : 2), who, m.name);
+  loot.startRoll(G.makeUnique(uniqueFrom(m.name), ilvl), who, m.name);
+  if (r.seen) social.raid(m.name);
+  S.raidKills = (S.raidKills || 0) + 1; earn(0.0001, { maxHp: 1e9, level: S.level, name: '' }); UI.drawBag(); G.save(S);
 }
 function uniqueFrom(boss) {          // prefer ones you have not found yet
   const ids = Object.keys(G.UNIQUES).filter(k => G.UNIQUES[k].boss === boss), fresh = ids.filter(k => !(S.uniques || {})[k]);
@@ -395,7 +408,11 @@ function start(name) {
     npcCatch: (p, got) => people.fishBite(p, got) });
   people.ctx.fishing = fishing;
   clock = new Clock({ S, people, mobs, chat: UI.chat, later: (s, f) => social.later(s, f) });
-  dungeon.ctx.booked = () => clock.booked(); dungeon.ctx.runOver = (won, d) => clock.runOver(won, d);
+  dungeon.ctx.booked = () => clock.booked('dungeon'); dungeon.ctx.runOver = (won, d) => clock.runOver(won, d, 'dungeon');
+  raid = new Raid(scene, { S, people, world, me: meUnit, aggroed, chat: UI.chat, float: (p, text, cls) => UI.float(p, text, cls), later: (s, f) => social.later(s, f),
+    warn: text => { UI.toast(text, '#c08aff'); UI.sfx('err'); }, boom: (x, z) => fx.emit(x, 1, z, { n: 60, color: 0xc08aff, spread: 3, up: 1.6, jitter: 4, life: 1 }),
+    booked: () => clock.booked('raid'), runOver: (won, r) => clock.runOver(won, r, 'raid'), bossLoot: raidLoot });
+  people.ctx.raid = raid;
   dungeon.ctx.roomLoot = d => { if (Math.random() < 0.6) { const m = d.mobs.find(m => m.room === d.room); loot.startRoll(G.rollItem(S.level + 1, null, 1), d.alive(), m ? 'The ' + m.name : 'The pack'); } };
   mobs.ctx.killed = m => {           // Old Tusk leaves something behind if you were there
     if (m.kind !== 'tusk' || zoneNow !== 'green' || meUnit.dead || distTo(m) > 60) return;
@@ -407,12 +424,12 @@ function start(name) {
     who: a => social.who(a), fame: () => social.fameInfo(), gquit: () => social.gquit(), act: a => social.act(a), changed: () => G.save(S),
     target: n => { const p = n && social.find(n, true); if (p) setTarget(p); else UI.err(n ? `No one called ${n} is here` : 'Usage: /target <name>'); },
     roll: k => loot.choose(k), events: () => UI.toggleEvents(), opened: () => { player.keys.clear(); } });
-  UI.init(S, { clock: () => clock, dressed, cast, fish, eat, secondWind, windReady: () => G.rank(S, 'wind') > 0 && (cds.wind || 0) <= T, release, returnToLife, drink: toggleDrink, self: () => setTarget(meUnit), pick: pickFrame, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
+  UI.init(S, { clock: () => clock, targetUnit: u => setTarget(u), dressed, cast, fish, eat, secondWind, windReady: () => G.rank(S, 'wind') > 0 && (cds.wind || 0) <= T, release, returnToLife, drink: toggleDrink, self: () => setTarget(meUnit), pick: pickFrame, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
     panel: open => { if (open) player.free(); else if (S.look) player.lock(); } });
   player.look = !!S.look; UI.setLook(player.look, false);
   player.enabled = true; G.save(S);
   look.onLower = n => UI.chat('c-sys', ['', 'Graphics: soft glow turned off to keep things smooth.', 'Graphics: shadows turned off to keep things smooth.', 'Graphics: resolution lowered to keep things smooth.'][n]);
-  window.game = { me: meUnit, get corpse() { return corpse; }, get casting() { return casting; }, S, people, mobs, dungeon, player, DUN, scene, renderer, cast, tabTarget, hurtTarget, toggleLook, UI, G, Chat, get social() { return social; }, get loot() { return loot; }, get fishing() { return fishing; }, get clock() { return clock; }, get meal() { return meal; }, eat, fish, secondWind, release, cds, get T() { return T; }, fig: me, dressed, get target() { return target; }, set target(p) { target = p; } };
+  window.game = { me: meUnit, get corpse() { return corpse; }, get casting() { return casting; }, S, people, mobs, dungeon, player, DUN, scene, renderer, cast, tabTarget, hurtTarget, toggleLook, UI, G, Chat, get social() { return social; }, get loot() { return loot; }, get fishing() { return fishing; }, get clock() { return clock; }, get raid() { return raid; }, RAID, get meal() { return meal; }, eat, fish, secondWind, release, cds, get T() { return T; }, fig: me, dressed, get target() { return target; }, set target(p) { target = p; } };
 }
 const nameBox = document.getElementById('cname'); nameBox.value = S.name || '';
 document.getElementById('enter').onclick = () => start(nameBox.value.trim().slice(0, 12));
@@ -473,15 +490,24 @@ function step(dt) {
   loot.update(dt, T);
   mobs.update(dt, T);
   dungeon.update(dt, T);
+  raid.update(dt, T);
   // Portals: into Emberdeep from town, and back out again.
   if (zoneNow === 'hub' && Math.hypot(POI.dungeon.px - player.x, POI.dungeon.pz - player.z) < 2.2) {
     player.x = DUN.start.x; player.z = DUN.start.z; player.yaw = Math.PI; player.camOff = 0; target = null; casting = null; dungeon.enter();
     if (!S.seenDungeon) { S.seenDungeon = true; UI.chat('c-sys', 'A party is running Emberdeep without a healer. Follow them and keep them alive. Nobody will stop you.'); }
   } else if (zoneNow === 'dungeon' && DUN.exits.some(e => Math.hypot(e.x - player.x, e.z - player.z) < 2)) {
     player.x = POI.dungeon.x + 3; player.z = POI.dungeon.z; player.yaw = Math.PI / 2; player.camOff = 0; target = null; casting = null; dungeon.leave();
+  } else if (zoneNow === 'hub' && Math.hypot(POI.raid.px - player.x, POI.raid.pz - player.z) < 2.2) {      // the Shattered Spire
+    if (S.level < RAID_LEVEL) { if (!raidNag || T - raidNag > 6) { raidNag = T; UI.err(`You must be level ${RAID_LEVEL} to enter the Shattered Spire`); } player.x = POI.raid.x + 2; player.z = POI.raid.z; }
+    else {
+      player.x = RAID.start.x; player.z = RAID.start.z; player.yaw = Math.PI; player.camOff = 0; target = null; casting = null; raid.enter();
+      if (!S.seenRaid) { S.seenRaid = true; UI.chat('c-sys', 'Twenty people, two healers who will run dry, and two bosses. Keep the tanks up, Circle the crowd, Cleanse Splinters and Wither. Raid frames are on the left.'); }
+    }
+  } else if (zoneNow === 'raid' && RAID.exits.some(e => Math.hypot(e.x - player.x, e.z - player.z) < 2)) {
+    player.x = POI.raid.x + 3; player.z = POI.raid.z; player.yaw = Math.PI / 2; player.camOff = 0; target = null; casting = null; raid.leave();
   }
-  const z = player.x > 500 ? 'dungeon' : inGreen(player) ? 'green' : 'hub';
-  if (z !== zoneNow) { zoneNow = z; UI.zone(ZONE_NAME[z], G.BANDS[z]); world.mood(z === 'dungeon'); look.mood(z === 'dungeon'); if (z === 'green' && !S.seenGreen) { S.seenGreen = true; UI.chat('c-sys', 'People out here can die. Press 3 to Revive the fallen (5 second cast).'); } }
+  const z = player.x > 1500 ? 'raid' : player.x > 500 ? 'dungeon' : inGreen(player) ? 'green' : 'hub';
+  if (z !== zoneNow) { zoneNow = z; UI.zone(ZONE_NAME[z], G.BANDS[z]); world.mood(z === 'raid' ? 'spire' : z === 'dungeon'); look.mood(z === 'dungeon' || z === 'raid'); if (z === 'green' && !S.seenGreen) { S.seenGreen = true; UI.chat('c-sys', 'People out here can die. Press 3 to Revive the fallen (5 second cast).'); } }
   const st = G.stats(S);
   S.mana = Math.min(st.maxMana, S.mana + (st.regen * (G.rank(S, 'calm') && T - lastCast > 4 ? 1.5 : 1) + (meal ? meal.rate : 0) + (drinking > 1 ? st.maxMana * 0.08 * (G.hasFx(S, 'spring') ? 2 : 1) : 0)) * dt);   // drinking: about 12 s from empty
   if (gcd > 0) gcd -= dt;
@@ -514,14 +540,15 @@ function step(dt) {
   UI.hint(fishing.active ? fishing.hint() : sp ? sp.msg : S.healed > 150 ? '' : !target ? 'Find someone hurt and press Tab to target them' :
     target.dead ? 'Press 3 to Revive (stand still)' : target.hp >= target.maxHp ? `${target.name} is at full health. Tab to someone hurt (red or yellow bar)` : 'Press 1 to cast Mend (stand still), or 2 for Renew');
 
-  const inDun = zoneNow === 'dungeon' && dungeon.active;
+  const inDun = zoneNow === 'dungeon' && dungeon.active, inRaid = zoneNow === 'raid' && raid.active;
   let list;
-  if (inDun) list = dungeon.party.filter(p => !p.gone);
+  if (inRaid) list = raid.party.filter(p => !p.gone);
+  else if (inDun) list = dungeon.party.filter(p => !p.gone);
   else list = people.list.filter(p => p.grow >= 1 && !p.fading && (p.dead || p.hp < p.maxHp) && distTo(p) < 40)
     .sort((a, b) => (a.dead ? 1.5 : a.hp / a.maxHp) - (b.dead ? 1.5 : b.hp / b.maxHp));
   UI.update(dt, { stats: st, combat: inCombat(), cds, T, target, dist: target ? distTo(target) : 0, casting, gcd, gcdMax, project, dt, me: meUnit, drinking, eating: !!meal, list, party: inDun, distOf: distTo,
-    boss: inDun ? dungeon.bossInfo() : null, moodOf: p => p.isMe ? '' : social.label(p) });
-  if (frame % 4 === 0) UI.drawMap(player, player.yaw, people.list, target, corpse, zoneNow === 'dungeon' ? dungeon.mobs : mobs.list, loot.drops);
+    raid: inRaid, boss: inDun ? dungeon.bossInfo() : inRaid ? raid.bossInfo() : null, moodOf: p => p.isMe ? '' : social.label(p) });
+  if (frame % 4 === 0) UI.drawMap(player, player.yaw, people.list, target, corpse, allMobs(), loot.drops);
   if ((saveT += dt) > 15) { saveT = 0; G.save(S); }
 }
 tick();

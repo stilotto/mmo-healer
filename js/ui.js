@@ -3,7 +3,7 @@
 import { SPELLS, healEstimate, knows, SLOTS, TREES, TIER_COST, rank, cantLearn, learn, resetTalents, pointsFree, pointsSpent, SLOT_ICON, RARITY, RARITY_COLOR, bagSize, stats, xpNeed, itemScore, equipItem, sellItem, stock, price, buy, restock, restockCost, buyBag, bagCost, EFFECTS, UNIQUES, avgIlvl } from './game.js';
 import { makeDoll } from './doll.js';
 import { CLASSES } from './figure.js';
-import { mapShapes, WALL_R, ZONE, DUN } from './world.js';
+import { mapShapes, WALL_R, ZONE, DUN, instanceAt } from './world.js';
 import { chat, chatHtml } from './chat.js';
 import { FAME, fameTier } from './memory.js';
 export { chat, chatHtml };
@@ -196,7 +196,8 @@ export function update(dt, v) {
   $('pframe').classList.toggle('sel', v.target === v.me); $('pframe').classList.toggle('combat', !!v.combat);
   const ps = v.drinking ? (v.eating ? 'Eating' : 'Drinking') + (v.me.hots.length ? ' · ❋' : '') : (v.me.hots.length ? '❋ Renew' : '') + (v.me.ward ? ' ◈' : '') + (v.me.surge ? ' ⚡ Surge' : '');
   if ($('psub').textContent !== ps) $('psub').textContent = ps;
-  frames(v); boss(v);
+  if (v.raid) raidFrames(v); else { if (rcells.length) $('raidf').style.display = 'none'; frames(v); }
+  boss(v);
   setBar('pmp', S.mana / st.maxMana, `${Math.floor(S.mana)} / ${st.maxMana}`);
   $('pname').textContent = `${S.name}  ·  ${S.level}`;
   const t = v.target, tf = $('tframe');
@@ -249,8 +250,8 @@ export function drawMap(me, yaw, people, target, corpse, mobs, drops = []) {
   const c = $('map'), x = c.getContext('2d'), W = c.width, k = W / 2 / 48;
   x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = '#3f5c30'; x.fillRect(0, 0, W, W);
   x.translate(W / 2 - me.x * k, W / 2 - me.z * k); x.scale(k, k);
-  if (me.x > 500) { x.fillStyle = '#120a08'; x.fillRect(me.x - 100, me.z - 100, 200, 200); x.fillStyle = '#6a5a52'; for (const [x0, z0, x1, z1] of DUN.rects) x.fillRect(x0, z0, x1 - x0, z1 - z0);
-    x.fillStyle = '#6ab8ff'; for (const e of DUN.exits) { x.beginPath(); x.arc(e.x, e.z, 2, 0, 7); x.fill(); } }
+  if (me.x > 500) { const I = instanceAt(me.x); x.fillStyle = I === DUN ? '#120a08' : '#2a1a3a'; x.fillRect(me.x - 100, me.z - 100, 200, 200); x.fillStyle = I === DUN ? '#6a5a52' : '#8a809a'; for (const [x0, z0, x1, z1] of I.rects) x.fillRect(x0, z0, x1 - x0, z1 - z0);
+    x.fillStyle = '#6ab8ff'; for (const e of I.exits) { x.beginPath(); x.arc(e.x, e.z, 2, 0, 7); x.fill(); } }
   x.fillStyle = '#5f8a48'; x.fillRect(ZONE.x0, ZONE.z0, ZONE.x1 - ZONE.x0, -ZONE.z0 - 40);
   x.fillStyle = '#8a8478'; x.beginPath(); x.arc(0, 0, WALL_R, 0, 7); x.fill();
   x.strokeStyle = '#555049'; x.lineWidth = 2.5; x.stroke();
@@ -297,7 +298,28 @@ export function sfx(kind) {
 const rows = [];
 let shown = [], pickT = 0;
 export const frameUnits = () => shown;
+// Raid frames: four groups of five, small cells, class-coloured, red when low.
+const rcells = [];
+function raidFrames(v) {
+  const box = $('raidf'); box.style.display = 'grid'; $('party').style.display = 'none';
+  while (rcells.length < 20) {
+    const c = el('div', 'rc', '<i></i><span></span><b></b>'), i = rcells.length;
+    c.onclick = () => { const u = rcells[i].u; if (u) H.targetUnit(u); }; box.append(c);
+    rcells.push({ c, fill: c.children[0], t: c.children[1], d: c.children[2], u: null });
+  }
+  rcells.forEach((w, i) => {
+    const u = v.list[(i % 4) * 5 + Math.floor(i / 4)];        // column = group
+    w.u = u; w.c.style.visibility = u ? '' : 'hidden'; if (!u) return;
+    const f = u.dead ? 0 : u.hp / u.maxHp;
+    w.fill.style.transform = `scaleX(${f})`; w.fill.style.background = f < 0.35 ? '#c0302a' : CLASSES[u.cls].color;
+    if (w.t.textContent !== u.name) w.t.textContent = u.name;
+    const mark = (u.dots && u.dots.length ? '●' : '') + (u.hots.length ? '❋' : '') + (u.tank ? '⛨' : u.healer ? '✚' : '');
+    if (w.d.textContent !== mark) w.d.textContent = mark;
+    w.c.classList.toggle('sel', v.target === u); w.c.classList.toggle('dead', !!u.dead); w.c.classList.toggle('far', v.distOf(u) > 40);
+  });
+}
 function frames(v) {
+  $('party').style.display = '';
   const box = $('party');
   if ((pickT -= v.dt) <= 0 || v.list !== frames.list) {
     pickT = 1; frames.list = v.list;

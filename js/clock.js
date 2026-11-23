@@ -33,18 +33,19 @@ export class Clock {
   say(text) { this.ctx.chat('c-sys', '[Events] ' + text); }
   gen(p, text, zone) { if (p && !p.gone) this.ctx.chat('c-gen', `[${zone ? 'Greenhollow' : 'General'}] ${p.name}: ${text}`); }
 
-  // The Emberdeep party, for the dungeon: if a run went in and the healer
+  // The Emberdeep party or the raiders: if they went in and the healer
   // follows while it is under way, these are the people inside.
-  booked() {
-    const e = this.events.find(e => e.kind === 'dungeon' && e.state === 'on' && !e.joined);
+  booked(kind = 'dungeon') {
+    const e = this.events.find(e => e.kind === kind && e.state === 'on' && !e.joined);
     if (!e || !e.party) return null;
     for (const p of e.people) if (!p.gone) this.ctx.people.remove(p);      // still at the portal: they are the ones inside now
     e.joined = true; return e.party;
   }
-  runOver(won, d) {
-    const e = this.events.find(e => e.kind === 'dungeon' && e.state === 'on' && e.joined);
+  runOver(won, d, kind = 'dungeon') {
+    const e = this.events.find(e => e.kind === kind && e.state === 'on' && e.joined);
     if (!e) return;
     const dead = d.party.filter(p => p.dead).length;
+    if (kind === 'raid') return this.finish(e, won ? `The Hollow Regent is down! A stranger healed the raid${dead ? ` (${dead} died)` : ''}.` : 'Wiped, even with a stranger healing.', won);
     this.finish(e, won ? `Cleared, with a stranger healing them${dead ? ` (${dead} died on the way)` : ''}.` : 'Wiped, even with a healer along.', won);
   }
 
@@ -96,6 +97,7 @@ export class Clock {
       e.tusk = t; for (const p of e.people) { p.mob = t; p.state = 'hunt'; p.stuck = 0; }
       this.say(`${e.name}: the hunters charge Old Tusk at the watchtower.`);
     } else if (k === 'dungeon' || k === 'raid') {
+      if (k === 'raid') e.party = e.people.map(p => ({ name: p.name, cls: p.cls }));
       for (const p of e.people) { p.leaving = k; P.go(p, POI[k], 0.6); }
       this.say(`${e.name}: the party goes in.`);
     } else if (k === 'duel') {
@@ -150,7 +152,7 @@ export class Clock {
         }
         if (e.state === 'on') for (const p of e.people) if (!p.gone && !p.duel && p.state === 'idle') p.wait = Math.max(p.wait, 3);
         if (e.state === 'on' && T > e.endAt) this.finish(e, 'Called off: it ran too long.', false);
-      } else if (T > e.endAt) {
+      } else if (T > e.endAt && !(e.joined && T < e.endAt + 600)) {     // a run you joined ends when it really ends
         if (e.kind === 'dungeon') {
           const won = Math.random() < 0.3;
           this.finish(e, e.joined ? 'The party finished without you.' : won ? 'Cleared! Cinderjaw is down, and nobody had a healer.' : `Wiped on ${pick(['the first pull', 'the hounds', 'Cinderjaw', 'Cinderjaw at 8%'])}. No healer.`, won);

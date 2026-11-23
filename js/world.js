@@ -28,9 +28,22 @@ export const DUN = {
   exits: [{ x: DX, z: 7.4 }, { x: DX - 27.4, z: -84 }],
   start: { x: DX, z: -1 },
 };
+// The Shattered Spire, the raid, built further east still: an entry hall, a
+// walkway, the Shardwarden's terrace, another walkway, the Hollow Regent's crown.
+export const RX = 2000;
+const Q = (x0, z0, x1, z1) => [RX + x0, z0, RX + x1, z1];
+export const RAID = {
+  rects: [Q(-10, -14, 10, 10), Q(-4, -42, 4, -12), Q(-24, -86, 24, -40), Q(-4, -118, 4, -84), Q(-28, -166, 28, -116)],
+  way: [[0, -2], [0, -46], [0, -64], [0, -112], [0, -124], [0, -142]].map(([x, z]) => ({ x: RX + x, z })),
+  bosses: [{ way: 2, edge: 1 }, { way: 5, edge: 4 }],
+  exits: [{ x: RX, z: 9.4 }, { x: RX, z: -164.4 }],
+  start: { x: RX, z: -7 },
+};
+// Which instance a point is in (Emberdeep or the Spire), or null outdoors.
+export const instanceAt = x => x > 1500 ? RAID : x > 500 ? DUN : null;
 function collideDungeon(p, r) {
   let best = null, bd = 1e9;
-  for (const [x0, z0, x1, z1] of DUN.rects) {
+  for (const [x0, z0, x1, z1] of instanceAt(p.x).rects) {
     const cx = Math.max(x0 + r, Math.min(x1 - r, p.x)), cz = Math.max(z0 + r, Math.min(z1 - r, p.z)), d = (cx - p.x) ** 2 + (cz - p.z) ** 2;
     if (d < bd) { bd = d; best = [cx, cz]; }
   }
@@ -92,7 +105,16 @@ export function buildWorld(scene) {
   const hemi = new THREE.HemisphereLight(0xdfeaff, 0x6a5a40, 1.5); scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xfff0d0, 1.9); sun.position.set(-60, 90, 40); scene.add(sun);
   const sky = scene.background, dark = new THREE.Color(0x140a08);
-  const mood = cave => {
+  const dusk = canvasTex(8, 256, (x, w, h) => {
+    const g = x.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, '#120a2a'); g.addColorStop(0.5, '#3a2468'); g.addColorStop(0.75, '#a05a8a'); g.addColorStop(1, '#d88a7a');
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+  });
+  const mood = cave => {             // false outdoors, true in Emberdeep, 'spire' on the raid
+    if (cave === 'spire') {
+      scene.background = dusk; scene.fog.color.set(0x5a3a7a); scene.fog.near = 60; scene.fog.far = 260;
+      hemi.intensity = 1.5; hemi.color.set(0xd8c8ff); sun.intensity = 1.1; return;
+    }
     scene.background = cave ? dark : sky; scene.fog.color.set(cave ? 0x140a08 : 0xcfdbe0); scene.fog.near = cave ? 30 : 90; scene.fog.far = cave ? 170 : 420;
     hemi.intensity = cave ? 1.6 : 1.5; hemi.color.set(cave ? 0xffc8a0 : 0xdfeaff); sun.intensity = cave ? 0.5 : 1.9;
   };
@@ -233,7 +255,7 @@ export function buildWorld(scene) {
     const lb = label(name, sub, 3); lb.position.set(0, 9.4, 0); g.add(lb);
     const n = Math.hypot(x, z * 0.3), ux = -x / n, uz = -z * 0.3 / n;
     POI[key] = { x: x + ux * 3, z: z + uz * 3, px: x, pz: z };
-    if (key !== 'dungeon') spots.push({ x, z, r: 2.5, msg });
+    if (key === 'pvp') spots.push({ x, z, r: 2.5, msg });
     mapShapes.push({ t: 'c', x, z, r: 2.5, c: col });
   };
   portal('dungeon', 'Emberdeep', 'Dungeon', -47, -15, '#ff7a2a', 'The portal hums, but does not take you. You are not attuned to Emberdeep yet.');
