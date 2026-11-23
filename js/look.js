@@ -23,7 +23,7 @@ export const LOOKS = {
 export function makeLook(name, { scene, renderer, camera, world }) {
   const L = LOOKS[name || 'storybook'];
   // ?look=original: the first build's flat style
-  if (!L) return { render: () => renderer.render(scene, camera), update() {}, mood() {}, resize() {} };
+  if (!L) return { render: () => renderer.render(scene, camera), update() {}, mood() {}, resize() {}, quality: 'auto', setQuality() {} };
   const { hemi, sun } = world.lights;
   const skyTex = sky(L.sky);
   renderer.toneMapping = L.tone; renderer.toneMappingExposure = L.exposure;
@@ -66,14 +66,22 @@ export function makeLook(name, { scene, renderer, camera, world }) {
   // Frame-rate safety net: if the game runs slow, step down one notch at a
   // time (glow, then shadows, then resolution). ?quality=low starts at the
   // bottom; ?quality=high never steps down.
-  const q = new URLSearchParams(location.search).get('quality');
+  // The saved setting (Help window or /graphics) applies unless the address says otherwise.
+  let q = new URLSearchParams(location.search).get('quality');
+  if (!q) { try { q = localStorage.getItem('mmoHealerGfx') || 'auto'; } catch (e) { q = 'auto'; } }
   let t = 0, level = 0, frames = 0, spent = 0, settle = 4;
+  const fullComposer = composer, ratio = renderer.getPixelRatio();
   const steps = [
     () => { composer = null; },
     () => { renderer.shadowMap.enabled = false; sun.castShadow = false; scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => m.needsUpdate = true); }); },
     () => renderer.setPixelRatio(Math.min(devicePixelRatio, 1) * 0.75),
   ];
-  const lower = () => { if (level < steps.length) { steps[level++](); look.onLower && look.onLower(level); } };
+  const lower = (quiet) => { if (level < steps.length) { steps[level++](); if (!quiet && look.onLower) look.onLower(level); } };
+  // Back to full quality: glow, shadows and resolution as the look wants them.
+  const raise = () => {
+    if (!level) return; level = 0; composer = fullComposer; renderer.setPixelRatio(ratio);
+    if (L.shadows) { renderer.shadowMap.enabled = true; sun.castShadow = true; scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => m.needsUpdate = true); }); }
+  };
   const look = {
     render() { if (composer) composer.render(); else renderer.render(scene, camera); },
     resize(w, h) { if (composer) composer.setSize(w, h); },
@@ -86,7 +94,15 @@ export function makeLook(name, { scene, renderer, camera, world }) {
       if (L.shadows) { sun.target.position.set(p.x, 0, p.z); sun.position.set(p.x + L.sun[2][0], L.sun[2][1], p.z + L.sun[2][2]); }
     },
     mood(cave) { if (!cave) outdoors(); },
+    // 'auto' (steps down if slow), 'high' (never steps down) or 'low' (everything off).
+    get quality() { return q; },
+    setQuality(mode) {
+      q = mode; try { localStorage.setItem('mmoHealerGfx', mode); } catch (e) {}
+      raise(); settle = 4; frames = 0; spent = 0;
+      if (mode === 'low') while (level < steps.length) lower(true);
+      if (composer) composer.setSize(innerWidth, innerHeight);
+    },
   };
-  if (q === 'low') while (level < steps.length) lower();
+  if (q === 'low') while (level < steps.length) lower(true);
   return look;
 }

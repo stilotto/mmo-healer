@@ -173,6 +173,8 @@ player.onClick = (x, y) => {
 };
 player.onKey = e => {
   if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Slash') { e.preventDefault(); Chat.open(e.code === 'Slash' ? '/' : ''); return; }
+  const sk = e.shiftKey && /^Digit([1-6])$/.exec(e.code);       // Shift+1 to 6: the same as F1 to F6 (handy on a Chromebook)
+  if (sk) { e.preventDefault(); if (sk[1] === '1') setTarget(meUnit); else pickFrame(+sk[1] - 2); return; }
   const fk = /^F([1-6])$/.exec(e.code);
   if (fk) { e.preventDefault(); if (fk[1] === '1') setTarget(meUnit); else pickFrame(+fk[1] - 2); return; }
   if (e.code === 'Tab') tabTarget(e.shiftKey);
@@ -184,6 +186,7 @@ player.onKey = e => {
   else if (e.code === 'Digit7' || e.code === 'Numpad7') cast(6);
   else if (e.code === 'Digit8' || e.code === 'Numpad8') cast(7);
   else if (e.code === 'KeyN') UI.toggleTalents();
+  else if (e.code === 'KeyH') UI.toggleHelp();
   else if (e.code === 'KeyF') hurtTarget();
   else if (e.code === 'KeyX') toggleLook();
   else if (e.code === 'Digit1' || e.code === 'Numpad1') cast(0);
@@ -198,6 +201,10 @@ function doEmote(kind, arg) {
   if (meUnit.dead) return UI.err('You are dead');
   social.emote(kind, arg, target);
   emo = { mode: kind === 'thank' ? 'bow' : kind === 'laugh' ? 'cheer' : kind, t: kind === 'sit' ? 1e9 : kind === 'dance' ? 8 : 2.2 };
+}
+function setGraphics(m) {
+  if (!['auto', 'high', 'low'].includes(m)) return UI.chat('c-sys', `Graphics are ${look.quality}. Use /graphics auto, high or low.`);
+  look.setQuality(m); UI.chat('c-sys', { auto: 'Graphics: auto. Full quality, turning down on its own if the game runs slow.', high: 'Graphics: high. Full quality, never turned down.', low: 'Graphics: low. Glow, shadows and resolution turned down for a smooth game.' }[m]);
 }
 function toggleLook() { S.look = !S.look; player.setLook(S.look); UI.setLook(S.look, player.locked); G.save(S); UI.chat('c-sys', S.look ? 'Mouse-look on: the mouse steers, A and D strafe. Esc frees the cursor; click the world to steer again.' : 'Mouse-look off: hold the right button to steer.'); }
 player.onLock = locked => { if (started) UI.setLook(S.look, locked); };
@@ -423,8 +430,8 @@ function start(name) {
   Chat.init(S, { say: (t, y) => social.talk(t, y), emote: doEmote, whisper: (n, t) => social.whisper(n, t), reply: t => social.reply(t), guild: t => social.guildSay(t),
     who: a => social.who(a), fame: () => social.fameInfo(), gquit: () => social.gquit(), act: a => social.act(a), changed: () => G.save(S),
     target: n => { const p = n && social.find(n, true); if (p) setTarget(p); else UI.err(n ? `No one called ${n} is here` : 'Usage: /target <name>'); },
-    roll: k => loot.choose(k), events: () => UI.toggleEvents(), opened: () => { player.keys.clear(); } });
-  UI.init(S, { clock: () => clock, targetUnit: u => setTarget(u), dressed, cast, fish, eat, secondWind, windReady: () => G.rank(S, 'wind') > 0 && (cds.wind || 0) <= T, release, returnToLife, drink: toggleDrink, self: () => setTarget(meUnit), pick: pickFrame, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
+    roll: k => loot.choose(k), events: () => UI.toggleEvents(), help: () => { if (!UI.helpShown()) UI.toggleHelp(); }, graphics: m => setGraphics(m), opened: () => { player.keys.clear(); } });
+  UI.init(S, { quality: () => look.quality, setQuality: m => setGraphics(m), clock: () => clock, targetUnit: u => setTarget(u), dressed, cast, fish, eat, secondWind, windReady: () => G.rank(S, 'wind') > 0 && (cds.wind || 0) <= T, release, returnToLife, drink: toggleDrink, self: () => setTarget(meUnit), pick: pickFrame, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
     panel: open => { if (open) player.free(); else if (S.look) player.lock(); } });
   player.look = !!S.look; UI.setLook(player.look, false);
   player.enabled = true; G.save(S);

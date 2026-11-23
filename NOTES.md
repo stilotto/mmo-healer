@@ -73,12 +73,15 @@ Sprints 1 to 8 in `TODO.md` are built and on `main`:
 
 - Sprint 10, Crowds: the Shattered Spire raid.
 
-Next: proposed only: sprint 11 (Sides: Bloodsand Pit), the stats tab, and the
-open ideas in `TODO.md` (graveyard, rival healer). Confirm with the owner,
-then wait for their go. On a Chromebook, F1 to F6 need Search plus the top
-row (or the "top-row keys as function keys" setting); the owner knows.
-The owner liked the paper doll.
-Nothing has had a hands-on balance pass beyond the owner's first play.
+- Sprint 11: help window and settings.
+
+`TODO.md` was cleaned up after sprint 10: "The plan" lists sprints 12 to 17
+in the agreed order (Sides, Polish, the rival, airship and second zone,
+second dungeon, town services). Wait for the owner's go on each. The owner
+now plays with a mouse and keyboard on a dock; ask about making mouse-look
+the default. On a Chromebook without a dock, Shift+1 to 6 stand in for
+F1 to F6, and Low graphics (Help window, /graphics low or `?quality=low`)
+keeps it smooth.
 
 `fable notes.md` holds the longer-term plan and opinions it came from.
 
@@ -368,6 +371,20 @@ Nothing has had a hands-on balance pass beyond the owner's first play.
 - Clock: `booked(kind)` and `runOver(won, x, kind)` serve both instances;
   a run you joined ends when it really ends.
 - `tools/raid.mjs` plays one raid with no healer and one with a scripted one.
+
+## Help and settings (sprint 11)
+
+- `ui.js`: `toggleHelp`, `drawHelp` builds the window (`#help`) each time it
+  opens: settings buttons, then tables of controls; spells come from
+  `SPELLS`, so new spells appear on their own. Add new keys and commands to
+  its lists when you add them to the game.
+- Graphics: `look.setQuality('auto' | 'high' | 'low')` steps the notches
+  down (glow, shadows, resolution) or back up at once; saved in
+  localStorage `mmoHealerGfx`; `?quality=` in the address overrides it.
+  `setGraphics` in `main.js` (the window and /graphics).
+- Shift+1 to 6 in `player.onKey` mirror F1 to F6. H opens help; /help
+  opens it too.
+- `tools/help.mjs` checks it.
 
 ## Things worth knowing
 

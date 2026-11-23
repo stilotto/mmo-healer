@@ -1,232 +1,77 @@
 # MMO Healer: to do
 
-The ledger of plans. Nothing under "Open" is built until the owner says go.
+The ledger of plans. Nothing is built until the owner says go. How the
+built pieces work is in `NOTES.md`; this file keeps only a line each.
+The test for every sprint: do they need me, do they notice me, did I get
+paid? Build whichever answer is weakest.
 
-## Built
+## The plan (agreed order, after sprint 10)
 
-- Central hub (Lanternrest): fountain plaza, inn, bank, auction hall, guild
-  hall, market stalls, duelling ring, training dummies, city wall.
-- Shown but not active: sealed gate to Greenhollow (newbie zone), three
-  portals (dungeon, raid, battleground), airship that docks and leaves.
-- Simulated players who wander, chat, duel, train, and arrive hurt.
-- MMO-style controls: WASD, mouse steer and look, zoom into first person,
-  tab targeting, click to target, action bar with Mend and Renew, cast bar,
-  global cooldown, mana.
-- XP and levels, loot drops in four rarities, seven gear slots, bag.
-- Minimap, chat log, floating heal numbers, touch controls.
-- Save in the browser.
-- Look up and down: drag, or the up and down arrow keys. The view tips up to
-  the sky even when the camera is resting on the ground.
-- Card on stilotto.github.io.
+11. **Help and settings: built.** A help window with every control (keys,
+    mouse, touch, spells, slash commands): H, the ? button, or /help. A
+    settings section in it: graphics Auto, High or Low (saved, applied at
+    once; also /graphics auto|high|low; `?quality=` in the address still
+    wins) and mouse-look on or off. Shift+1 to 6 do what F1 to F6 do, for
+    Chromebooks.
+12. **Sides.** Bloodsand Pit: two teams, flags, heal one side or both; the
+    other side hunts you. (big)
+13. **Polish.** The stats tab: a tab in the character window with lifetime
+    numbers (total healed, saves, revives, bosses and raid kills, fish
+    caught, Old Glimmerfins, people met, friends, grudges, uniques found,
+    deaths, time played). The graveyard: ghosts rise in a small Greenhollow
+    churchyard (and one near Lanternrest) instead of at the quest camp or
+    fountain, with a spirit keeper, headstones and a soft light; maybe the
+    keeper brings you back on the spot for a cost. (small)
+14. **The rival.** A rival healer who runs with a party properly and
+    resents you. (medium)
+15. **More world, part 1.** The airship works: a flight to a second zone.
+    (big)
+16. **More world, part 2.** A second dungeon, with the Emberdeep extras
+    folded in (a second boss, patrols, a party that waits for the healer's
+    mana, a boss kill count), and item sets. (big)
+17. **Town services.** A working inn, bank and auction hall, and guild
+    perks beyond the small ones from sprint 7. (medium)
 
-## Sprint 1: built
+## Waiting on the owner
 
-- Mouse-look as an option (X, or the Mouse button): the mouse pivots the view
-  with no button held, A and D strafe, Esc frees the cursor, a click on the
-  world takes it back. Opening the bag frees it too. The choice is saved.
-- Shift+Tab goes back a target. F (or the Hurt button) targets the most hurt
-  person within range.
-- Pim the Quartermaster at the red stall: four pieces of gear (restocked on
-  level up or for a fee) and two bag upgrades of seven slots each.
-- Mana regeneration raised a little. No hands-on balance pass yet: that
-  needs the owner's feel for it.
+- Hands-on balance pass: XP curve, loot pace, mana, raid difficulty. Send
+  notes from play at any time.
+- Mouse-look as the default: the owner now plays with a mouse and keyboard
+  (Chromebook on a dock). Ask whether to switch the default.
 
-## Sprint 2: built
+## Ideas (not placed)
 
-- The north gate is open. Greenhollow lies beyond it: a road, the warden's
-  quest camp, a pond, a farm, a wood, a bog and a ruined watchtower.
-- Monsters: Bog Slimes, Bristle Boars, Hollow Wolves, and the elite Old Tusk
-  by the watchtower. They ignore the healer.
-- People take quests from Warden Hale, hunt monsters, sit to rest, hand in,
-  sometimes level up ("ding!"), and walk to and from town through the gate.
-- People die if nobody heals them. A body lies for 80 seconds, then the
-  player "releases" and is gone.
-- Revive on key 3: a 5 second cast on a dead player. Worth a full bar of XP.
-- Minimap shows the zone, the road and monsters. Zone name changes as you
-  cross the gate. Far-off figures are hidden to keep the frame rate up.
-
-## Sprint 3: built
-
-- Emberdeep: walk into the orange portal in town. Five rooms joined by
-  corridors, three trash pulls (Cinder Slimes, Ash Hounds) and the boss,
-  Cinderjaw. Blue portals at the entrance and behind the boss lead out.
-- A party of five (tank and four damage dealers) runs it without a healer:
-  they gather, pull room by room, sit to recover, ask for a rez, and chat in
-  a [Party] channel. They notice when someone starts healing them.
-- Cinderjaw: hard hits on the tank, a telegraphed Flame Breath that takes a
-  fifth of everyone's health, and a frenzy at 25%.
-- In tests, with no healer the party loses people on trash and wipes on the
-  boss; with steady healing it wins.
-- Boss loot: a guaranteed Rare or better (sometimes a second item) and 40%
-  of a level in XP.
-- Each visit is a fresh run. A wipe brings a new party after a few seconds.
-- `?speed=N` runs the world N times faster (for tests).
-
-## Sprint plan (proposed, not yet agreed)
-
-Rewritten after sprint 3 from `fable notes.md`. The test for every sprint:
-do they need me, do they notice me, did I get paid? Build whichever answer
-is weakest. Sprints 4 to 8 are the game; 9 onward is more of it.
-
-4. **The look: built.** Front-loaded so later sprints are
-   built once in the final style. Art direction: Storybook (chosen); a new figure model (better proportions, faces, gear sockets,
-   cheaper to draw); lighting (soft shadows, better sky, glow on fire,
-   portals and spells); textures made in code, grass and props; Lanternrest
-   polished as the reference scene; a frame-rate check at Chromebook size.
-   Built: Storybook light, people and monsters rebuilt, combat text,
-   textures, tiered firs, grass, town props, window frames and flower boxes,
-   stone dungeon, frame-rate safety net, sparkles for spells, fires and
-   portals. Owner checked the frame rate on the Chromebook: smooth, no
-   step-down.
-5. **The healer's hands: built.** Frames down the left (Emberdeep's party
-   inside; otherwise the five nearby who most need you), class-coloured,
-   with Renew, Ward and bleed icons and an incoming-heal segment. Click or
-   F2 to F6 to target; F1 or a click on your own frame targets yourself.
-   Flash (key 4, level 3) and Ward (key 5, level 5), locked on the bar until
-   learned. Drink (Z or the Drink button): about 12 seconds from empty.
-   Emberdeep damage shapes: crushing blows on the tank, bleeding bites from
-   hounds and Cinderjaw, Cinder Slimes that burst when they die. A boss
-   frame with Cinderjaw's Flame Breath cast bar.
-6. **They bite back: built.** Healing someone a monster is fighting adds
-   to its threat on you (half the healing done); past 60% of its health it
-   turns on you (100% when a tank is up, and the tank taunts it back after 4
-   seconds). Monsters may also jump a healer who wanders close, in
-   Greenhollow and in Emberdeep. Cinderjaw's breath and bursting slimes hit
-   you too. The town is safe: monsters give up at the wall. You have real
-   health, regenerate out of combat, cannot drink in combat, and your frame
-   glows red while something is on you. Death: Release Spirit, run back as
-   a ghost (grey world, faster) to the pillar of light over your body, and
-   Return to Life at half health and mana. Fade (key 6, level 2): monsters
-   forget you and go back to their old target; 30 second cooldown.
-   The original idea and the agreed item above are covered by this sprint.
-7. **They remember: built.** A saved roster of 64 people (calling, guild,
-   temperament, looks) who reappear in town, Greenhollow and Emberdeep
-   parties. Each remembers heals, saves from near death, revives, deaths you
-   watched, and emotes. They thank you, call your name when hurt, wave as you
-   pass, whisper after a save, sulk or rant after you let them die, forgive
-   you later. A fame meter under the minimap (Who?, Some healer, That healer,
-   The mystery healer, The Lantern); General chat gossips about your recent
-   deeds and asks for you by name; parties that know you count you in at
-   once; guilds invite you (Join button or /accept) with a small perk each,
-   and guild chat. Owner chose to fold the chat box in here:
-   Enter opens it (tap the panel on phones), Enter sends, Esc closes, up
-   arrow recalls. Tabs: All, General, Zone, Party, Combat. Commands: /say,
-   /yell, /w, /r, /g, /wave, /cheer, /bow, /dance, /sit, /laugh, /thank,
-   /who, /who <name> (shows their record), /target, /roll, /fame,
-   /leave and /join general or zone, /gquit, /help. People nearby answer.
-   Not built from the original idea: the rival healer and the inn room.
-8. **Loot that matters: built.** Loot lies on the ground at the giver's
-   feet (or the boss's body) with a beam in its rarity's colour (taller for
-   better, a gold pillar for uniques) and a mark on the minimap; walk over it
-   to pick it up. Drops last five minutes. In Emberdeep the party rolls Need
-   or Greed on what each pack leaves and on Cinderjaw's unique; a roll
-   window (or /need, /greed, /pass) lets the healer crash it, and the party
-   has opinions (a Need win counts against you with those who needed it).
-   Rare and Epic gear carries one of nine effects (echo heal, Renew bloom,
-   mana back on crits, a ward on low Mends, quicker Revive, shorter Fade,
-   Flash while moving, faster drinking, cheaper Flash). Six boss uniques
-   with their own effects: four from Cinderjaw (won by roll), two from Old
-   Tusk (dropped when it dies near you), tracked in the character window.
-   Gear shows on the healer (hood or circlet, mantle and stole, gloves,
-   boots, staff crescent, ring, charm) in rarity colours; Epic and unique
-   glow. Paper doll: the healer in 3D, turning (drag to spin), slots around
-   it, hover a bag item to try it on, stats beside it (power, spirit, mana
-   regen, haste, mana, average item level, fame).
-9. **The clock: built.** An events board by the fountain (click it, the
-   tracker under the minimap, or /events) and a tracker of the next three.
-   Four events on repeating timers (first ones 1.5 to 5 minutes in):
-   Emberdeep run (a named tank and four gather at the portal and go in; if
-   you follow while it is under way they are the party inside, otherwise it
-   resolves without you, about 30% clears, and survivors come back hurt),
-   Old Tusk hunt (four gather at the camp and really fight Old Tusk: the
-   result is what happens), duelling tournament (four in the ring, semis
-   and a final, real duels), Shattered Spire raid (eight go in, mostly
-   wipe). Each posts to chat and to the board's "How it went". Zones have
-   fixed level bands: Greenhollow 1 to 6 (Old Tusk 8), Emberdeep 5 to 10
-   (Cinderjaw 11); the city still follows your level.
-10. **Crowds: built.** The Shattered Spire through the purple portal, from
-   level 5 (raid band 7 to 11, bosses 13). Twenty raiders: two Knights
-   tanking, two Druid healers who heal the tanks until they run out of mana
-   (about a minute, then "OOM!!"), sixteen damage dealers (ranged ones stand
-   back). The Shardwarden (Shard Storm: 14% of everyone's health every 15 to
-   19 s, with a cast bar; Splinter bleeds on three; faster at 30%) and the
-   Hollow Regent (Hollow Pulse 17%; Wither on two; three Shades at 66% and
-   33% that chase the damage dealers until the off-tank picks them up;
-   enrage at 15%). Boss health is sized to the raid's damage (about two
-   minutes each). Raid frames: four groups of five, click to target. Each
-   boss: half a level of experience, a Rare (Shardwarden) or Epic (Regent)
-   roll and a unique roll among six of the raid. Four new uniques: Shardglass
-   Circlet (Circle +20%), Splintered Prism (Cleanse heals 10%), Crook of the
-   Hollow Crown (Mend may add Renew), Gravelight Band (Revive at 70%).
-   Followed in from the events board, the raiders who gathered are inside.
-   Circle and Cleanse come from talents (agreed in the talent sprint).
-11. **Sides.** Bloodsand Pit: two teams, flags, heal one side or both; the
-    other side hunts you.
-12. **More world.** Working airship to a second zone, a second dungeon,
-    item sets, guild perks, working inn, bank and auction hall.
-
-## Agreed after sprint 8 (owner), order not yet set
-
-Proposed order: the pond (built), talents (built), the clock (built), then the rest; the stats tab later. Confirm with the owner.
-
-- **The pond: built.** The Greenhollow pond is water. Wading in the
-  shallow ring (4.5 yards): 25% slower, sunk to the knees, splashes and
-  rings. Swimming in the deep middle: 45% slower, sunk to the shoulders, a
-  swim stroke, no casting or jumping, and monsters give up on you. People
-  and monsters walk round it. Two or three of the roster sit on the bank
-  with rods, catch things and chat. The healer fishes from the bank or the
-  shallows (G or the Fish button, shown near the water): watch the float,
-  click when it dips (1.6 seconds), too soon comes up empty, moving stops
-  it. Catches: four fish (eat one from the bag to sit and get 30 to 75% of
-  your mana back over 6 seconds, or sell), junk, now and then gear, and
-  Old Glimmerfin (2%): fame and General chat gossip. The dark triangle
-  was a fir's shadow on the water; water no longer takes shadows.
-  Water is a system now: `addWater` in `js/water.js` makes any circle or
-  rectangle of water with all of the above.
-- **Talent tree: built.** A point a level from level 3; each row of a
-  section opens after 3 points in it (the capstone needs 6); free respec.
-  N or Talents in the character window. Mending: Quick Hands (3, Mend
-  0.15 s faster each), Steady Light (2, +5% crit on Mend and Flash),
-  Overflow (Mend overhealing becomes a small heal over time), capstone
-  Circle (key 7: heals the target and everyone within 8 yards). Grace:
-  Lasting Renew (2, +1 tick each), Thick Ward (3, +10% each), Deep Well
-  (3, +6% mana regen each, owner's ask), Quickening (Renew below 30% heals
-  at once), capstone Cleanse (key 8: removes bleeds and burns). Shadow:
-  Quiet Hands (3, -10% threat each), Swift Spirit (ghost 30% faster),
-  Waterborne (full speed in water), Calm Mind (mana regen +50% after 4 s
-  without casting, owner's ask), Last Breath (once in 2 minutes a killing
-  blow leaves you at 1 and Fades you), capstone Second Wind (once in 10
-  minutes rise where you fell). Circle and Cleanse come from talents
-  (owner), so the raid sprint can use them.
-  Also asked for here: F (the Hurt button) targets the most hurt person in
-  spell range (40 yards), the healer included.
-- **Stats tab (own sprint, later).** A tab in the character window with
-  lifetime numbers: total healed (dropped from the window in sprint 8, so
-  bring it back), saves, revives, bosses killed, people met, friends,
-  grudges, uniques found, deaths, time played.
-
-Groundwork to fold into the sprints as needed: a Node balance sim with a
-scripted healer on real mana (sprint 5), the save version number (done in
-sprint 7), splitting `people.js` per zone (before sprint 9), cheaper
-figures (sprint 4).
-
-## Open (ideas, not yet placed)
-
-- A help window with every control (keys, mouse, touch, slash commands),
-  opened from a Help button and /help, for the owner and other players.
-  With it, an in-game graphics setting (and a /graphics low command) so
-  nobody needs to remember `?quality=low` in the address.
-- A real graveyard: ghosts rise in a small Greenhollow churchyard (and one
-  near Lanternrest) instead of at the quest camp or fountain, with a spirit
-  keeper figure, headstones and a soft light. Maybe the keeper offers to
-  bring you back on the spot for a cost (lost durability or a debuff).
-- A rival healer who runs with a party properly and resents you (from the
-  sprint 7 idea, not built).
 - `tools/sprint6.mjs`: the Emberdeep check (tank takes a monster back)
   rarely passes, on old code too: trash dies before threat builds. Needs a
   sturdier test, not a game change.
+- Groundwork when it is needed: a Node balance sim with a scripted healer on
+  real mana; splitting `people.js` per zone; cheaper figures.
 
-- Make mouse-look the default once it has been tried on a real mouse.
-- Emberdeep extras: a second boss, patrols, a party that waits for the
-  healer's mana, a boss kill count.
-- Hands-on balance pass: XP curve, loot pace, mana. Needs the owner's play.
+## Built (one line each; details in `NOTES.md`)
+
+- First build: Lanternrest, simulated players, MMO controls, Mend and Renew,
+  XP, loot, gear, bag, minimap, chat, touch controls, save, card on the site.
+- Sprint 1: mouse-look option (X), Shift+Tab, F for the most hurt, Pim the
+  Quartermaster (gear and bags).
+- Sprint 2: Greenhollow through the north gate, monsters, questing people
+  who die, Revive.
+- Sprint 3: Emberdeep, a five-person dungeon run with Cinderjaw.
+- Sprint 4: the Storybook look (light, figures, textures, sparkles, frame-rate
+  safety net). The owner chose Storybook over Dusk and Toon.
+- Sprint 5: unit frames, Flash, Ward, drinking, damage shapes, boss frame.
+- Sprint 6: threat, the healer can be hurt and die, ghost run, Fade, safe town.
+- Sprint 7: the roster that remembers you, fame, gossip, guilds, chat box and
+  slash commands.
+- Sprint 8: loot on the ground with beams, Need or Greed, item effects, boss
+  uniques, gear on the figure, paper doll.
+- The pond: wading, swimming, fishing (Old Glimmerfin), water as a system
+  (`addWater`).
+- Talents: Mending, Grace, Shadow; Circle and Cleanse (from talents, the
+  owner's choice); Deep Well and Calm Mind (owner's asks); free respec;
+  F includes you.
+- Sprint 9, the clock: events board and tracker, Emberdeep runs, Old Tusk
+  hunts, duelling tournaments, Spire raids; zone level bands (Greenhollow
+  1 to 6, Emberdeep 5 to 10).
+- Sprint 10, crowds: the Shattered Spire raid from level 5 (twenty raiders,
+  the Shardwarden and the Hollow Regent, raid frames, four uniques).
+- Sprint 11: help window, graphics and mouse-look settings, Shift+1 to 6.

@@ -10,26 +10,26 @@
  "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
-  "./js/chat.js": "./js/chat.js?v=20261123234330",
-  "./js/clock.js": "./js/clock.js?v=20261123234330",
-  "./js/doll.js": "./js/doll.js?v=20261123234330",
-  "./js/dungeon.js": "./js/dungeon.js?v=20261123234330",
-  "./js/figure.js": "./js/figure.js?v=20261123234330",
-  "./js/fishing.js": "./js/fishing.js?v=20261123234330",
-  "./js/fx.js": "./js/fx.js?v=20261123234330",
-  "./js/game.js": "./js/game.js?v=20261123234330",
-  "./js/look.js": "./js/look.js?v=20261123234330",
-  "./js/loot.js": "./js/loot.js?v=20261123234330",
-  "./js/memory.js": "./js/memory.js?v=20261123234330",
-  "./js/mobs.js": "./js/mobs.js?v=20261123234330",
-  "./js/people.js": "./js/people.js?v=20261123234330",
-  "./js/player.js": "./js/player.js?v=20261123234330",
-  "./js/raid.js": "./js/raid.js?v=20261123234330",
-  "./js/social.js": "./js/social.js?v=20261123234330",
-  "./js/textures.js": "./js/textures.js?v=20261123234330",
-  "./js/ui.js": "./js/ui.js?v=20261123234330",
-  "./js/water.js": "./js/water.js?v=20261123234330",
-  "./js/world.js": "./js/world.js?v=20261123234330"
+  "./js/chat.js": "./js/chat.js?v=20261123235000",
+  "./js/clock.js": "./js/clock.js?v=20261123235000",
+  "./js/doll.js": "./js/doll.js?v=20261123235000",
+  "./js/dungeon.js": "./js/dungeon.js?v=20261123235000",
+  "./js/figure.js": "./js/figure.js?v=20261123235000",
+  "./js/fishing.js": "./js/fishing.js?v=20261123235000",
+  "./js/fx.js": "./js/fx.js?v=20261123235000",
+  "./js/game.js": "./js/game.js?v=20261123235000",
+  "./js/look.js": "./js/look.js?v=20261123235000",
+  "./js/loot.js": "./js/loot.js?v=20261123235000",
+  "./js/memory.js": "./js/memory.js?v=20261123235000",
+  "./js/mobs.js": "./js/mobs.js?v=20261123235000",
+  "./js/people.js": "./js/people.js?v=20261123235000",
+  "./js/player.js": "./js/player.js?v=20261123235000",
+  "./js/raid.js": "./js/raid.js?v=20261123235000",
+  "./js/social.js": "./js/social.js?v=20261123235000",
+  "./js/textures.js": "./js/textures.js?v=20261123235000",
+  "./js/ui.js": "./js/ui.js?v=20261123235000",
+  "./js/water.js": "./js/water.js?v=20261123235000",
+  "./js/world.js": "./js/world.js?v=20261123235000"
  }
 }</script>
 <style>
@@ -147,6 +147,15 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
 .ev{padding:4px 0;border-top:1px dashed #2e2a20}.ev .w{font-size:11px;color:#aaa}.ev .s{float:right;color:var(--gold);font-size:12px}.ev.on .s{color:#6dff7a}
 .ev .good{color:#8aff8a}.ev .bad{color:#ff8a7a}
 @media (max-width:600px){#tracker{max-width:140px;font-size:10px}}
+#help{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:620px;max-width:calc(100% - 8px);max-height:calc(100% - 16px);overflow:auto;background:rgba(14,12,10,.97);border:1px solid var(--gold);border-radius:6px;padding:8px 10px;display:none;z-index:6;font-size:12px}
+#help h3{margin:0 0 4px;font:600 14px Cinzel,serif;color:var(--gold);display:flex;justify-content:space-between}#help h3 b{cursor:pointer;color:#ccc}
+#help h4{margin:8px 0 3px;font:600 12px Cinzel,serif;color:var(--gold)}
+#help .cols{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+#help table{border-collapse:collapse;width:100%}#help td{padding:1px 4px;vertical-align:top;border-top:1px solid #2a2418}
+#help td:first-child{color:#ffe9b0;font-weight:700;width:38%}
+#help .opt button{font:700 11px 'Nunito Sans',sans-serif;background:#2a2418;color:#ccc;border:1px solid #6a5a40;border-radius:4px;padding:2px 8px;margin:0 3px 3px 0;cursor:pointer}
+#help .opt button.on{background:#4a3a18;color:var(--gold);border-color:var(--gold)}
+@media (max-width:600px){#help .cols{grid-template-columns:1fr}}
 #trees{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .tree{border:1px solid #3a3426;border-radius:5px;padding:5px;background:#16130e}
 .tree .tn{font:600 13px Cinzel,serif;color:var(--gold)}.tree .tt{font-size:10px;color:#999;margin-bottom:4px}
@@ -228,6 +237,7 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
   <div id="events"><h3><span>Events Board</span><b id="evx">✕</b></h3><div id="evlist"></div>
     <h3 style="margin-top:8px"><span>How it went</span></h3><div id="evdone"></div>
     <div class="m" style="font-size:11px;color:#999;margin-top:6px">Events run whether you go or not. Greenhollow is levels 1 to 6, Emberdeep 5 to 10.</div></div>
+  <div id="help"><h3><span>Help</span><b id="helpx">✕</b></h3><div id="helpbody"></div></div>
   <div id="death"><div id="dtext"></div><button id="dbtn"></button><button id="wbtn" style="display:none;margin-left:6px">Second Wind</button></div>
   <div id="bottom">
     <div id="castbar"><i></i><span></span></div>
@@ -243,6 +253,6 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
   <p class="keys"><b>WASD</b> move and turn · <b>Q/E</b> strafe · <b>right-drag</b> steer · <b>left-drag</b> or <b>arrow keys</b> look (up and down too) · <b>wheel</b> zoom (all the way in for first person, or <b>V</b>) · <b>Tab</b> next target · <b>F</b> most hurt · <b>1, 2</b> heal · <b>3</b> revive · <b>B</b> bag · <b>Enter</b> chat (<b>/help</b>) · <b>Space</b> jump · <b>X</b> mouse-look (the mouse steers, A and D strafe, Esc frees the cursor)</p>
   <a href="https://stilotto.github.io/">More games from Stilotto</a>
 </div></div>
-<script type="module" src="js/main.js?v=20261123234330"></script>
+<script type="module" src="js/main.js?v=20261123235000"></script>
 </body>
 </html>

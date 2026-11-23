@@ -36,18 +36,48 @@ export function init(state, handlers) {
   bar.lastChild.id = 'fishbtn'; bar.lastChild.style.display = 'none';
   mk('Bag', toggleBag, 'Character and bag (B)');
   mk('View', () => H.view(), 'First or third person (V)');
+  mk('?', toggleHelp, 'Help: every control, and settings (H)');
   mk('Mouse', () => H.look(), 'Mouse-look on or off (X). Esc frees the cursor.');
   bar.lastChild.id = 'lookbtn';
-  $('evx').onclick = toggleEvents; $('tracker').onclick = toggleEvents;
+  $('helpx').onclick = toggleHelp; $('evx').onclick = toggleEvents; $('tracker').onclick = toggleEvents;
   $('bagx').onclick = toggleBag; $('talbtn').onclick = toggleTalents; $('talx').onclick = toggleTalents;
   $('treset').onclick = () => { resetTalents(S); sfx('equip'); drawTalents(); H.changed(); chat('c-sys', 'Your talents are reset. Every point is free to spend again.'); };
   chat('c-sys', `Welcome to Lanternrest, ${esc(S.name)}.`);
-  chat('c-sys', 'Tab picks a target. 1 casts Mend, 2 casts Renew. Enter opens the chat box; /help lists commands.');
+  chat('c-sys', 'Tab picks a target. 1 casts Mend, 2 casts Renew. Enter opens the chat box. H (or the ? button) shows every control.');
   $('pframe').onclick = () => H.self();
 }
 
 let canFish = false;
 export function fishable(on) { if (on === undefined) return canFish; canFish = on; $('fishbtn').style.display = on ? '' : 'none'; }
+// Help: every control in one place, and a few settings.
+let helpOpen = false;
+export function toggleHelp() { helpOpen = !helpOpen; $('help').style.display = helpOpen ? 'block' : 'none'; tip(); if (helpOpen) drawHelp(); H.panel(helpOpen || evOpen || bagOpen || talOpen); }
+export const helpShown = () => helpOpen;
+const rowsOf = list => '<table>' + list.map(([k, d]) => `<tr><td>${k}</td><td>${d}</td></tr>`).join('') + '</table>';
+export function drawHelp() {
+  if (!helpOpen) return;
+  const gfx = H.quality(), look = !!S.look;
+  const spells = SPELLS.map(sp => [sp.key, `${sp.name}${sp.lvl ? ` (level ${sp.lvl})` : ''}${sp.talent ? ' (talent)' : ''}: ${sp.desc}`]);
+  $('helpbody').innerHTML = `
+  <h4>Settings</h4>
+  <div class="opt">Graphics: ${['auto', 'high', 'low'].map(m => `<button data-g="${m}" class="${gfx === m ? 'on' : ''}">${{ auto: 'Auto (turns down if slow)', high: 'High', low: 'Low (for Chromebooks)' }[m]}</button>`).join('')}</div>
+  <div class="opt">Mouse-look: <button data-l="1" class="${look ? 'on' : ''}">On</button><button data-l="0" class="${look ? '' : 'on'}">Off</button> <span style="color:#999">The mouse steers without holding a button; Esc frees the cursor.</span></div>
+  <div class="cols"><div>
+  <h4>Moving and the camera</h4>${rowsOf([['W A S D', 'Move. A and D turn (strafe with the right button held, or in mouse-look)'], ['Q E', 'Strafe'], ['Arrow keys', 'Turn and tilt the view'], ['Space', 'Jump'], ['R', 'Run on its own (W or S stops)'],
+    ['Left drag', 'Look around'], ['Right drag', 'Steer'], ['Both buttons', 'Run forward'], ['Wheel', 'Zoom, all the way into first person'], ['V', 'First or third person'], ['X', 'Mouse-look on or off']])}
+  <h4>Targeting</h4>${rowsOf([['Click', 'Target a person'], ['Tab, Shift+Tab', 'Next or last target in front of you'], ['F', 'The most hurt person in range (you too)'],
+    ['F1 or Shift+1', 'Yourself'], ['F2 to F6 or Shift+2 to 6', 'The people in the frames on the left'], ['Esc', 'Clear the target, or stop a cast']])}
+  <h4>Other actions</h4>${rowsOf([['Z', 'Sit and drink to get mana back'], ['Click a fish in the bag', 'Eat it for mana'], ['G', 'Fish (at the water); again to reel in'], ['B or C', 'Character and bag'], ['N', 'Talents'], ['H', 'This help'], ['Enter or /', 'Chat']])}
+  </div><div>
+  <h4>Spells</h4>${rowsOf(spells)}
+  <h4>Slash commands</h4>${rowsOf([['/s /y /w /r /g', 'Say, yell, whisper, reply, guild'], ['/wave /cheer /bow /dance /sit /laugh /thank', 'Emotes'], ['/who [name]', 'Who is here, or what someone remembers'],
+    ['/target name', 'Target by name'], ['/need /greed /pass', 'Loot rolls'], ['/roll [max]', 'Roll a number'], ['/fame', 'Your fame'], ['/events', 'The events board'],
+    ['/graphics auto|high|low', 'Graphics quality'], ['/leave, /join general or zone', 'Chat channels'], ['/accept, /gquit', 'Guild invite, leave guild'], ['/help', 'This window']])}
+  <h4>Touch</h4>${rowsOf([['Stick', 'Move (bottom left)'], ['Drag', 'Look and steer'], ['Tap', 'Target'], ['Buttons', 'Spells and actions on the bar; double-tap a bag item to sell']])}
+  </div></div>`;
+  for (const b of $('helpbody').querySelectorAll('[data-g]')) b.onclick = () => { H.setQuality(b.dataset.g); drawHelp(); };
+  for (const b of $('helpbody').querySelectorAll('[data-l]')) b.onclick = () => { if (!!S.look !== (b.dataset.l === '1')) H.look(); drawHelp(); };
+}
 // Events: the tracker under the minimap and the board's window.
 let evOpen = false, evT = 0;
 export function toggleEvents() { evOpen = !evOpen; $('events').style.display = evOpen ? 'block' : 'none'; if (evOpen) { evT = 0; drawEvents(); } H.panel(evOpen || bagOpen || talOpen); }

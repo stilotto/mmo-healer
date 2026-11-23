@@ -58,13 +58,7 @@ export function open(start) {
 }
 function close() { const box = $('chatin'); $('chatwrap').classList.remove('typing'); box.value = ''; if (document.activeElement === box) box.blur(); }
 
-const HELP = [
-  '/say or /s, /yell or /y: talk to people nearby. Plain text is /say.',
-  '/w <name> <text> whispers someone, /r answers the last whisper.',
-  '/wave, /cheer, /bow, /dance, /sit (aim them at your target).',
-  '/who, or /who <name> to see what they remember. /target <name>.',
-  '/need, /greed, /pass on a loot roll. /roll [max], /fame, /events, /leave general, /join general (also zone), /gquit.',
-];
+const HELP = ['Every control and command is in the help window (H opens it any time).'];
 const EMOTES = ['wave', 'cheer', 'bow', 'dance', 'sit', 'laugh', 'thank'];
 const ALIAS = { s: 'say', y: 'yell', sh: 'yell', w: 'whisper', tell: 'whisper', t: 'whisper', r: 'reply', g: 'guild', tar: 'target', ty: 'thank', lol: 'laugh', '?': 'help' };
 
@@ -93,6 +87,7 @@ export function send(v) {
     S.chan[ch] = cmd === 'join'; H.changed();
     return chat('c-sys', cmd === 'join' ? `Joined channel: ${ch === 'general' ? 'General' : 'Zone'}.` : `Left channel: ${ch === 'general' ? 'General' : 'Zone'}.`);
   }
-  if (cmd === 'help') { for (const l of HELP) chat('c-sys', l); return; }
+  if (cmd === 'help') { for (const l of HELP) chat('c-sys', l); return H.help(); }
+  if (cmd === 'graphics' || cmd === 'gfx') return H.graphics(arg.toLowerCase());
   chat('c-sys', `Unknown command /${cmd}. Type /help for a list.`);
 }
