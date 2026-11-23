@@ -159,7 +159,7 @@ export class Clock {
           const back = P.arrive('dungeon', 2 + Math.floor(rnd(0, 3)), !won); if (back[0]) this.ctx.later(3, () => this.gen(back[0], won ? pick(['easy run', 'Cinderjaw down!']) : pick(['we needed a healer', 'wiped. again.', 'who pulled?'])), 3000);
         } else {
           const won = Math.random() < 0.25;
-          this.finish(e, won ? 'The Spire Warden is down! First kill of the week.' : `Wiped at ${pick([3, 8, 12, 31, 47])}%. "Healers went oom."`, won);
+          this.finish(e, won ? 'The Hollow Regent is down! First kill of the week.' : `Wiped at ${pick([3, 8, 12, 31, 47])}%. "Healers went oom."`, won);
           P.arrive('raid', 3 + Math.floor(rnd(0, 3)), true);
         }
       }
