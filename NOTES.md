@@ -76,8 +76,8 @@ Sprints 1 to 8 in `TODO.md` are built and on `main`:
 - Sprint 11: help window and settings.
 - Sprint 12, Sides: the Bloodsand Pit battleground.
 
-`TODO.md` was cleaned up after sprint 10: "The plan" lists sprints 13 to 17
-in the agreed order (Polish, the rival, airship and second zone,
+`TODO.md` was cleaned up after sprint 10: "The plan" lists sprints 13 to 18
+in the agreed order (Speed, an optimization pass the owner asked for next; Polish, the rival, airship and second zone,
 second dungeon, town services). Wait for the owner's go on each. The owner
 now plays with a mouse and keyboard on a dock and wants the mouse kept as
 it is (mouse-look stays off by default). On a Chromebook without a dock, Shift+1 to 6 stand in for
@@ -405,6 +405,11 @@ keeps it smooth.
   `hunters[k]`; `hate < -1` sends a guard. Team plates replace guild plates.
 - UI: `#pitb` scoreboard (`pitBoard`), raid frames with `cols: 2`.
 - `matchOver` in `main.js` pays the side you healed most if it won.
+- After a match: `matchOver` (main) works out the reward and shows
+  `UI.pitRecap(pit.recap())`; `recapT` counts 20 s, then `leavePit()` (back by
+  the red portal, revived if dead); "Stay" (`stayInPit`) shortens the Pit's
+  end timer. The Pit counts kills, deaths, flags, returns per person and
+  `pit.mine` (revives, deaths, peak hunters), `pit.raw` healing per side.
 - `tools/pit.mjs` checks it.
 
 ## Things worth knowing

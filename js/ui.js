@@ -331,6 +331,24 @@ let shown = [], pickT = 0;
 export const frameUnits = () => shown;
 // Raid frames: four groups of five, small cells, class-coloured, red when low.
 const rcells = [];
+// The Pit's recap: the result, both teams' numbers, your part and your reward.
+export function pitRecap(r) {
+  const box = $('recap'); box.style.display = r ? 'block' : 'none'; H.panel(!!r); if (!r) return;
+  const T = { sun: ['Sunward', '#ffc040'], dusk: ['Duskward', '#ff4a5a'] };
+  const n = x => Math.round(x).toLocaleString(), mm = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  const team = k => `<div><h4 style="color:${T[k][1]}">${T[k][0]} ${r.score[k]}</h4><table><tr><th></th><th>Kills</th><th>Deaths</th><th>Flags</th></tr>` +
+    r.teams[k].sort((a, b) => b.caps - a.caps || b.kills - a.kills).map(p => `<tr><td style="color:${CLASSES[p.cls].color}">${esc(p.name)}${p.name === r.top.kills ? ' ⚔' : ''}${p.name === r.top.caps ? ' ⚑' : ''}</td><td>${p.kills}</td><td>${p.deaths}</td><td>${p.caps}${p.returns ? ` <small>+${p.returns} back</small>` : ''}</td></tr>`).join('') + '</table></div>';
+  const m = r.mine;
+  box.innerHTML = `<div class="rt" style="color:${r.win ? T[r.win][1] : '#ddd'}">${r.win ? T[r.win][0] + ' wins!' : 'A draw'}</div>
+    <div class="rs">${r.score.sun} to ${r.score.dusk} · ${mm(r.time)}</div>
+    <div class="you"><b>Your part.</b> You healed <span style="color:${T.sun[1]}">Sunward ${n(r.raw.sun)}</span> and <span style="color:${T.dusk[1]}">Duskward ${n(r.raw.dusk)}</span>.
+      Revives ${m.revives} · deaths ${m.deaths}${m.hunted ? ` · hunted by up to ${m.hunted}` : ''}.<div class="rw">${esc(r.reward)}</div></div>
+    <div class="cols">${team('sun')}${team('dusk')}</div>
+    <div class="m" style="color:#999;font-size:11px">⚔ most kills · ⚑ most flags carried home</div>
+    <div class="bt"><button id="rleave">Back to town <span id="rcount"></span></button><button id="rstay">Stay for the next match</button></div>`;
+  $('rleave').onclick = () => H.leavePit(); $('rstay').onclick = () => H.stayInPit();
+}
+export function recapCount(t) { const c = $('rcount'); if (c) { const v = '(' + Math.ceil(Math.max(0, t)) + ')'; if (c.textContent !== v) c.textContent = v; } }
 // The Pit's scoreboard: score, clock, flags, and how each side sees you.
 function pitBoard(b) {
   const el2 = $('pitb'); el2.style.display = b ? 'block' : 'none'; if (!b) return;

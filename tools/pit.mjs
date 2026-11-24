@@ -55,7 +55,16 @@ const out = await ev(async () => {
   X.end('sun'); await w(300);
   o.reward = S.xp > xp0 || S.level > lvl0; o.endLine = lines().filter(l => /side you healed|wins the Bloodsand/.test(l)).slice(-2);
   o.deed = (S.deeds || []).some(d => d.kind === 'pit');
+  // 5. the recap window, then back to town on its own
+  const rc = document.getElementById('recap'); o.recap = getComputedStyle(rc).display === 'block' && /Sunward wins/.test(rc.textContent) && rc.querySelectorAll('tr').length >= 12;
+  o.recapYou = /You healed Sunward/.test(rc.textContent);
+  await until(() => P.x < 2500, 30000); o.backInTown = P.x < 2500 && !X.active && getComputedStyle(rc).display === 'none';
+  // 6. or stay for the next match
+  P.x = -47; P.z = 15; await until(() => X.active, 4000); X.end('dusk'); await w(300);
+  document.getElementById('rstay').click(); await until(() => X.phase === 'prep', 20000);
+  o.stayed = X.active && X.phase === 'prep' && P.x > 2500;
   return o;
 });
-await pg.screenshot({ path: OUT + '/pit.png' });
+await ev(() => { game.pit.end('sun'); }); await pg.waitForTimeout(500);
+await pg.screenshot({ path: OUT + '/recap.png' });
 console.log(JSON.stringify(out, null, 1), JSON.stringify(errs)); await br.close(); srv.close();

@@ -10,27 +10,27 @@
  "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
-  "./js/chat.js": "./js/chat.js?v=20261124000811",
-  "./js/clock.js": "./js/clock.js?v=20261124000811",
-  "./js/doll.js": "./js/doll.js?v=20261124000811",
-  "./js/dungeon.js": "./js/dungeon.js?v=20261124000811",
-  "./js/figure.js": "./js/figure.js?v=20261124000811",
-  "./js/fishing.js": "./js/fishing.js?v=20261124000811",
-  "./js/fx.js": "./js/fx.js?v=20261124000811",
-  "./js/game.js": "./js/game.js?v=20261124000811",
-  "./js/look.js": "./js/look.js?v=20261124000811",
-  "./js/loot.js": "./js/loot.js?v=20261124000811",
-  "./js/memory.js": "./js/memory.js?v=20261124000811",
-  "./js/mobs.js": "./js/mobs.js?v=20261124000811",
-  "./js/people.js": "./js/people.js?v=20261124000811",
-  "./js/pit.js": "./js/pit.js?v=20261124000811",
-  "./js/player.js": "./js/player.js?v=20261124000811",
-  "./js/raid.js": "./js/raid.js?v=20261124000811",
-  "./js/social.js": "./js/social.js?v=20261124000811",
-  "./js/textures.js": "./js/textures.js?v=20261124000811",
-  "./js/ui.js": "./js/ui.js?v=20261124000811",
-  "./js/water.js": "./js/water.js?v=20261124000811",
-  "./js/world.js": "./js/world.js?v=20261124000811"
+  "./js/chat.js": "./js/chat.js?v=20261124001609",
+  "./js/clock.js": "./js/clock.js?v=20261124001609",
+  "./js/doll.js": "./js/doll.js?v=20261124001609",
+  "./js/dungeon.js": "./js/dungeon.js?v=20261124001609",
+  "./js/figure.js": "./js/figure.js?v=20261124001609",
+  "./js/fishing.js": "./js/fishing.js?v=20261124001609",
+  "./js/fx.js": "./js/fx.js?v=20261124001609",
+  "./js/game.js": "./js/game.js?v=20261124001609",
+  "./js/look.js": "./js/look.js?v=20261124001609",
+  "./js/loot.js": "./js/loot.js?v=20261124001609",
+  "./js/memory.js": "./js/memory.js?v=20261124001609",
+  "./js/mobs.js": "./js/mobs.js?v=20261124001609",
+  "./js/people.js": "./js/people.js?v=20261124001609",
+  "./js/pit.js": "./js/pit.js?v=20261124001609",
+  "./js/player.js": "./js/player.js?v=20261124001609",
+  "./js/raid.js": "./js/raid.js?v=20261124001609",
+  "./js/social.js": "./js/social.js?v=20261124001609",
+  "./js/textures.js": "./js/textures.js?v=20261124001609",
+  "./js/ui.js": "./js/ui.js?v=20261124001609",
+  "./js/water.js": "./js/water.js?v=20261124001609",
+  "./js/world.js": "./js/world.js?v=20261124001609"
  }
 }</script>
 <style>
@@ -63,6 +63,14 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
 #pitb{position:absolute;left:50%;top:8px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--gold);border-radius:6px;padding:4px 10px;display:none;font-size:12px;text-align:center;min-width:280px;z-index:2}
 #pitb b{font:700 13px Cinzel,serif}#pitb span{color:#ddd;margin:0 8px}#pitb .f{display:flex;justify-content:space-between;font-size:10px;color:#bbb;margin-top:2px}#pitb .f span{margin:0}
 #pitb small.g{color:#8aff8a}#pitb small.r{color:#ff8a7a}
+#recap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:560px;max-width:calc(100% - 8px);max-height:calc(100% - 16px);overflow:auto;background:rgba(14,12,10,.97);border:1px solid var(--gold);border-radius:8px;padding:10px 14px;display:none;z-index:7;font-size:12px;text-align:center}
+#recap .rt{font:700 26px Cinzel,serif;text-shadow:0 2px 4px #000}#recap .rs{color:#ccc;margin-bottom:6px}
+#recap .you{background:#1e1a12;border:1px solid #3a3326;border-radius:5px;padding:6px;margin-bottom:6px;text-align:left}#recap .rw{margin-top:3px;color:#ffe9b0}
+#recap .cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:left}#recap h4{margin:2px 0;font:600 14px Cinzel,serif}
+#recap table{width:100%;border-collapse:collapse}#recap th{font-size:10px;color:#999;font-weight:400;text-align:right}#recap td{padding:1px 3px;border-top:1px solid #2a2418;text-align:right}#recap td:first-child{text-align:left;font-weight:700}
+#recap small{color:#999}#recap .bt{margin-top:8px;display:flex;gap:8px;justify-content:center}
+#recap button{font:700 12px 'Nunito Sans',sans-serif;background:#4a3a18;color:var(--gold);border:1px solid var(--gold);border-radius:5px;padding:5px 12px;cursor:pointer}#recap #rstay{background:#2a2418;color:#ccc;border-color:#6a5a40}
+@media (max-width:600px){#recap .cols{grid-template-columns:1fr}#recap .rt{font-size:20px}}
 .rc{position:relative;height:22px;background:var(--panel);border:1px solid #3a3326;border-radius:3px;cursor:pointer;overflow:hidden}
 .rc i{position:absolute;inset:0;transform-origin:left;opacity:.7}
 .rc span{position:absolute;left:3px;top:3px;right:12px;font:700 10px 'Nunito Sans',sans-serif;white-space:nowrap;overflow:hidden;text-shadow:0 1px 2px #000}
@@ -242,6 +250,7 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
     <h3 style="margin-top:8px"><span>How it went</span></h3><div id="evdone"></div>
     <div class="m" style="font-size:11px;color:#999;margin-top:6px">Events run whether you go or not. Greenhollow is levels 1 to 6, Emberdeep 5 to 10.</div></div>
   <div id="help"><h3><span>Help</span><b id="helpx">✕</b></h3><div id="helpbody"></div></div>
+  <div id="recap"></div>
   <div id="death"><div id="dtext"></div><button id="dbtn"></button><button id="wbtn" style="display:none;margin-left:6px">Second Wind</button></div>
   <div id="bottom">
     <div id="castbar"><i></i><span></span></div>
@@ -257,6 +266,6 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
   <p class="keys"><b>WASD</b> move and turn · <b>Q/E</b> strafe · <b>right-drag</b> steer · <b>left-drag</b> or <b>arrow keys</b> look (up and down too) · <b>wheel</b> zoom (all the way in for first person, or <b>V</b>) · <b>Tab</b> next target · <b>F</b> most hurt · <b>1, 2</b> heal · <b>3</b> revive · <b>B</b> bag · <b>Enter</b> chat (<b>/help</b>) · <b>Space</b> jump · <b>X</b> mouse-look (the mouse steers, A and D strafe, Esc frees the cursor)</p>
   <a href="https://stilotto.github.io/">More games from Stilotto</a>
 </div></div>
-<script type="module" src="js/main.js?v=20261124000811"></script>
+<script type="module" src="js/main.js?v=20261124001609"></script>
 </body>
 </html>

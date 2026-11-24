@@ -53,7 +53,7 @@ let mobs, dungeon, zoneNow = 'hub';
 // The healer as a unit, so F1 or a click on your own frame targets yourself.
 const meUnit = { isMe: true, name: '', cls: 'Healer', level: 1, hp: 100, maxHp: 100, x: 0, z: 0, hots: [], dots: [], ward: null, dead: false, faded: 0, lastHit: -99 };
 let social, loot, emo = null;      // emo: the healer's emote animation
-let pit, raid, raidNag = 0, clock, lastCast = -99, fishing, meal = null, splashT = 0, lastWater = '';
+let pit, recapT = 0, raid, raidNag = 0, clock, lastCast = -99, fishing, meal = null, splashT = 0, lastWater = '';
 let drinking = 0, wardLock = new WeakMap(), ghost = false, corpse = null, cds = {};
 
 // Threat. Healing someone a monster is fighting adds to that monster's
@@ -83,7 +83,7 @@ function hurtMe(dmg, by, big) {
 }
 function die(by) {
   meUnit.hp = 0; meUnit.dead = true; meUnit.hots = []; meUnit.dots = []; meUnit.ward = null; casting = null; drinking = 0;
-  corpse = { x: player.x, z: player.z, zone: zoneNow };
+  corpse = { x: player.x, z: player.z, zone: zoneNow }; if (zoneNow === 'pvp' && pit.mine) pit.mine.deaths++;
   for (const m of [...mobs.list, ...dungeon.mobs, ...raid.mobs]) { m.attackers.delete(meUnit); if (m.foe === meUnit) m.foe = null; m.ht = 0; }
   UI.chat('c-yell', `You have been slain by ${by.name}.`); UI.sfx('err'); UI.death('dead');
 }
@@ -290,6 +290,7 @@ function land(sp, t) {
   if (S.mana < G.manaCost(S, sp)) return UI.err('Not enough mana');
   S.mana -= G.manaCost(S, sp);
   if (sp.id === 'revive') {
+    if (t.zone === 'pvp' && pit.mine) pit.mine.revives++;
     people.revive(t, G.hasFx(S, 'grave') ? 0.7 : 0.35); beam(t, 0xffd76a); burst(t, 0xffd76a, 50, 3.2); fx.emit(t.x, 0.3, t.z, { n: 30, color: 0xfff2a8, spread: 1.2, up: 0.4, jitter: 2.4, life: 0.9 }); UI.sfx('level'); UI.chat('c-heal', `You bring ${t.name} back to life.`);
     UI.float(t, 'Revived', 'crit'); earn(t.maxHp, t); return;
   }
@@ -365,16 +366,28 @@ function raidLoot(m, r) {
   S.raidKills = (S.raidKills || 0) + 1; earn(0.0001, { maxHp: 1e9, level: S.level, name: '' }); UI.drawBag(); G.save(S);
 }
 // A Pit match ends: a bonus if the side you healed most won.
+// A Pit match ends: a bonus if the side you healed most won, then the recap
+// window, and back to town after a short count (or stay for the next one).
 function matchOver(win, p) {
   const g = p.given, mine = g.sun + g.dusk < 0.5 ? null : g.sun >= g.dusk ? 'sun' : 'dusk';
   S.pitMatches = (S.pitMatches || 0) + 1;
-  if (!mine) return UI.chat('c-sys', 'You stayed out of it. Nobody pays a spectator.');
-  if (win === mine) {
+  let reward;
+  if (!mine) reward = 'You stayed out of it. Nobody pays a spectator.';
+  else if (win === mine) {
     const xp = Math.round(G.xpNeed(S.level) * 0.3); S.xp += xp; S.pitWins = (S.pitWins || 0) + 1; social.pit(TEAMS[win].name);
-    UI.chat('c-heal', `The side you healed won. You gain ${xp} experience, and ${TEAMS[win].name} will not forget it.`); earn(0.0001, { maxHp: 1e9, level: S.level, name: '' });
-  } else UI.chat('c-sys', win ? `The side you healed lost. ${TEAMS[win].name} saw what you did.` : 'A draw. Both sides blame the healer.');
-  G.save(S);
+    reward = `The side you healed won. You gain ${xp} experience, and ${TEAMS[win].name} will not forget it.`; earn(0.0001, { maxHp: 1e9, level: S.level, name: '' });
+  } else reward = win ? `The side you healed lost. ${TEAMS[win].name} saw what you did.` : 'A draw. Both sides blame the healer.';
+  UI.chat(win === mine && mine ? 'c-heal' : 'c-sys', reward); G.save(S);
+  UI.pitRecap({ ...p.recap(), reward, sided: mine });
+  recapT = 20;
 }
+// Out of the Pit: back beside the red portal, alive whatever happened.
+function leavePit() {
+  recapT = 0; UI.pitRecap(null);
+  if (meUnit.dead) { ghost = false; meUnit.dead = false; setGhost(false); UI.death(null); corpse = null; player.speedMul = 1; meUnit.hp = Math.round(meUnit.maxHp * 0.5); }
+  player.x = POI.pvp.x + 3; player.z = POI.pvp.z; player.yaw = Math.PI / 2; player.camOff = 0; target = null; casting = null; pit.leave();
+}
+function stayInPit() { recapT = 0; UI.pitRecap(null); pit.timer = Math.min(pit.timer, 3); }
 function uniqueFrom(boss) {          // prefer ones you have not found yet
   const ids = Object.keys(G.UNIQUES).filter(k => G.UNIQUES[k].boss === boss), fresh = ids.filter(k => !(S.uniques || {})[k]);
   const pool = fresh.length && Math.random() < 0.7 ? fresh : ids; return pool[Math.floor(Math.random() * pool.length)];
@@ -446,7 +459,7 @@ function start(name) {
     who: a => social.who(a), fame: () => social.fameInfo(), gquit: () => social.gquit(), act: a => social.act(a), changed: () => G.save(S),
     target: n => { const p = n && social.find(n, true); if (p) setTarget(p); else UI.err(n ? `No one called ${n} is here` : 'Usage: /target <name>'); },
     roll: k => loot.choose(k), events: () => UI.toggleEvents(), help: () => { if (!UI.helpShown()) UI.toggleHelp(); }, graphics: m => setGraphics(m), opened: () => { player.keys.clear(); } });
-  UI.init(S, { quality: () => look.quality, setQuality: m => setGraphics(m), clock: () => clock, targetUnit: u => setTarget(u), dressed, cast, fish, eat, secondWind, windReady: () => G.rank(S, 'wind') > 0 && (cds.wind || 0) <= T, release, returnToLife, drink: toggleDrink, self: () => setTarget(meUnit), pick: pickFrame, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
+  UI.init(S, { leavePit, stayInPit, quality: () => look.quality, setQuality: m => setGraphics(m), clock: () => clock, targetUnit: u => setTarget(u), dressed, cast, fish, eat, secondWind, windReady: () => G.rank(S, 'wind') > 0 && (cds.wind || 0) <= T, release, returnToLife, drink: toggleDrink, self: () => setTarget(meUnit), pick: pickFrame, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
     panel: open => { if (open) player.free(); else if (S.look) player.lock(); } });
   player.look = !!S.look; UI.setLook(player.look, false);
   player.enabled = true; G.save(S);
@@ -514,6 +527,7 @@ function step(dt) {
   dungeon.update(dt, T);
   raid.update(dt, T);
   pit.update(dt, T);
+  if (recapT > 0) { recapT -= dt; UI.recapCount(recapT); if (recapT <= 0) leavePit(); }
   // Portals: into Emberdeep from town, and back out again.
   if (zoneNow === 'hub' && Math.hypot(POI.dungeon.px - player.x, POI.dungeon.pz - player.z) < 2.2) {
     player.x = DUN.start.x; player.z = DUN.start.z; player.yaw = Math.PI; player.camOff = 0; target = null; casting = null; dungeon.enter();
@@ -530,7 +544,7 @@ function step(dt) {
     player.x = PIT.start.x; player.z = PIT.start.z; player.yaw = -Math.PI / 2; player.camOff = 0; target = null; casting = null; pit.enter();
     if (!S.seenPit) { S.seenPit = true; UI.chat('c-sys', 'Two sides, six each. Heal whoever you like: the side you heal against will come for you, and the side you help may look after you. Fade shakes off hunters.'); }
   } else if (zoneNow === 'pvp' && PIT.exits.some(e => Math.hypot(e.x - player.x, e.z - player.z) < 2)) {
-    player.x = POI.pvp.x + 3; player.z = POI.pvp.z; player.yaw = Math.PI / 2; player.camOff = 0; target = null; casting = null; pit.leave();
+    leavePit();
   } else if (zoneNow === 'raid' && RAID.exits.some(e => Math.hypot(e.x - player.x, e.z - player.z) < 2)) {
     player.x = POI.raid.x + 3; player.z = POI.raid.z; player.yaw = Math.PI / 2; player.camOff = 0; target = null; casting = null; raid.leave();
   }

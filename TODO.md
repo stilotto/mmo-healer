@@ -5,7 +5,7 @@ built pieces work is in `NOTES.md`; this file keeps only a line each.
 The test for every sprint: do they need me, do they notice me, did I get
 paid? Build whichever answer is weakest.
 
-## The plan (agreed order, after sprint 10)
+## The plan (agreed order, after sprint 10; Speed added as 13)
 
 11. **Help and settings: built.** A help window with every control (keys,
     mouse, touch, spells, slash commands): H, the ? button, or /help. A
@@ -24,22 +24,36 @@ paid? Build whichever answer is weakest.
     hunters after you, and a side that likes you sends a fighter to guard
     you. Fade shakes hunters off. A scoreboard (score, clock, flags, how
     each side sees you) and team frames in two columns. If the side you
-    healed most wins: 30% of a level, fame 4 and gossip.
-13. **Polish.** The stats tab: a tab in the character window with lifetime
+    healed most wins: 30% of a level, fame 4 and gossip. After the match (owner's
+    ask): a recap window (result, score, time, each player's kills, deaths
+    and flags, top killer and carrier, your healing to each side, revives,
+    deaths, hunters, your reward), then back to town after 20 seconds, or
+    "Stay for the next match".
+13. **Speed (next, owner's ask).** The Chromebook is a bit jerky even on Low
+    graphics. A pass of optimization: measure first (frame time by part:
+    people, figures, name plates, sparkles, shadows, the HUD's DOM updates,
+    the minimap), then cut what costs most. Likely suspects: name plates
+    repainted and many sprites drawn, per-frame DOM writes (frames, tracker,
+    raid frames), the minimap redrawn every 4 frames, people far away still
+    simulated and animated every frame, many separate meshes (merge or
+    instance town props and walls), the bloom pass, figure count in town.
+    Low should also cut grass, sparkles and draw distance. Check on the
+    Chromebook with the owner.
+14. **Polish.** The stats tab: a tab in the character window with lifetime
     numbers (total healed, saves, revives, bosses and raid kills, fish
     caught, Old Glimmerfins, people met, friends, grudges, uniques found,
     deaths, time played). The graveyard: ghosts rise in a small Greenhollow
     churchyard (and one near Lanternrest) instead of at the quest camp or
     fountain, with a spirit keeper, headstones and a soft light; maybe the
     keeper brings you back on the spot for a cost. (small)
-14. **The rival.** A rival healer who runs with a party properly and
+15. **The rival.** A rival healer who runs with a party properly and
     resents you. (medium)
-15. **More world, part 1.** The airship works: a flight to a second zone.
+16. **More world, part 1.** The airship works: a flight to a second zone.
     (big)
-16. **More world, part 2.** A second dungeon, with the Emberdeep extras
+17. **More world, part 2.** A second dungeon, with the Emberdeep extras
     folded in (a second boss, patrols, a party that waits for the healer's
     mana, a boss kill count), and item sets. (big)
-17. **Town services.** A working inn, bank and auction hall, and guild
+18. **Town services.** A working inn, bank and auction hall, and guild
     perks beyond the small ones from sprint 7. (medium)
 
 ## Waiting on the owner
@@ -83,6 +97,7 @@ paid? Build whichever answer is weakest.
 - Sprint 10, crowds: the Shattered Spire raid from level 5 (twenty raiders,
   the Shardwarden and the Hollow Regent, raid frames, four uniques).
 - Sprint 11: help window, graphics and mouse-look settings, Shift+1 to 6.
-- Sprint 12, sides: the Bloodsand Pit, capture the flag, hunters and guards.
+- Sprint 12, sides: the Bloodsand Pit, capture the flag, hunters and guards;
+  a recap window after each match, then back to town.
 - Decided: mouse-look stays off by default. The owner tried a real mouse and
   the current scheme (hold a button to steer) matches their muscle memory.

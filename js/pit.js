@@ -89,7 +89,9 @@ export class Pit {
       });
     }
     this.flag = { sun: { at: 'home', x: PIT.bases.sun.x, z: PIT.bases.sun.z, by: null }, dusk: { at: 'home', x: PIT.bases.dusk.x, z: PIT.bases.dusk.z, by: null } };
-    this.score = { sun: 0, dusk: 0 }; this.hate = { sun: 0, dusk: 0 }; this.given = { sun: 0, dusk: 0 };
+    this.score = { sun: 0, dusk: 0 }; this.hate = { sun: 0, dusk: 0 }; this.given = { sun: 0, dusk: 0 }; this.raw = { sun: 0, dusk: 0 };
+    this.mine = { revives: 0, deaths: 0, hunted: 0 };
+    for (const p of this.party) Object.assign(p, { kills: 0, deaths: 0, caps: 0, returns: 0 });
     Object.assign(this, { phase: 'prep', timer: 15, t: MATCH, think: 0, result: null, hunters: { sun: 0, dusk: 0 } });
     this.ctx.chat('c-sys', 'The Bloodsand Pit: Sunward against Duskward. Bring the other side\'s flag home to your own. First to 3 captures, or the most in 8 minutes.');
     this.teamSay('sun', 'start');
@@ -104,13 +106,13 @@ export class Pit {
   // The healer healed someone: their foes take note (a full bar of healing is 1).
   healed(p, amt) {
     if (!p.team || !amt) return;
-    const k = amt / p.maxHp; this.given[p.team] += k;
+    const k = amt / p.maxHp; this.given[p.team] += k; this.raw[p.team] += amt;
     this.hate[TEAMS[p.team].foe] += k; this.hate[p.team] -= k * 0.5;
   }
   // How each side sees you, for the scoreboard.
   standing(k) { const h = this.hate[k]; return h > 1 ? 'hunting you' : h < -1 ? 'on your side' : h > 0.3 ? 'watching you' : ''; }
   died(p, by) {
-    p.respawnAt = this.t - RESPAWN;
+    p.respawnAt = this.t - RESPAWN; p.deaths = (p.deaths || 0) + 1; if (by && by.team) by.kills = (by.kills || 0) + 1;
     if (this.flag) for (const k in this.flag) { const f = this.flag[k]; if (f.by === p) { f.by = null; f.at = 'dropped'; f.x = p.x; f.z = p.z; this.news(`${p.name} drops the ${TEAMS[k].name} flag!`); } }
     if (by && by.isMe === undefined && Math.random() < 0.08) this.ctx.chat('c-party', `[${TEAMS[by.team] ? TEAMS[by.team].name : 'Pit'}] ${by.name}: ${pick(['got one', 'down', 'next', 'too easy'])}`);
   }
@@ -141,10 +143,10 @@ export class Pit {
     for (const p of this.alive()) {
       const own = this.flag[p.team], foe = this.flag[TEAMS[p.team].foe], foeK = TEAMS[p.team].foe;
       if (!foe.by && foe.at !== 'cap' && Math.hypot(p.x - foe.x, p.z - foe.z) < 1.8) { foe.by = p; foe.at = 'carried'; this.news(`${p.name} has taken the ${TEAMS[foeK].name} flag!`); }
-      if (own.at === 'dropped' && Math.hypot(p.x - own.x, p.z - own.z) < 1.8) { own.at = 'home'; own.x = PIT.bases[p.team].x; own.z = PIT.bases[p.team].z; this.news(`${p.name} returns the ${TEAMS[p.team].name} flag.`); }
+      if (own.at === 'dropped' && Math.hypot(p.x - own.x, p.z - own.z) < 1.8) { own.at = 'home'; p.returns++; own.x = PIT.bases[p.team].x; own.z = PIT.bases[p.team].z; this.news(`${p.name} returns the ${TEAMS[p.team].name} flag.`); }
       const home = PIT.bases[p.team];
       if (foe.by === p && own.at === 'home' && Math.hypot(p.x - home.x, p.z - home.z) < 3) {
-        this.score[p.team]++; foe.by = null; foe.at = 'home'; foe.x = PIT.bases[foeK].x; foe.z = PIT.bases[foeK].z;
+        this.score[p.team]++; p.caps++; foe.by = null; foe.at = 'home'; foe.x = PIT.bases[foeK].x; foe.z = PIT.bases[foeK].z;
         this.news(`${p.name} captures the ${TEAMS[foeK].name} flag! ${TEAMS.sun.name} ${this.score.sun}, ${TEAMS.dusk.name} ${this.score.dusk}.`);
         this.teamSay(p.team, 'cap'); this.teamSay(foeK, 'lost'); ctx.sfx('level');
         if (this.score[p.team] >= CAPS) return this.end(p.team);
@@ -156,7 +158,7 @@ export class Pit {
       const want = me.dead || me.faded > 0 ? 0 : this.hate[k] > 4 ? 3 : this.hate[k] > 2.5 ? 2 : this.hate[k] > 1 ? 1 : 0;
       if (want > this.hunters[k]) { this.teamSay(k, 'hunt'); ctx.warn(`${TEAMS[k].name} is hunting you!`); }
       if (this.hate[k] < -1 && this.hunters[k] >= 0 && !this.loved?.[k]) { this.loved = { ...(this.loved || {}), [k]: true }; this.teamSay(k, 'love'); }
-      this.hunters[k] = want;
+      this.hunters[k] = want; this.mine.hunted = Math.max(this.mine.hunted, want);
     }
     if ((this.think -= dt) > 0) return;
     this.think = 0.5;
@@ -191,11 +193,20 @@ export class Pit {
     }
   }
   end(win) {
-    const ctx = this.ctx; this.phase = 'end'; this.timer = 14; this.result = win;
+    const ctx = this.ctx; this.phase = 'end'; this.timer = 25; this.result = win;
     for (const p of this.alive()) { p.mob = null; p.state = 'idle'; if (p.team === win) { p.anim = 'cheer'; p.animT = 4; } }
     if (!win) { this.news(`The match is a draw, ${this.score.sun} to ${this.score.dusk}.`); }
     else { this.news(`${TEAMS[win].name} wins the Bloodsand Pit, ${this.score[win]} to ${this.score[TEAMS[win].foe]}!`); this.teamSay(win, 'win'); this.teamSay(TEAMS[win].foe, 'lose'); }
     if (ctx.matchOver) ctx.matchOver(win, this);
+  }
+  // For the recap window: the result, everyone's numbers, and yours.
+  recap() {
+    const row = p => ({ name: p.name, cls: p.cls, kills: p.kills || 0, deaths: p.deaths || 0, caps: p.caps || 0, returns: p.returns || 0 });
+    const all = this.party.filter(p => !p.gone), best = (f) => all.slice().sort((a, b) => (b[f] || 0) - (a[f] || 0))[0];
+    const top = { kills: best('kills'), caps: best('caps') };
+    return { win: this.result, score: { ...this.score }, time: Math.round(MATCH - Math.max(0, this.t)), raw: { ...this.raw }, mine: { ...this.mine },
+      teams: { sun: this.team('sun').map(row), dusk: this.team('dusk').map(row) },
+      top: { kills: top.kills && top.kills.kills ? top.kills.name : '', caps: top.caps && top.caps.caps ? top.caps.name : '' } };
   }
   // For the scoreboard.
   board() {
