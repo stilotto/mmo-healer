@@ -26,6 +26,7 @@ export class Social {
   where(p) {
     if (p.zone === 'dungeon') return 'Emberdeep';
     if (p.zone === 'raid') return 'the Shattered Spire';
+    if (p.zone === 'pvp') return 'the Bloodsand Pit';
     if (p.zone === 'hub') return p.duel ? 'the duelling ring' : 'Lanternrest';
     if (Math.hypot(p.x - POI.camp.x, p.z - POI.camp.z) < 20) return 'the camp';
     let best = 0, bd = 1e9; CAMPS.forEach((c, i) => { const d = Math.hypot(p.x - c.x, p.z - c.z); if (d < bd) { bd = d; best = i; } });
@@ -112,6 +113,7 @@ export class Social {
     for (const p of this.ctx.people.list.filter(p => p.fishing && !p.dead).slice(0, 2))
       this.later(rnd(1.5, 3.5), () => !p.gone && this.say(p, pick(['WHAT. that is Old Glimmerfin', 'ten years I have sat at this pond', 'no way. NO WAY.', 'can I at least touch it?'])));
   }
+  pit(team) { this.fame(4); M.deed(this.S, 'pit', team, 'the Bloodsand Pit', this.t); }
   raid(name) { this.fame(8); M.deed(this.S, 'raid', name, 'the Shattered Spire', this.t); }
   boss(seen) { if (seen) { this.fame(6); M.deed(this.S, 'boss', '', 'Emberdeep', this.t); } }
   wipe() { M.deed(this.S, 'wipe', '', 'Emberdeep', this.t); }

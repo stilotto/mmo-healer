@@ -13,8 +13,18 @@ paid? Build whichever answer is weakest.
     once; also /graphics auto|high|low; `?quality=` in the address still
     wins) and mouse-look on or off. Shift+1 to 6 do what F1 to F6 do, for
     Chromebooks.
-12. **Sides.** Bloodsand Pit: two teams, flags, heal one side or both; the
-    other side hunts you. (big)
+12. **Sides: built.** The Bloodsand Pit through the red portal (no level
+    gate; people follow your level). Sunward (gold, south) and Duskward
+    (crimson, north), six a side: a guard, two runners, three fighters.
+    Capture the flag: first to 3, or the most in 8 minutes. People really
+    fight each other; the fallen rise at their base after 12 seconds unless
+    you revive them first. Whom you heal is watched: a side's anger is the
+    healing you gave its enemies (less half what you gave it, cooling
+    slowly); past one, two and four full bars it sends one, two or three
+    hunters after you, and a side that likes you sends a fighter to guard
+    you. Fade shakes hunters off. A scoreboard (score, clock, flags, how
+    each side sees you) and team frames in two columns. If the side you
+    healed most wins: 30% of a level, fame 4 and gossip.
 13. **Polish.** The stats tab: a tab in the character window with lifetime
     numbers (total healed, saves, revives, bosses and raid kills, fish
     caught, Old Glimmerfins, people met, friends, grudges, uniques found,
@@ -73,5 +83,6 @@ paid? Build whichever answer is weakest.
 - Sprint 10, crowds: the Shattered Spire raid from level 5 (twenty raiders,
   the Shardwarden and the Hollow Regent, raid frames, four uniques).
 - Sprint 11: help window, graphics and mouse-look settings, Shift+1 to 6.
+- Sprint 12, sides: the Bloodsand Pit, capture the flag, hunters and guards.
 - Decided: mouse-look stays off by default. The owner tried a real mouse and
   the current scheme (hold a button to steer) matches their muscle memory.

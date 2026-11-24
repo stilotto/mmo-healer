@@ -226,6 +226,7 @@ export function update(dt, v) {
   $('pframe').classList.toggle('sel', v.target === v.me); $('pframe').classList.toggle('combat', !!v.combat);
   const ps = v.drinking ? (v.eating ? 'Eating' : 'Drinking') + (v.me.hots.length ? ' · ❋' : '') : (v.me.hots.length ? '❋ Renew' : '') + (v.me.ward ? ' ◈' : '') + (v.me.surge ? ' ⚡ Surge' : '');
   if ($('psub').textContent !== ps) $('psub').textContent = ps;
+  pitBoard(v.pit);
   if (v.raid) raidFrames(v); else { if (rcells.length) $('raidf').style.display = 'none'; frames(v); }
   boss(v);
   setBar('pmp', S.mana / st.maxMana, `${Math.floor(S.mana)} / ${st.maxMana}`);
@@ -330,16 +331,28 @@ let shown = [], pickT = 0;
 export const frameUnits = () => shown;
 // Raid frames: four groups of five, small cells, class-coloured, red when low.
 const rcells = [];
+// The Pit's scoreboard: score, clock, flags, and how each side sees you.
+function pitBoard(b) {
+  const el2 = $('pitb'); el2.style.display = b ? 'block' : 'none'; if (!b) return;
+  const t = Math.ceil(b.t), clock = Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
+  const st = k => b.stand[k] ? ` <small class="${b.stand[k] === 'on your side' ? 'g' : 'r'}">${b.stand[k]}</small>` : '';
+  const html = `<div><b style="color:#ffc040">Sunward ${b.score.sun}</b> <span>${b.end || (b.prep ? 'starts in ' + Math.ceil(b.prep) : clock)}</span> <b style="color:#ff4a5a">${b.score.dusk} Duskward</b></div>` +
+    `<div class="f"><span>⚑ ${b.flags.sun}${st('sun')}</span><span>⚑ ${b.flags.dusk}${st('dusk')}</span></div>`;
+  if (el2.innerHTML !== html) el2.innerHTML = html;
+}
 function raidFrames(v) {
-  const box = $('raidf'); box.style.display = 'grid'; $('party').style.display = 'none';
-  while (rcells.length < 20) {
+  const box = $('raidf'), cols = v.cols || 4, rows = cols === 4 ? 5 : 6;      // the raid in groups of five; the Pit as two teams of six
+  box.style.display = 'grid'; $('party').style.display = 'none'; box.style.gridTemplateColumns = `repeat(${cols}, var(--rcw))`;
+  while (rcells.length < 24) {
     const c = el('div', 'rc', '<i></i><span></span><b></b>'), i = rcells.length;
     c.onclick = () => { const u = rcells[i].u; if (u) H.targetUnit(u); }; box.append(c);
     rcells.push({ c, fill: c.children[0], t: c.children[1], d: c.children[2], u: null });
   }
   rcells.forEach((w, i) => {
-    const u = v.list[(i % 4) * 5 + Math.floor(i / 4)];        // column = group
+    const u = i < cols * rows ? v.list[(i % cols) * rows + Math.floor(i / cols)] : null;        // column = group or team
+    w.c.style.display = i < cols * rows ? '' : 'none';
     w.u = u; w.c.style.visibility = u ? '' : 'hidden'; if (!u) return;
+    w.c.style.borderLeft = u.team ? `3px solid ${u.team === 'sun' ? '#ffc040' : '#ff4a5a'}` : '';
     const f = u.dead ? 0 : u.hp / u.maxHp;
     w.fill.style.transform = `scaleX(${f})`; w.fill.style.background = f < 0.35 ? '#c0302a' : CLASSES[u.cls].color;
     if (w.t.textContent !== u.name) w.t.textContent = u.name;

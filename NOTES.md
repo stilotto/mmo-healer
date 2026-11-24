@@ -74,9 +74,10 @@ Sprints 1 to 8 in `TODO.md` are built and on `main`:
 - Sprint 10, Crowds: the Shattered Spire raid.
 
 - Sprint 11: help window and settings.
+- Sprint 12, Sides: the Bloodsand Pit battleground.
 
-`TODO.md` was cleaned up after sprint 10: "The plan" lists sprints 12 to 17
-in the agreed order (Sides, Polish, the rival, airship and second zone,
+`TODO.md` was cleaned up after sprint 10: "The plan" lists sprints 13 to 17
+in the agreed order (Polish, the rival, airship and second zone,
 second dungeon, town services). Wait for the owner's go on each. The owner
 now plays with a mouse and keyboard on a dock and wants the mouse kept as
 it is (mouse-look stays off by default). On a Chromebook without a dock, Shift+1 to 6 stand in for
@@ -385,6 +386,26 @@ keeps it smooth.
 - Shift+1 to 6 in `player.onKey` mirror F1 to F6. H opens help; /help
   opens it too.
 - `tools/help.mjs` checks it.
+
+## The Bloodsand Pit (sprint 12)
+
+- `PIT` in `world.js` at `PX` = 3000 (past x 2500); `instanceAt` covers it.
+  Outdoor mood. `js/pit.js`: `buildPit` (sand, low walls, crowd tiers, two
+  bases with banners, the two flags) and `Pit` (phases prep, play, end).
+- People fight people: in `people.js` hunt, a target without `def` is a
+  person and takes `people.hurt` (scaled by `p.pvpK`); `kill` hands Pit
+  deaths to `pit.died` (no slain lines, no blame in memory). `p.focus`
+  stops runners turning to fight back.
+- `Pit.orders(k)` every half second: carrier runs home; runners go for the
+  enemy flag; anyone chases an enemy carrier; the guard holds within 16 of
+  base; fighters roam and fight within 14. Respawn is handled by the Pit
+  (`p.respawnAt`, 12 s), not `people.revive`.
+- `pit.healed(unit, amt)` is called from `addThreat` in `main.js` for every
+  heal, tick and ward on someone in the Pit. `hate[k]` (cools 1.5%/s) sets
+  `hunters[k]`; `hate < -1` sends a guard. Team plates replace guild plates.
+- UI: `#pitb` scoreboard (`pitBoard`), raid frames with `cols: 2`.
+- `matchOver` in `main.js` pays the side you healed most if it won.
+- `tools/pit.mjs` checks it.
 
 ## Things worth knowing
 

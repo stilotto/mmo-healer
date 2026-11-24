@@ -108,6 +108,7 @@ export const LINES = {
     wipe: ['Emberdeep wiped again. even {me} could not save them', 'another wipe in Emberdeep. where was {me}?'],
     fish: ['did {me} really pull Old Glimmerfin out of {where}?', 'someone caught Old Glimmerfin at {where}. I have been fishing there for YEARS', 'Old Glimmerfin is real?? {me} has it', 'heard {me} landed Old Glimmerfin. the healer. fishing.'],
     raid: ['{who} is down and the raid says a stranger healed them', 'the Spire raid had THREE healers tonight. we brought two.', 'was {me} in the Spire? {who} died to a raid with a mystery healer', 'heard {me} healed the whole Spire raid'],
+    pit: ['{who} won the Pit and they say a stranger healed them through it', 'the Pit has a rogue healer now. {who} loved it, the other side did not', 'who keeps healing in the Bloodsand Pit?', 'heard {me} picked {who} in the Pit'],
     letdie: ['{who} died at {where} with {me} standing right there', 'lol {me} watched {who} die at {where}', 'heals are not free I guess. ask {who}'],
   },
   ask: ['is {me} on?', 'anyone seen {me} today?', 'LF {me}, will pay in thanks', 'how do I get {me} to heal me', 'is {me} real or a rumour?'],

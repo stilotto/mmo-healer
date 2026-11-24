@@ -39,8 +39,17 @@ export const RAID = {
   exits: [{ x: RX, z: 9.4 }, { x: RX, z: -164.4 }],
   start: { x: RX, z: -7 },
 };
-// Which instance a point is in (Emberdeep or the Spire), or null outdoors.
-export const instanceAt = x => x > 1500 ? RAID : x > 500 ? DUN : null;
+// The Bloodsand Pit, the battleground: one long sandy arena with a base at
+// each end. Sunward holds the south end, Duskward the north.
+export const PX = 3000;
+export const PIT = {
+  rects: [[PX - 26, -58, PX + 26, 58], [PX + 26, -4, PX + 34, 4]],
+  bases: { sun: { x: PX, z: 50 }, dusk: { x: PX, z: -50 } },
+  exits: [{ x: PX + 33.4, z: 0 }],
+  start: { x: PX + 20, z: 0 },
+};
+// Which instance a point is in (Emberdeep, the Spire, the Pit), or null outdoors.
+export const instanceAt = x => x > 2500 ? PIT : x > 1500 ? RAID : x > 500 ? DUN : null;
 function collideDungeon(p, r) {
   let best = null, bd = 1e9;
   for (const [x0, z0, x1, z1] of instanceAt(p.x).rects) {
@@ -255,7 +264,6 @@ export function buildWorld(scene) {
     const lb = label(name, sub, 3); lb.position.set(0, 9.4, 0); g.add(lb);
     const n = Math.hypot(x, z * 0.3), ux = -x / n, uz = -z * 0.3 / n;
     POI[key] = { x: x + ux * 3, z: z + uz * 3, px: x, pz: z };
-    if (key === 'pvp') spots.push({ x, z, r: 2.5, msg });
     mapShapes.push({ t: 'c', x, z, r: 2.5, c: col });
   };
   portal('dungeon', 'Emberdeep', 'Dungeon', -47, -15, '#ff7a2a', 'The portal hums, but does not take you. You are not attuned to Emberdeep yet.');
