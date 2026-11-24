@@ -75,9 +75,10 @@ Sprints 1 to 8 in `TODO.md` are built and on `main`:
 
 - Sprint 11: help window and settings.
 - Sprint 12, Sides: the Bloodsand Pit battleground.
+- Sprint 13, Speed: profiling, baked scenery, cheaper far people and HUD.
 
 `TODO.md` was cleaned up after sprint 10: "The plan" lists sprints 13 to 18
-in the agreed order (Speed, an optimization pass the owner asked for next; Polish, the rival, airship and second zone,
+in the agreed order (Speed, built; Polish next; the rival, airship and second zone,
 second dungeon, town services). Wait for the owner's go on each. The owner
 now plays with a mouse and keyboard on a dock and wants the mouse kept as
 it is (mouse-look stays off by default). On a Chromebook without a dock, Shift+1 to 6 stand in for
@@ -411,6 +412,34 @@ keeps it smooth.
   end timer. The Pit counts kills, deaths, flags, returns per person and
   `pit.mine` (revives, deaths, peak hunters), `pit.raw` healing per side.
 - `tools/pit.mjs` checks it.
+
+## Speed (sprint 13)
+
+- `?prof` in the address shows a box (bottom left): average ms per frame for
+  each part (`mark()` calls in `main.js` step and tick), fps, draw calls,
+  triangles, people and visible figures. Also `game.prof.last`.
+  `tools/speed.mjs [quality] [cpu]` prints it for the plaza, gate and
+  Greenhollow (with `cpu`, the hottest functions too). The headless browser
+  caps near 20 fps and draws on the CPU, so compare calls and the JS parts,
+  not fps.
+- Measured: game logic is about 2 ms; draw calls were the cost.
+- `js/bake.js`: each builder (`buildWorld`, `buildDungeon`, `buildRaid`,
+  `buildPit`) ends with `bake(scene, newChildren, blockers)`, which merges
+  meshes with the same look in the same 48-yard square. Anything that moves,
+  is clicked, is see-through, or is toggled must be marked
+  `userData.live = true` before the bake (its whole group is kept). Camera
+  blockers stay, hidden (raycasts ignore visibility). Baked and leftover still
+  objects have `matrixAutoUpdate` off: move them and nothing happens.
+- Figures: `fig.far` is the whole person as one mesh in a standing pose
+  (cached per look); `setFar(fig, on)` swaps it with the torso and limbs.
+  `LOD` in `figure.js` (far, plate, show distances) is set by `lowGfx` in
+  `main.js` when `look.low` changes. People and monsters hide name plates
+  past `LOD.plate` unless targeted.
+- HUD: `txt(el, v)` and `sty(el, prop, v)` in `ui.js` remember the last value
+  and only write on change. Write those elements through them too, or the
+  cache goes stale (`err` and `toast` do).
+- Low graphics: antialiasing is chosen when the renderer is made (saved
+  setting or `?quality`), so switching to Low drops it from the next load.
 
 ## Things worth knowing
 

@@ -6,6 +6,7 @@
 // sides watch whom you heal: heal one side and the other sends hunters after
 // you; the side you favour may send someone to guard you.
 import * as THREE from 'three';
+import { bake } from './bake.js';
 import { makePlate } from './figure.js';
 import { PIT, label } from './world.js';
 import * as TX from './textures.js';
@@ -26,6 +27,7 @@ const SAY = {
 const sandC = 0xf0dcb0;
 
 export function buildPit(scene, blockers) {
+  const n0 = scene.children.length;
   const L = c => new THREE.MeshLambertMaterial({ color: c });
   const [x0, z0, x1, z1] = PIT.rects[0], cx = (x0 + x1) / 2;
   const t = TX.dirt(); t.repeat.set(8, 18);
@@ -64,6 +66,8 @@ export function buildPit(scene, blockers) {
   const p = new THREE.Mesh(new THREE.TorusGeometry(1.8, 0.25, 8, 20), new THREE.MeshBasicMaterial({ color: 0x6ab8ff })); p.position.set(PIT.exits[0].x, 2.2, 0); p.rotation.y = Math.PI / 2; scene.add(p);
   const c = new THREE.Mesh(new THREE.CircleGeometry(1.7, 18), new THREE.MeshBasicMaterial({ color: 0x9ad8ff, transparent: true, opacity: 0.45, side: THREE.DoubleSide })); c.position.copy(p.position); c.rotation.y = Math.PI / 2; scene.add(c);
   const lb = label('Lanternrest', 'Way out', 1.6); lb.position.set(PIT.exits[0].x, 4.6, 0); scene.add(lb);
+  for (const o of [p, ...banners, ...Object.values(flags).map(f => f.group)]) o.userData.live = true;
+  bake(scene, scene.children.slice(n0), blockers);
   return { flags, update(dt, t) { p.rotation.z += dt; for (const b of banners) b.rotation.y = Math.sin(t * 1.3 + b.position.x) * 0.25; for (const k in flags) flags[k].cloth.rotation.y = Math.sin(t * 3 + (k === 'sun' ? 0 : 2)) * 0.3; } };
 }
 

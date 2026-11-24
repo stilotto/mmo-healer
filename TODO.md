@@ -29,16 +29,16 @@ paid? Build whichever answer is weakest.
     and flags, top killer and carrier, your healing to each side, revives,
     deaths, hunters, your reward), then back to town after 20 seconds, or
     "Stay for the next match".
-13. **Speed (next, owner's ask).** The Chromebook is a bit jerky even on Low
-    graphics. A pass of optimization: measure first (frame time by part:
-    people, figures, name plates, sparkles, shadows, the HUD's DOM updates,
-    the minimap), then cut what costs most. Likely suspects: name plates
-    repainted and many sprites drawn, per-frame DOM writes (frames, tracker,
-    raid frames), the minimap redrawn every 4 frames, people far away still
-    simulated and animated every frame, many separate meshes (merge or
-    instance town props and walls), the bloom pass, figure count in town.
-    Low should also cut grass, sparkles and draw distance. Check on the
-    Chromebook with the owner.
+13. **Speed: built (first pass; check on the Chromebook).** Measured with
+    `?prof` (a corner box: ms per part of the frame, draw calls, triangles):
+    the game logic is about 2 ms a frame; drawing is the cost. Still scenery
+    is baked into a few big meshes per 48-yard square; people far away are one
+    mesh instead of seven; name plates only within 55 yards (or targeted);
+    the HUD only touches the page when a value changes; sparkles skip work
+    when there are none. Low also: no antialiasing (from the next load),
+    a third of the grass, half the sparkles, detail and plates closer in,
+    people hidden past 110 yards. Draw calls on Low went from about 200-490
+    to 90-220. Next if still jerky: numbers from `?prof` on the Chromebook.
 14. **Polish.** The stats tab: a tab in the character window with lifetime
     numbers (total healed, saves, revives, bosses and raid kills, fish
     caught, Old Glimmerfins, people met, friends, grudges, uniques found,
@@ -97,6 +97,8 @@ paid? Build whichever answer is weakest.
 - Sprint 10, crowds: the Shattered Spire raid from level 5 (twenty raiders,
   the Shardwarden and the Hollow Regent, raid frames, four uniques).
 - Sprint 11: help window, graphics and mouse-look settings, Shift+1 to 6.
+- Sprint 13, speed: `?prof`, baked scenery, far people as one mesh, a
+  lighter HUD, a lighter Low.
 - Sprint 12, sides: the Bloodsand Pit, capture the flag, hunters and guards;
   a recap window after each match, then back to town.
 - Decided: mouse-look stays off by default. The owner tried a real mouse and

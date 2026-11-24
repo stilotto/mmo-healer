@@ -2,6 +2,7 @@
 // it without a healer. Each visit is a fresh run: three rooms of trash and
 // Cinderjaw at the end. The controller here walks the party from pull to pull.
 import * as THREE from 'three';
+import { bake } from './bake.js';
 import { makeMob, animateMob, makePlate } from './figure.js';
 import { DUN, DX, collide, label } from './world.js';
 import * as TX from './textures.js';
@@ -22,6 +23,7 @@ const SAY = {
 };
 
 export function buildDungeon(scene, blockers) {
+  const n0 = scene.children.length;
   const L = c => new THREE.MeshLambertMaterial({ color: c });
   const ft = TX.stone(), wt = TX.stone(); ft.repeat.set(0.25, 0.25); wt.repeat.set(0.5, 2);
   const floorM = new THREE.MeshLambertMaterial({ color: 0x9a8070, map: ft }), wallM = new THREE.MeshLambertMaterial({ color: 0x8a6a5a, map: wt });
@@ -60,6 +62,8 @@ export function buildDungeon(scene, blockers) {
   }
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.8, 1, 40), new THREE.MeshBasicMaterial({ color: 0xff7a2a, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
   ring.rotation.x = -Math.PI / 2; ring.position.y = 0.08; scene.add(ring);
+  for (const o of [...fires, ...spin, ring]) o.userData.live = true;
+  bake(scene, scene.children.slice(n0), blockers);
   return { ring, fires, portals: spin, update(dt, t) { for (const f of fires) f.scale.y = 1 + Math.sin(t * 12 + f.position.x) * 0.2; for (const p of spin) p.rotation.z += dt; } };
 }
 

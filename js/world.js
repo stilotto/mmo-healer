@@ -6,6 +6,7 @@ import { canvasTex, mergeParts, at, SHAPES as SH } from './figure.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import * as TX from './textures.js';
 import { addWater, keepOut } from './water.js';
+import { bake } from './bake.js';
 
 // A storybook fir: three stacked cones in a unit box (radius 1, height 1).
 const firGeo = () => mergeGeometries([[1, 0.55, -0.2], [0.76, 0.5, 0.1], [0.5, 0.42, 0.33]].map(([r, h, y]) => new THREE.ConeGeometry(r, h, 8).translate(0, y, 0).toNonIndexed()));
@@ -102,7 +103,7 @@ export function label(text, sub, size = 5) {
 }
 
 export function buildWorld(scene) {
-  const blockers = [], spin = [];
+  const blockers = [], spin = [], n0 = scene.children.length;
 
   // Sky, light, far hills
   scene.background = canvasTex(8, 256, (x, w, h) => {
@@ -362,6 +363,9 @@ export function buildWorld(scene) {
   scene.add(mergeParts(P));
 
   const zone = buildZone(scene, { L, mesh, flat, leaf, stone, stoneD });
+  // Speed: still scenery becomes a few big meshes. Moving or clickable things stay.
+  for (const o of [...spin, board, ship, zone.fire]) o.userData.live = true;
+  bake(scene, scene.children.slice(n0), blockers);
 
   function update(dt, t) {
     zone.update(dt, t);
@@ -375,7 +379,7 @@ export function buildWorld(scene) {
     prop.rotation.x += dt * 14;
     state.arrived = state.docked && !was; state.left = !state.docked && was;
   }
-  return { update, ship: state, blockers, mood, board, lights: { hemi, sun } };
+  return { update, ship: state, blockers, mood, board, grass: zone.grass, lights: { hemi, sun } };
 }
 
 // Greenhollow: the novice lands outside the north gate. A road, a quest camp,
@@ -472,5 +476,5 @@ function buildZone(scene, { L, mesh, flat, leaf, stone, stoneD }) {
   const tm = new THREE.InstancedMesh(blade, new THREE.MeshLambertMaterial({ color: 0xffffff }), tufts.length);
   tufts.forEach(([x, z], i) => { const s = 0.7 + rnd() * 0.9; M.makeScale(s, s * (0.8 + rnd() * 0.6), s); M.setPosition(x, 0, z); tm.setMatrixAt(i, M); tm.setColorAt(i, col.setHSL(0.22 + rnd() * 0.07, 0.55, 0.2 + rnd() * 0.1)); });
   tm.userData.looked = true; tm.receiveShadow = true; scene.add(tm);
-  return { update(dt, t) { fire.scale.y = 1 + Math.sin(t * 13) * 0.18; fire.rotation.y += dt * 4; } };
+  return { fire, grass: tm, update(dt, t) { fire.scale.y = 1 + Math.sin(t * 13) * 0.18; fire.rotation.y += dt * 4; } };
 }

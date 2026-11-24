@@ -2,7 +2,7 @@
 // back hurt from dungeons and catch airships. Out in Greenhollow (zone
 // 'green') they take quests from the warden, hunt monsters, rest, and die if
 // nobody heals them. None of them asked for a healer.
-import { makeFigure, animate, makePlate, CLASSES } from './figure.js';
+import { makeFigure, animate, makePlate, CLASSES, LOD, setFar } from './figure.js';
 import { POI, CAMPS, collide } from './world.js';
 import { WATERS } from './water.js';
 import { npcMaxHp, bandLevel, BANDS } from './game.js';
@@ -263,7 +263,8 @@ export class People {
       if (p.fading) { p.grow -= dt * 3; if (p.grow <= 0) { this.remove(p); continue; } }
       else if (p.grow < 1) p.grow = Math.min(1, p.grow + dt * 2.5);
       g.scale.setScalar(Math.max(0.01, p.grow));
-      g.visible = Math.hypot(p.x - eye.x, p.z - eye.z) < 150;
+      const dist = Math.hypot(p.x - eye.x, p.z - eye.z);
+      g.visible = dist < LOD.show; setFar(p.fig, dist > LOD.far); p.plate.sprite.visible = dist < LOD.plate || ctx.target() === p;
 
       if (p.dead) {
         if ((p.deadT -= dt) <= 0 && !p.fading) { p.fading = true; if (this.near(p)) ctx.chat('c-sys', `${p.name} releases their spirit.`); }

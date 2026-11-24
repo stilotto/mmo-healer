@@ -91,25 +91,40 @@ export function makeFigure(cls, seed = Math.random() * 1000) {
 
   const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
   const head = new THREE.Group(); head.position.y = 1.67; body.add(head);
-  body.add(new THREE.Mesh(torso, vmat));
+  const torsoM = new THREE.Mesh(torso, vmat); body.add(torsoM);
   const limb = (geo, x, y) => { const p = new THREE.Group(); p.position.set(x, y, 0); p.add(new THREE.Mesh(geo, vmat)); body.add(p); return p; };
   const legL = limb(leg, -0.13, 0.76), legR = limb(leg, 0.13, 0.76), armL = limb(arm, -0.37, 1.33), armR = limb(arm, 0.37, 1.33);
   const handR = new THREE.Group(), handL = new THREE.Group(); handR.position.y = handL.position.y = -0.56; armR.add(handR); armL.add(handL);
-  const w = c.weapon;
+  const w = c.weapon, held = [];
   if (w === 'sword') {
+    held.push(['R', 'sword'], ['L', 'shield' + tunic]);
     handR.add(new THREE.Mesh(cached('sword', () => [[S.box(0.06, 0.03, 0.9), 0xdfe4ec, at(0, 0, 0.55)], [S.box(0.28, 0.05, 0.06), 0xd8b45a, at(0, 0, 0.1)], [S.cyl(0.03, 0.03, 0.16, 6), 0x5a3a22, at(0, 0, 0, Math.PI / 2)]]), vmat));
     handL.add(new THREE.Mesh(cached('shield' + tunic, () => [[S.cyl(0.32, 0.32, 0.06, 14), shade(c.tunic, 0.8), at(-0.06, 0.05, 0.05, 0, 0, Math.PI / 2)], [S.sph(0.08, 8, 6), 0xd8b45a, at(-0.1, 0.05, 0.05)]]), vmat));
   } else if (w === 'staff') {
+    held.push(['R', 'staff']);
     handR.add(new THREE.Mesh(cached('staff', () => [[S.cyl(0.035, 0.04, 1.75, 6), 0x7a5430, at(0, 0.3, 0.06)], [S.cyl(0.07, 0.05, 0.14, 6), 0xd8b45a, at(0, 1.12, 0.06)]]), vmat));
     const orb = new THREE.Mesh(G.orb, cls === 'Healer' ? orbMat : mat(shade(c.tunic, 1.4))); orb.position.set(0, 1.26, 0.06); handR.add(orb);
   } else if (w === 'dagger') {
     const d = cached('dagger', () => [[S.box(0.05, 0.025, 0.42), 0xdfe4ec, at(0, 0, 0.26)], [S.box(0.16, 0.04, 0.05), 0x8a6a3a, at(0, 0, 0.05)]]);
-    handR.add(new THREE.Mesh(d, vmat)); handL.add(new THREE.Mesh(d, vmat));
+    handR.add(new THREE.Mesh(d, vmat)); handL.add(new THREE.Mesh(d, vmat)); held.push(['R', 'dagger'], ['L', 'dagger']);
   }
   const sh = new THREE.Mesh(G.shadow, shadowMat); sh.rotation.x = -Math.PI / 2; sh.position.y = 0.03; g.add(sh);
   const hit = new THREE.Mesh(G.hit, hitMat); hit.position.y = 1.05; g.add(hit);
   const sc = 0.95 + r(10) / 100; body.scale.setScalar(sc);
-  return { group: g, body, head, legL, legR, armL, armR, hit, sockets: { head, handR, handL }, phase: r(100) / 10 };
+  // Speed: far away, the whole person is one mesh in a standing pose (see setFar).
+  const farGeo = cache.get('f' + key + w) || (cache.set('f' + key + w, mergeGeometries([
+    torso.clone(), leg.clone().translate(-0.13, 0.76, 0), leg.clone().translate(0.13, 0.76, 0), arm.clone().translate(-0.37, 1.33, 0), arm.clone().translate(0.37, 1.33, 0),
+    ...held.map(([s, k]) => cache.get(k).clone().translate(s === 'R' ? 0.37 : -0.37, 0.77, 0)),
+  ])), cache.get('f' + key + w));
+  const far = new THREE.Mesh(farGeo, vmat); far.visible = false; body.add(far);
+  return { group: g, body, head, torso: torsoM, far, isFar: false, legL, legR, armL, armR, hit, sockets: { head, handR, handL }, phase: r(100) / 10 };
+}
+// How far things are drawn in detail (yards from the healer). Low graphics
+// shortens them (set from main.js).
+export const LOD = { far: 30, plate: 55, show: 150 };
+export function setFar(f, far) {
+  if (f.isFar === far) return; f.isFar = far;
+  f.far.visible = far; f.torso.visible = f.legL.visible = f.legR.visible = f.armL.visible = f.armR.visible = !far;
 }
 
 // mode: idle | walk | attack | cast | cheer | sit | dead | wave | bow | dance

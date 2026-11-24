@@ -1,7 +1,7 @@
 // The monsters of Greenhollow: they graze around their camp, fight whoever
 // attacks them, sometimes jump a passer-by, and come back a while after dying.
 // They ignore the healer.
-import { makeMob, animateMob, makePlate, MOBS } from './figure.js';
+import { makeMob, animateMob, makePlate, MOBS, LOD } from './figure.js';
 import { CAMPS, collide, WALL_R } from './world.js';
 import { swimming } from './water.js';
 import { bandLevel } from './game.js';
@@ -38,7 +38,8 @@ export class Mobs {
     const eye = this.ctx.eye(), folk = this.ctx.people.list;
     for (const m of this.list) {
       const g = m.fig.group;
-      g.visible = Math.hypot(m.x - eye.x, m.z - eye.z) < 150;
+      const dist = Math.hypot(m.x - eye.x, m.z - eye.z);
+      g.visible = dist < LOD.show;
       if (m.grow < 1) m.grow = Math.min(1, m.grow + dt * 2);
       let anim = 'idle';
       if (m.state === 'dead') {
@@ -47,7 +48,7 @@ export class Mobs {
         if (m.deadT <= 0) this.spawn(m.camp, m);
         animateMob(m.fig, anim, t); g.position.set(m.x, 0, m.z); m.plate.sprite.visible = false; continue;
       }
-      m.plate.sprite.visible = true; g.scale.setScalar(Math.max(0.01, m.grow));
+      m.plate.sprite.visible = dist < LOD.plate || (this.ctx.target && this.ctx.target() === m); g.scale.setScalar(Math.max(0.01, m.grow));
       if (m.state === 'fight') {
         let f = m.foe;
         if (!f || f.dead || f.gone || Math.hypot(f.x - m.camp.x, f.z - m.camp.z) > m.camp.r + 45 || Math.hypot(f.x, f.z) < WALL_R + 4 || swimming(f)) {   // the town is safe, and they do not swim

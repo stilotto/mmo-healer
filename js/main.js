@@ -9,7 +9,7 @@ import { Dungeon } from './dungeon.js';
 import { DUN, RAID, PIT } from './world.js';
 import { Pit, TEAMS } from './pit.js';
 import { Raid, RAID_LEVEL } from './raid.js';
-import { makeFigure, animate, makePlate, dress } from './figure.js';
+import { makeFigure, animate, makePlate, dress, LOD } from './figure.js';
 import { Loot } from './loot.js';
 import { People } from './people.js';
 import { Player } from './player.js';
@@ -22,7 +22,10 @@ import { Clock } from './clock.js';
 import { ripple, updateWater, SURFACE } from './water.js';
 
 const canvas = document.getElementById('view');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+// Low graphics (saved or in the address) also starts without antialiasing,
+// which can only be chosen when the renderer is made.
+const gfx0 = (() => { try { return new URLSearchParams(location.search).get('quality') || localStorage.getItem('mmoHealerGfx') || 'auto'; } catch (e) { return 'auto'; } })();
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: gfx0 !== 'low', powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 900);
@@ -418,7 +421,7 @@ function start(name) {
     float: (p, text, cls) => UI.float(p, text, cls),
     onHot: (p, amt) => { UI.sfx('tick'); fx.emit(p.x, 0.8, p.z, { n: 5, color: 0x7dffc0, spread: 0.45, up: 1.6, life: 0.9 }); const e = people.heal(p, amt, false, true); addThreat(p, e); earn(e, p); }, hurtMe,
   });
-  mobs = new Mobs(scene, { S, people, me: meUnit, aggroed, eye: () => player, float: (p, text, cls) => UI.float(p, text, cls) });
+  mobs = new Mobs(scene, { S, people, me: meUnit, aggroed, target: () => target, eye: () => player, float: (p, text, cls) => UI.float(p, text, cls) });
   people.ctx.mobs = mobs;
   dungeon = new Dungeon(scene, { S, people, world, me: meUnit, aggroed, boom: (x, z) => fx.emit(x, 0.6, z, { n: 40, color: 0xff7a2a, spread: 0.8, up: 1.4, jitter: 3, life: 0.8 }), chat: UI.chat, float: (p, text, cls) => UI.float(p, text, cls), warn: text => { UI.toast(text, '#ff7a2a'); UI.sfx('err'); },
     bossLoot(helped) {
@@ -464,14 +467,37 @@ function start(name) {
   player.look = !!S.look; UI.setLook(player.look, false);
   player.enabled = true; G.save(S);
   look.onLower = n => UI.chat('c-sys', ['', 'Graphics: soft glow turned off to keep things smooth.', 'Graphics: shadows turned off to keep things smooth.', 'Graphics: resolution lowered to keep things smooth.'][n]);
-  window.game = { me: meUnit, get corpse() { return corpse; }, get casting() { return casting; }, S, people, mobs, dungeon, player, DUN, scene, renderer, cast, tabTarget, hurtTarget, toggleLook, UI, G, Chat, get social() { return social; }, get loot() { return loot; }, get fishing() { return fishing; }, get clock() { return clock; }, get raid() { return raid; }, get pit() { return pit; }, RAID, get meal() { return meal; }, eat, fish, secondWind, release, cds, get T() { return T; }, fig: me, dressed, get target() { return target; }, set target(p) { target = p; } };
+  window.game = { me: meUnit, get corpse() { return corpse; }, get casting() { return casting; }, S, people, mobs, dungeon, player, DUN, scene, renderer, cast, tabTarget, hurtTarget, toggleLook, UI, G, Chat, get social() { return social; }, get loot() { return loot; }, get fishing() { return fishing; }, get clock() { return clock; }, get raid() { return raid; }, get pit() { return pit; }, RAID, get meal() { return meal; }, eat, fish, secondWind, release, cds, get T() { return T; }, fig: me, dressed, get target() { return target; }, set target(p) { target = p; }, prof, look, world };
+}
+// ?prof: time each part of the frame (ms per frame, averaged each second),
+// shown in a small box and kept in game.prof for the tests.
+const PROF = new URLSearchParams(location.search).has('prof'), prof = { acc: {}, n: 0, last: {}, t: 0 };
+let markT = 0;
+const mark = k => { if (!PROF) return; const n = performance.now(); prof.acc[k] = (prof.acc[k] || 0) + n - markT; markT = n; };
+let profBox = null;
+function profFrame(dt) {
+  prof.n++; if ((prof.t += dt) < 1) return;
+  const i = renderer.info.render, out = {}; renderer.info.autoReset = false;
+  for (const k in prof.acc) out[k] = +(prof.acc[k] / prof.n).toFixed(2);
+  out.fps = +(prof.n / prof.t).toFixed(1); out.calls = Math.round(i.calls / prof.n); out.tris = Math.round(i.triangles / prof.n); out.folk = people ? people.list.length : 0; out.figs = people ? people.list.filter(p => p.fig && p.fig.group.visible).length : 0; i.calls = i.triangles = 0;
+  prof.last = out; prof.acc = {}; prof.n = 0; prof.t = 0;
+  if (!profBox) { profBox = document.createElement('pre'); profBox.style.cssText = 'position:fixed;left:4px;bottom:4px;z-index:99;margin:0;padding:4px 6px;background:#000a;color:#bfe;font:10px/1.25 monospace;pointer-events:none'; document.body.appendChild(profBox); }
+  profBox.textContent = Object.entries(out).map(([k, v]) => k + ' ' + v).join('\n');
 }
 const nameBox = document.getElementById('cname'); nameBox.value = S.name || '';
 document.getElementById('enter').onclick = () => start(nameBox.value.trim().slice(0, 12));
 nameBox.addEventListener('keydown', e => { if (e.key === 'Enter') start(nameBox.value.trim().slice(0, 12)); });
 if (new URLSearchParams(location.search).has('go')) start('Tester');
 
-const frameClock = new THREE.Clock(); let T = 0;
+const frameClock = new THREE.Clock(); let T = 0, lowNow = null;
+// Low graphics (chosen, or reached by stepping down) also draws less: people
+// in full detail and name plates only close by, less grass, fewer sparkles.
+function lowGfx(low) {
+  lowNow = low;
+  Object.assign(LOD, low ? { far: 18, plate: 40, show: 110 } : { far: 30, plate: 55, show: 150 });
+  if (world.grass) world.grass.count = low ? Math.round(world.grass.instanceMatrix.count / 3) : world.grass.instanceMatrix.count;
+  fx.thin = low ? 0.5 : 1;
+}
 function tick() {
   requestAnimationFrame(tick);
   const dt = Math.min(0.05, frameClock.getDelta());
@@ -480,17 +506,20 @@ function tick() {
     camera.position.set(Math.sin(T * 0.08) * 46, 16, Math.cos(T * 0.08) * 46); camera.lookAt(0, 4, 0);
     look.render(); return;
   }
+  markT = PROF ? performance.now() : 0;
+  if (look.low !== lowNow) lowGfx(look.low);
   for (let i = 0; i < SPEED; i++) step(dt);   // ?speed=N runs the world faster, for tests
-  look.update(dt, player);
-  fx.update(dt, player);
-  look.render();
+  look.update(dt, player); mark('look');
+  fx.update(dt, player); mark('fx');
+  look.render(); mark('render');
+  if (PROF) profFrame(dt);
 }
 const SPEED = Math.max(1, Math.min(20, +new URLSearchParams(location.search).get('speed') || 1));
 function step(dt) {
   T += dt; frame++;
-  world.update(dt, T);
+  world.update(dt, T); mark('world');
   player.dead = meUnit.dead && !ghost; player.ghost = ghost; player.waterborne = G.rank(S, 'water') > 0;
-  player.update(dt);
+  player.update(dt); mark('player');
   { const st0 = G.stats(S); meUnit.name = S.name; meUnit.level = S.level; meUnit.x = player.x; meUnit.z = player.z;
     if (meUnit.maxHp !== st0.maxHp) { meUnit.hp = meUnit.maxHp = st0.maxHp; }
     for (let h = meUnit.hots.length - 1; h >= 0; h--) { const o = meUnit.hots[h]; if ((o.t -= dt) <= 0) { o.t += o.every; o.left--; const k = o.left <= 0 && o.bloom ? o.tick * 3 : o.tick; meUnit.hp = Math.min(meUnit.maxHp, meUnit.hp + k); UI.float(meUnit, '+' + k, ''); if (o.left <= 0) meUnit.hots.splice(h, 1); } }
@@ -517,16 +546,16 @@ function step(dt) {
     else if (!player.speed && splashT <= -1.4) { splashT = 0; ripple(player.x, player.z, 1, 0.3); }
   }
   fishing.update(dt, T);
-  clock.update(dt, T);
+  clock.update(dt, T); mark('misc');
   { const can = !!(fishing.active || (!meUnit.dead && fishing.spot()));
     if (can !== UI.fishable()) { UI.fishable(can); if (can && !S.seenBank) { S.seenBank = true; UI.chat('c-sys', 'You could fish here. Press G or the Fish button, then click when the float dips.'); } } }
-  people.update(dt, T);
-  social.update(dt, T);
-  loot.update(dt, T);
-  mobs.update(dt, T);
+  people.update(dt, T); mark('people');
+  social.update(dt, T); mark('social');
+  loot.update(dt, T); mark('loot');
+  mobs.update(dt, T); mark('mobs');
   dungeon.update(dt, T);
   raid.update(dt, T);
-  pit.update(dt, T);
+  pit.update(dt, T); mark('instances');
   if (recapT > 0) { recapT -= dt; UI.recapCount(recapT); if (recapT <= 0) leavePit(); }
   // Portals: into Emberdeep from town, and back out again.
   if (zoneNow === 'hub' && Math.hypot(POI.dungeon.px - player.x, POI.dungeon.pz - player.z) < 2.2) {
@@ -582,6 +611,7 @@ function step(dt) {
   UI.hint(fishing.active ? fishing.hint() : sp ? sp.msg : S.healed > 150 ? '' : !target ? 'Find someone hurt and press Tab to target them' :
     target.dead ? 'Press 3 to Revive (stand still)' : target.hp >= target.maxHp ? `${target.name} is at full health. Tab to someone hurt (red or yellow bar)` : 'Press 1 to cast Mend (stand still), or 2 for Renew');
 
+  mark('rest');
   const inDun = zoneNow === 'dungeon' && dungeon.active, inRaid = zoneNow === 'raid' && raid.active, inPit = zoneNow === 'pvp' && pit.active;
   let list;
   if (inPit) list = pit.frameList();
@@ -590,8 +620,8 @@ function step(dt) {
   else list = people.list.filter(p => p.grow >= 1 && !p.fading && (p.dead || p.hp < p.maxHp) && distTo(p) < 40)
     .sort((a, b) => (a.dead ? 1.5 : a.hp / a.maxHp) - (b.dead ? 1.5 : b.hp / b.maxHp));
   UI.update(dt, { stats: st, combat: inCombat(), cds, T, target, dist: target ? distTo(target) : 0, casting, gcd, gcdMax, project, dt, me: meUnit, drinking, eating: !!meal, list, party: inDun, distOf: distTo,
-    raid: inRaid || inPit, cols: inPit ? 2 : 4, pit: inPit ? pit.board() : null, boss: inDun ? dungeon.bossInfo() : inRaid ? raid.bossInfo() : null, moodOf: p => p.isMe ? '' : social.label(p) });
-  if (frame % 4 === 0) UI.drawMap(player, player.yaw, people.list, target, corpse, allMobs(), loot.drops);
+    raid: inRaid || inPit, cols: inPit ? 2 : 4, pit: inPit ? pit.board() : null, boss: inDun ? dungeon.bossInfo() : inRaid ? raid.bossInfo() : null, moodOf: p => p.isMe ? '' : social.label(p) }); mark('hud');
+  if (frame % 4 === 0) UI.drawMap(player, player.yaw, people.list, target, corpse, allMobs(), loot.drops); mark('map');
   if ((saveT += dt) > 15) { saveT = 0; G.save(S); }
 }
 tick();

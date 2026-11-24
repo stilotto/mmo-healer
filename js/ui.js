@@ -8,7 +8,11 @@ import { chat, chatHtml } from './chat.js';
 import { FAME, fameTier } from './memory.js';
 export { chat, chatHtml };
 
-const $ = id => document.getElementById(id);
+const ids = {};
+const $ = id => ids[id] && ids[id].isConnected ? ids[id] : (ids[id] = document.getElementById(id));
+// Speed: the HUD runs every frame, so only touch the page when a value changes.
+const txt = (e, v) => { v = String(v); if (e._t !== v) { e._t = v; e.textContent = v; } };
+const sty = (e, k, v) => { v = String(v); const c = e._s || (e._s = {}); if (c[k] !== v) { c[k] = v; e.style[k] = v; } };
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
 const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 let S, H, slots = [], floats = [], errT = 0, toastT = 0;
@@ -115,8 +119,8 @@ export function drawTalents() {
     box.append(d);
   }
 }
-export function err(text) { const e = $('err'); e.textContent = text; e.style.opacity = 1; errT = 1.6; sfx('err'); }
-export function toast(text, color) { const e = $('toast'); e.textContent = text; e.style.color = color || ''; e.style.opacity = 1; toastT = 2.6; }
+export function err(text) { const e = $('err'); txt(e, text); sty(e, 'opacity', 1); errT = 1.6; sfx('err'); }
+export function toast(text, color) { const e = $('toast'); txt(e, text); sty(e, 'color', color || ''); sty(e, 'opacity', 1); toastT = 2.6; }
 export function zone(name, band) { $('zone').textContent = name; toast(name + (band ? ` (levels ${band[0]} to ${band[1]})` : '')); }
 export function hint(text) { const h = $('hint'); if (h.textContent !== text) h.textContent = text; }
 const qcol = it => it.unique ? '#ffa030' : RARITY_COLOR[it.q], qcls = it => it ? (it.unique ? 'qu' : 'q' + it.q) : '';
@@ -217,7 +221,7 @@ export function drawBag() {
   $('ucount').textContent = Object.keys(S.uniques).filter(k => UNIQUES[k]).length + ' / ' + Object.keys(UNIQUES).length;
 }
 
-const setBar = (id, frac, text) => { $(id).style.transform = `scaleX(${Math.max(0, Math.min(1, frac))})`; if (text !== undefined) { const t = $(id + 't'); if (t && t.textContent !== text) t.textContent = text; } };
+const setBar = (id, frac, text) => { sty($(id), 'transform', `scaleX(${Math.max(0, Math.min(1, frac))})`); if (text !== undefined) { const t = $(id + 't'); if (t) txt(t, text); } };
 
 // Called every frame with what the HUD needs to show.
 export function update(dt, v) {
@@ -225,46 +229,46 @@ export function update(dt, v) {
   setBar('php', v.me.hp / v.me.maxHp, `${Math.ceil(v.me.hp)} / ${v.me.maxHp}`);
   $('pframe').classList.toggle('sel', v.target === v.me); $('pframe').classList.toggle('combat', !!v.combat);
   const ps = v.drinking ? (v.eating ? 'Eating' : 'Drinking') + (v.me.hots.length ? ' · ❋' : '') : (v.me.hots.length ? '❋ Renew' : '') + (v.me.ward ? ' ◈' : '') + (v.me.surge ? ' ⚡ Surge' : '');
-  if ($('psub').textContent !== ps) $('psub').textContent = ps;
+  txt($('psub'), ps);
   pitBoard(v.pit);
-  if (v.raid) raidFrames(v); else { if (rcells.length) $('raidf').style.display = 'none'; frames(v); }
+  if (v.raid) raidFrames(v); else { if (rcells.length) sty($('raidf'), 'display', 'none'); frames(v); }
   boss(v);
   setBar('pmp', S.mana / st.maxMana, `${Math.floor(S.mana)} / ${st.maxMana}`);
-  $('pname').textContent = `${S.name}  ·  ${S.level}`;
+  txt($('pname'), `${S.name}  ·  ${S.level}`);
   const t = v.target, tf = $('tframe');
-  tf.style.display = t ? 'block' : 'none';
+  sty(tf, 'display', t ? 'block' : 'none');
   if (t) {
-    $('tname').textContent = t.name; $('tname').style.color = CLASSES[t.cls].color; $('tport').textContent = t.level;
+    txt($('tname'), t.name); sty($('tname'), 'color', CLASSES[t.cls].color); txt($('tport'), t.level);
     setBar('thp', t.hp / t.maxHp, t.dead ? 'Dead' : `${Math.ceil(t.hp)} / ${t.maxHp}`);
-    $('thp').style.background = t.hp < t.maxHp * 0.35 ? '#d83a2a' : '';
-    $('tsub').textContent = `${t.cls}${t.dead ? ' · Dead' : t.duel ? ' · Duelling' : t.state === 'hunt' ? ' · In combat' : t.resting ? ' · Resting' : ''}${t.hots.length ? ' · ❋ Renew' : ''}${v.moodOf && v.moodOf(t) ? ' · ' + v.moodOf(t) : ''} · ${Math.round(v.dist)} yd`;
+    sty($('thp'), 'background', t.hp < t.maxHp * 0.35 ? '#d83a2a' : '');
+    txt($('tsub'), `${t.cls}${t.dead ? ' · Dead' : t.duel ? ' · Duelling' : t.state === 'hunt' ? ' · In combat' : t.resting ? ' · Resting' : ''}${t.hots.length ? ' · ❋ Renew' : ''}${v.moodOf && v.moodOf(t) ? ' · ' + v.moodOf(t) : ''} · ${Math.round(v.dist)} yd`);
   }
   const cb = $('castbar');
-  if (v.casting) { cb.style.visibility = 'visible'; cb.firstElementChild.style.width = (v.casting.t / v.casting.dur * 100) + '%'; cb.lastElementChild.textContent = v.casting.spell.name; }
-  else cb.style.visibility = 'hidden';
+  if (v.casting) { sty(cb, 'visibility', 'visible'); sty(cb.firstElementChild, 'width', (v.casting.t / v.casting.dur * 100) + '%'); txt(cb.lastElementChild, v.casting.spell.name); }
+  else sty(cb, 'visibility', 'hidden');
   SPELLS.forEach((sp, i) => {
-    const lk = slots[i].querySelector('.lk'); if (lk) lk.style.display = knows(S, sp) ? 'none' : '';
+    const lk = slots[i]._lk === undefined ? (slots[i]._lk = slots[i].querySelector('.lk')) : slots[i]._lk; if (lk) sty(lk, 'display', knows(S, sp) ? 'none' : '');
     if (sp.talent) { const d = knows(S, sp) ? '' : 'none'; if (slots[i].style.display !== d) slots[i].style.display = d; }
     slots[i].classList.toggle('dim', v.me.dead || (!sp.self && (!t || v.dist > sp.range)) || S.mana < sp.mana);
     const own = sp.cd && v.cds[sp.id] > v.T ? (v.cds[sp.id] - v.T) / sp.cd : 0;
-    slots[i].querySelector('.cd').style.height = Math.max(own, v.gcd > 0 ? v.gcd / v.gcdMax : 0) * 100 + '%';
+    sty(slots[i]._cd || (slots[i]._cd = slots[i].querySelector('.cd')), 'height', Math.max(own, v.gcd > 0 ? v.gcd / v.gcdMax : 0) * 100 + '%');
   });
   fame();
   if ((evT -= v.dt) <= 0) { evT = 0.5; drawEvents(); }
   if (bagOpen && doll) doll.render(dt);
-  const need = xpNeed(S.level); $('xp').firstElementChild.style.width = (S.xp / need * 100) + '%'; $('xp').lastElementChild.textContent = `${S.xp} / ${need} XP`;
-  if (errT > 0 && (errT -= dt) <= 0) $('err').style.opacity = 0;
-  if (toastT > 0 && (toastT -= dt) <= 0) $('toast').style.opacity = 0;
+  const need = xpNeed(S.level); sty($('xp').firstElementChild, 'width', (S.xp / need * 100) + '%'); txt($('xp').lastElementChild, `${S.xp} / ${need} XP`);
+  if (errT > 0 && (errT -= dt) <= 0) sty($('err'), 'opacity', 0);
+  if (toastT > 0 && (toastT -= dt) <= 0) sty($('toast'), 'opacity', 0);
   for (let i = floats.length - 1; i >= 0; i--) {
     const f = floats[i]; f.t += dt;
     if (f.t > f.life) { f.e.remove(); floats.splice(i, 1); continue; }
     const k = f.t / f.life, p = v.project(f.pos, 2.3);
-    if (!p || p.d > 55) { f.e.style.display = 'none'; continue; }
+    if (!p || p.d > 55) { sty(f.e, 'display', 'none'); continue; }
     const near = Math.max(0.5, Math.min(1.25, 16 / p.d));           // smaller further away
     const pop = calm ? 1 : f.t < 0.08 ? 0.6 + f.t / 0.08 * (f.big ? 1.1 : 0.7) : f.t < 0.22 ? (f.big ? 1.7 : 1.3) - (f.t - 0.08) / 0.14 * (f.big ? 0.5 : 0.3) : f.big ? 1.2 : 1;
     const rise = (1 - (1 - k) * (1 - k)) * 70 * near, drift = calm ? 0 : f.dx * k * near;
-    f.e.style.display = ''; f.e.style.opacity = k < 0.6 ? 1 : (1 - k) / 0.4;
-    f.e.style.transform = `translate(${p.x + drift}px,${p.y - rise}px) translate(-50%,-50%) scale(${pop * near})`;
+    sty(f.e, 'display', ''); sty(f.e, 'opacity', k < 0.6 ? 1 : (1 - k) / 0.4);
+    sty(f.e, 'transform', `translate(${p.x + drift}px,${p.y - rise}px) translate(-50%,-50%) scale(${pop * near})`);
   }
 }
 
@@ -351,7 +355,7 @@ export function pitRecap(r) {
 export function recapCount(t) { const c = $('rcount'); if (c) { const v = '(' + Math.ceil(Math.max(0, t)) + ')'; if (c.textContent !== v) c.textContent = v; } }
 // The Pit's scoreboard: score, clock, flags, and how each side sees you.
 function pitBoard(b) {
-  const el2 = $('pitb'); el2.style.display = b ? 'block' : 'none'; if (!b) return;
+  const el2 = $('pitb'); sty(el2, 'display', b ? 'block' : 'none'); if (!b) return;
   const t = Math.ceil(b.t), clock = Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
   const st = k => b.stand[k] ? ` <small class="${b.stand[k] === 'on your side' ? 'g' : 'r'}">${b.stand[k]}</small>` : '';
   const html = `<div><b style="color:#ffc040">Sunward ${b.score.sun}</b> <span>${b.end || (b.prep ? 'starts in ' + Math.ceil(b.prep) : clock)}</span> <b style="color:#ff4a5a">${b.score.dusk} Duskward</b></div>` +
@@ -360,7 +364,7 @@ function pitBoard(b) {
 }
 function raidFrames(v) {
   const box = $('raidf'), cols = v.cols || 4, rows = cols === 4 ? 5 : 6;      // the raid in groups of five; the Pit as two teams of six
-  box.style.display = 'grid'; $('party').style.display = 'none'; box.style.gridTemplateColumns = `repeat(${cols}, var(--rcw))`;
+  sty(box, 'display', 'grid'); sty($('party'), 'display', 'none'); sty(box, 'gridTemplateColumns', `repeat(${cols}, var(--rcw))`);
   while (rcells.length < 24) {
     const c = el('div', 'rc', '<i></i><span></span><b></b>'), i = rcells.length;
     c.onclick = () => { const u = rcells[i].u; if (u) H.targetUnit(u); }; box.append(c);
@@ -368,19 +372,19 @@ function raidFrames(v) {
   }
   rcells.forEach((w, i) => {
     const u = i < cols * rows ? v.list[(i % cols) * rows + Math.floor(i / cols)] : null;        // column = group or team
-    w.c.style.display = i < cols * rows ? '' : 'none';
-    w.u = u; w.c.style.visibility = u ? '' : 'hidden'; if (!u) return;
-    w.c.style.borderLeft = u.team ? `3px solid ${u.team === 'sun' ? '#ffc040' : '#ff4a5a'}` : '';
+    sty(w.c, 'display', i < cols * rows ? '' : 'none');
+    w.u = u; sty(w.c, 'visibility', u ? '' : 'hidden'); if (!u) return;
+    sty(w.c, 'borderLeft', u.team ? `3px solid ${u.team === 'sun' ? '#ffc040' : '#ff4a5a'}` : '');
     const f = u.dead ? 0 : u.hp / u.maxHp;
-    w.fill.style.transform = `scaleX(${f})`; w.fill.style.background = f < 0.35 ? '#c0302a' : CLASSES[u.cls].color;
-    if (w.t.textContent !== u.name) w.t.textContent = u.name;
+    sty(w.fill, 'transform', `scaleX(${f})`); sty(w.fill, 'background', f < 0.35 ? '#c0302a' : CLASSES[u.cls].color);
+    if (w.t.textContent !== u.name) txt(w.t, u.name);
     const mark = (u.dots && u.dots.length ? '●' : '') + (u.hots.length ? '❋' : '') + (u.tank ? '⛨' : u.healer ? '✚' : '');
-    if (w.d.textContent !== mark) w.d.textContent = mark;
+    if (w.d.textContent !== mark) txt(w.d, mark);
     w.c.classList.toggle('sel', v.target === u); w.c.classList.toggle('dead', !!u.dead); w.c.classList.toggle('far', v.distOf(u) > 40);
   });
 }
 function frames(v) {
-  $('party').style.display = '';
+  sty($('party'), 'display', '');
   const box = $('party');
   if ((pickT -= v.dt) <= 0 || v.list !== frames.list) {
     pickT = 1; frames.list = v.list;
@@ -388,7 +392,7 @@ function frames(v) {
     shown = [...keep, ...want.filter(u => !keep.includes(u))].slice(0, 5);
     if (v.party) shown = v.list.slice(0, 5);
   }
-  $('phead').textContent = shown.length ? v.party ? 'Their party (not yours)' : 'Nearby' : '';
+  txt($('phead'), shown.length ? v.party ? 'Their party (not yours)' : 'Nearby' : '');
   while (rows.length < 5) {
     const r = el('div', 'pf', '<div class="fill"></div><div class="inc"></div><div class="wd"></div><div class="t"></div><div class="s"><span></span><span></span></div><kbd></kbd>');
     const i = rows.length; r.onclick = () => H.pick(i); r.querySelector('kbd').textContent = 'F' + (i + 2); box.append(r);
@@ -396,29 +400,29 @@ function frames(v) {
   }
   rows.forEach((w, i) => {
     const u = shown[i];
-    w.r.style.display = u ? '' : 'none'; if (!u) return;
+    sty(w.r, 'display', u ? '' : 'none'); if (!u) return;
     const f = u.dead ? 0 : u.hp / u.maxHp;
-    w.fill.style.transform = `scaleX(${f})`;
-    w.fill.style.background = f < 0.35 ? '#c0302a' : CLASSES[u.cls].color; w.fill.style.opacity = f < 0.35 ? 1 : 0.62;   // class-coloured, red when low
+    sty(w.fill, 'transform', `scaleX(${f})`);
+    sty(w.fill, 'background', f < 0.35 ? '#c0302a' : CLASSES[u.cls].color); sty(w.fill, 'opacity', f < 0.35 ? 1 : 0.62);   // class-coloured, red when low
     let inc = 0;
     if (v.casting && v.casting.target === u) inc = Math.min(1 - f, healEstimate(S, v.casting.spell) / u.maxHp);
-    w.inc.style.left = (f * 100) + '%'; w.inc.style.width = (inc * 100) + '%';
-    w.wd.style.width = u.ward ? Math.min(100, u.ward.amt / u.maxHp * 100) + '%' : '0';
-    if (w.t.textContent !== u.name) w.t.textContent = u.name;
+    sty(w.inc, 'left', (f * 100) + '%'); sty(w.inc, 'width', (inc * 100) + '%');
+    sty(w.wd, 'width', u.ward ? Math.min(100, u.ward.amt / u.maxHp * 100) + '%' : '0');
+    if (w.t.textContent !== u.name) txt(w.t, u.name);
     const icons = (u.hots.length ? '❋' : '') + (u.ward ? '◈' : '') + (u.dots && u.dots.length ? '<b style="color:#ff5a4a">●</b>' : '');
     if (w.a.innerHTML !== icons) w.a.innerHTML = icons;
-    const txt = u.dead ? 'Dead' : Math.round(f * 100) + '%'; if (w.b.textContent !== txt) w.b.textContent = txt;
+    const pct = u.dead ? 'Dead' : Math.round(f * 100) + '%'; txt(w.b, pct);
     w.r.classList.toggle('sel', v.target === u); w.r.classList.toggle('dead', !!u.dead); w.r.classList.toggle('far', v.distOf(u) > 40);
   });
 }
 function boss(v) {
   const b = v.boss, box = $('boss');
-  box.style.display = b ? 'block' : 'none'; if (!b) return;
-  if ($('bname').textContent !== b.name) $('bname').textContent = b.name;
+  sty(box, 'display', b ? 'block' : 'none'); if (!b) return;
+  if ($('bname').textContent !== b.name) txt($('bname'), b.name);
   setBar('bhp', b.hp / b.maxHp, Math.round(b.hp / b.maxHp * 100) + '%');
   const c = $('bcast');
-  c.style.visibility = b.casting ? 'visible' : 'hidden';
-  if (b.casting) { c.firstElementChild.style.width = (b.casting.k * 100) + '%'; c.lastElementChild.textContent = b.casting.name; }
+  sty(c, 'visibility', b.casting ? 'visible' : 'hidden');
+  if (b.casting) { sty(c.firstElementChild, 'width', (b.casting.k * 100) + '%'); txt(c.lastElementChild, b.casting.name); }
 }
 
 // Death: "dead" offers Release Spirit; "ghost" says where to run; "body"

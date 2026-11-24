@@ -5,6 +5,7 @@
 // curses, who calls Shades and enrages at the end. Like Emberdeep, each visit
 // is a fresh raid, and nobody asked for a healer.
 import * as THREE from 'three';
+import { bake } from './bake.js';
 import { makeMob, animateMob, makePlate, makeFigure, animate } from './figure.js';
 import { RAID, collide, label } from './world.js';
 import * as TX from './textures.js';
@@ -31,6 +32,7 @@ const KINDS = {
 
 // Crystal and stone, open to a dusk sky, with floating shards about the edges.
 export function buildRaid(scene, blockers) {
+  const n0 = scene.children.length;
   const ft = TX.stone(), wt = TX.stone(); wt.repeat.set(0.5, 1);
   const wallM = new THREE.MeshLambertMaterial({ color: 0x7a6a8a, map: wt });
   for (const [x0, z0, x1, z1] of RAID.rects) {
@@ -69,6 +71,8 @@ export function buildRaid(scene, blockers) {
   }
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.8, 1, 40), new THREE.MeshBasicMaterial({ color: 0xc08aff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
   ring.rotation.x = -Math.PI / 2; ring.position.y = 0.08; scene.add(ring);
+  for (const o of [...floaters, ...spin, ring]) o.userData.live = true;
+  bake(scene, scene.children.slice(n0), blockers);
   return { ring, portals: spin, update(dt, t) { for (const p of spin) p.rotation.z += dt; for (const c of floaters) { c.rotation.y += dt * 0.6; c.position.y = c.userData.y + Math.sin(t + c.position.x) * 0.4; } } };
 }
 
