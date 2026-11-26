@@ -10,28 +10,29 @@
  "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js",
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/",
-  "./js/bake.js": "./js/bake.js?v=20261124005328",
-  "./js/chat.js": "./js/chat.js?v=20261124005328",
-  "./js/clock.js": "./js/clock.js?v=20261124005328",
-  "./js/doll.js": "./js/doll.js?v=20261124005328",
-  "./js/dungeon.js": "./js/dungeon.js?v=20261124005328",
-  "./js/figure.js": "./js/figure.js?v=20261124005328",
-  "./js/fishing.js": "./js/fishing.js?v=20261124005328",
-  "./js/fx.js": "./js/fx.js?v=20261124005328",
-  "./js/game.js": "./js/game.js?v=20261124005328",
-  "./js/look.js": "./js/look.js?v=20261124005328",
-  "./js/loot.js": "./js/loot.js?v=20261124005328",
-  "./js/memory.js": "./js/memory.js?v=20261124005328",
-  "./js/mobs.js": "./js/mobs.js?v=20261124005328",
-  "./js/people.js": "./js/people.js?v=20261124005328",
-  "./js/pit.js": "./js/pit.js?v=20261124005328",
-  "./js/player.js": "./js/player.js?v=20261124005328",
-  "./js/raid.js": "./js/raid.js?v=20261124005328",
-  "./js/social.js": "./js/social.js?v=20261124005328",
-  "./js/textures.js": "./js/textures.js?v=20261124005328",
-  "./js/ui.js": "./js/ui.js?v=20261124005328",
-  "./js/water.js": "./js/water.js?v=20261124005328",
-  "./js/world.js": "./js/world.js?v=20261124005328"
+  "./js/bake.js": "./js/bake.js?v=20261126152451",
+  "./js/chat.js": "./js/chat.js?v=20261126152451",
+  "./js/clock.js": "./js/clock.js?v=20261126152451",
+  "./js/doll.js": "./js/doll.js?v=20261126152451",
+  "./js/dungeon.js": "./js/dungeon.js?v=20261126152451",
+  "./js/figure.js": "./js/figure.js?v=20261126152451",
+  "./js/fishing.js": "./js/fishing.js?v=20261126152451",
+  "./js/fx.js": "./js/fx.js?v=20261126152451",
+  "./js/game.js": "./js/game.js?v=20261126152451",
+  "./js/look.js": "./js/look.js?v=20261126152451",
+  "./js/loot.js": "./js/loot.js?v=20261126152451",
+  "./js/memory.js": "./js/memory.js?v=20261126152451",
+  "./js/mobs.js": "./js/mobs.js?v=20261126152451",
+  "./js/people.js": "./js/people.js?v=20261126152451",
+  "./js/pit.js": "./js/pit.js?v=20261126152451",
+  "./js/player.js": "./js/player.js?v=20261126152451",
+  "./js/raid.js": "./js/raid.js?v=20261126152451",
+  "./js/social.js": "./js/social.js?v=20261126152451",
+  "./js/textures.js": "./js/textures.js?v=20261126152451",
+  "./js/tour.js": "./js/tour.js?v=20261126152451",
+  "./js/ui.js": "./js/ui.js?v=20261126152451",
+  "./js/water.js": "./js/water.js?v=20261126152451",
+  "./js/world.js": "./js/world.js?v=20261126152451"
  }
 }</script>
 <style>
@@ -169,6 +170,11 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
 #help .opt button{font:700 11px 'Nunito Sans',sans-serif;background:#2a2418;color:#ccc;border:1px solid #6a5a40;border-radius:4px;padding:2px 8px;margin:0 3px 3px 0;cursor:pointer}
 #help .opt button.on{background:#4a3a18;color:var(--gold);border-color:var(--gold)}
 @media (max-width:600px){#help .cols{grid-template-columns:1fr}}
+#speedr{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:760px;max-width:calc(100% - 8px);max-height:calc(100% - 16px);background:rgba(14,12,10,.97);border:1px solid var(--gold);border-radius:6px;padding:8px 10px;display:none;z-index:7;font-size:12px}
+#speedr h3{margin:0 0 4px;font:600 14px Cinzel,serif;color:var(--gold);display:flex;justify-content:space-between}#speedr h3 b{cursor:pointer;color:#ccc}
+#speedr p{margin:0 0 4px;color:#bbb}
+#speedr textarea{width:100%;box-sizing:border-box;height:min(340px,calc(100vh - 120px));background:#0a0908;color:#dfe;border:1px solid #3a3426;font:10.5px/1.3 monospace;white-space:pre;overflow:auto;resize:none}
+#speedr button{font:700 12px 'Nunito Sans',sans-serif;background:#4a3a18;color:var(--gold);border:1px solid var(--gold);border-radius:4px;padding:3px 14px;margin-top:4px;cursor:pointer}
 #trees{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .tree{border:1px solid #3a3426;border-radius:5px;padding:5px;background:#16130e}
 .tree .tn{font:600 13px Cinzel,serif;color:var(--gold)}.tree .tt{font-size:10px;color:#999;margin-bottom:4px}
@@ -252,6 +258,7 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
     <div class="m" style="font-size:11px;color:#999;margin-top:6px">Events run whether you go or not. Greenhollow is levels 1 to 6, Emberdeep 5 to 10.</div></div>
   <div id="help"><h3><span>Help</span><b id="helpx">✕</b></h3><div id="helpbody"></div></div>
   <div id="recap"></div>
+  <div id="speedr"><h3><span>Speed report</span><b id="speedx">✕</b></h3><p>Copy this and paste it to Claude.</p><textarea id="speedt" readonly spellcheck="false"></textarea><button id="speedc">Copy</button></div>
   <div id="death"><div id="dtext"></div><button id="dbtn"></button><button id="wbtn" style="display:none;margin-left:6px">Second Wind</button></div>
   <div id="bottom">
     <div id="castbar"><i></i><span></span></div>
@@ -267,6 +274,6 @@ body.ghost #view{filter:grayscale(.85) brightness(1.05) contrast(.95)}
   <p class="keys"><b>WASD</b> move and turn · <b>Q/E</b> strafe · <b>right-drag</b> steer · <b>left-drag</b> or <b>arrow keys</b> look (up and down too) · <b>wheel</b> zoom (all the way in for first person, or <b>V</b>) · <b>Tab</b> next target · <b>F</b> most hurt · <b>1, 2</b> heal · <b>3</b> revive · <b>B</b> bag · <b>Enter</b> chat (<b>/help</b>) · <b>Space</b> jump · <b>X</b> mouse-look (the mouse steers, A and D strafe, Esc frees the cursor)</p>
   <a href="https://stilotto.github.io/">More games from Stilotto</a>
 </div></div>
-<script type="module" src="js/main.js?v=20261124005328"></script>
+<script type="module" src="js/main.js?v=20261126152451"></script>
 </body>
 </html>

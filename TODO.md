@@ -38,7 +38,8 @@ paid? Build whichever answer is weakest.
     when there are none. Low also: no antialiasing (from the next load),
     a third of the grass, half the sparkles, detail and plates closer in,
     people hidden past 110 yards. Draw calls on Low went from about 200-490
-    to 90-220. Next if still jerky: numbers from `?prof` on the Chromebook.
+    to 90-220. Next if still jerky: the owner runs `/speedtest` on the Chromebook
+    (docked and not) and pastes the report.
 14. **Polish.** The stats tab: a tab in the character window with lifetime
     numbers (total healed, saves, revives, bosses and raid kills, fish
     caught, Old Glimmerfins, people met, friends, grudges, uniques found,

@@ -23,7 +23,7 @@ export const LOOKS = {
 export function makeLook(name, { scene, renderer, camera, world }) {
   const L = LOOKS[name || 'storybook'];
   // ?look=original: the first build's flat style
-  if (!L) return { render: () => renderer.render(scene, camera), update() {}, mood() {}, resize() {}, quality: 'auto', low: false, setQuality() {} };
+  if (!L) return { render: () => renderer.render(scene, camera), update() {}, mood() {}, resize() {}, quality: 'auto', low: false, level: 'original look', setQuality() {} };
   const { hemi, sun } = world.lights;
   const skyTex = sky(L.sky);
   renderer.toneMapping = L.tone; renderer.toneMappingExposure = L.exposure;
@@ -97,6 +97,8 @@ export function makeLook(name, { scene, renderer, camera, world }) {
     // 'auto' (steps down if slow), 'high' (never steps down) or 'low' (everything off).
     get quality() { return q; },
     get low() { return level >= steps.length; },
+    get notch() { return level; },
+    get level() { return ['full quality', 'glow off', 'glow and shadows off', 'glow and shadows off, lower resolution'][level]; },
     setQuality(mode) {
       q = mode; try { localStorage.setItem('mmoHealerGfx', mode); } catch (e) {}
       raise(); settle = 4; frames = 0; spent = 0;

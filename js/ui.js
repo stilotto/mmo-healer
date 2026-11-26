@@ -65,6 +65,7 @@ export function drawHelp() {
   $('helpbody').innerHTML = `
   <h4>Settings</h4>
   <div class="opt">Graphics: ${['auto', 'high', 'low'].map(m => `<button data-g="${m}" class="${gfx === m ? 'on' : ''}">${{ auto: 'Auto (turns down if slow)', high: 'High', low: 'Low (for Chromebooks)' }[m]}</button>`).join('')}</div>
+  <div class="opt">Speed: <button data-st="1">Run the speed test</button> <span style="color:#999">About a minute: the game visits ten spots and measures the frame rate, then shows a report to copy.</span></div>
   <div class="opt">Mouse-look: <button data-l="1" class="${look ? 'on' : ''}">On</button><button data-l="0" class="${look ? '' : 'on'}">Off</button> <span style="color:#999">The mouse steers without holding a button; Esc frees the cursor.</span></div>
   <div class="cols"><div>
   <h4>Moving and the camera</h4>${rowsOf([['W A S D', 'Move. A and D turn (strafe with the right button held, or in mouse-look)'], ['Q E', 'Strafe'], ['Arrow keys', 'Turn and tilt the view'], ['Space', 'Jump'], ['R', 'Run on its own (W or S stops)'],
@@ -76,10 +77,11 @@ export function drawHelp() {
   <h4>Spells</h4>${rowsOf(spells)}
   <h4>Slash commands</h4>${rowsOf([['/s /y /w /r /g', 'Say, yell, whisper, reply, guild'], ['/wave /cheer /bow /dance /sit /laugh /thank', 'Emotes'], ['/who [name]', 'Who is here, or what someone remembers'],
     ['/target name', 'Target by name'], ['/need /greed /pass', 'Loot rolls'], ['/roll [max]', 'Roll a number'], ['/fame', 'Your fame'], ['/events', 'The events board'],
-    ['/graphics auto|high|low', 'Graphics quality'], ['/leave, /join general or zone', 'Chat channels'], ['/accept, /gquit', 'Guild invite, leave guild'], ['/help', 'This window']])}
+    ['/graphics auto|high|low', 'Graphics quality'], ['/speedtest', 'Measure the frame rate on a tour of ten spots'], ['/fpslog', 'Log the frame rate as you play (again to stop)'], ['/speedreport', 'The last speed report'], ['/leave, /join general or zone', 'Chat channels'], ['/accept, /gquit', 'Guild invite, leave guild'], ['/help', 'This window']])}
   <h4>Touch</h4>${rowsOf([['Stick', 'Move (bottom left)'], ['Drag', 'Look and steer'], ['Tap', 'Target'], ['Buttons', 'Spells and actions on the bar; double-tap a bag item to sell']])}
   </div></div>`;
   for (const b of $('helpbody').querySelectorAll('[data-g]')) b.onclick = () => { H.setQuality(b.dataset.g); drawHelp(); };
+  for (const b of $('helpbody').querySelectorAll('[data-st]')) b.onclick = () => { toggleHelp(); H.speedtest(); };
   for (const b of $('helpbody').querySelectorAll('[data-l]')) b.onclick = () => { if (!!S.look !== (b.dataset.l === '1')) H.look(); drawHelp(); };
 }
 // Events: the tracker under the minimap and the board's window.
@@ -437,4 +439,17 @@ export function death(st) {
   b.textContent = st === 'dead' ? 'Release Spirit' : 'Return to Life'; b.disabled = st === 'ghost';
   b.onclick = () => st === 'dead' ? H.release() : H.returnToLife();
   const w = $('wbtn'); w.style.display = st === 'dead' && H.windReady() ? '' : 'none'; w.onclick = () => H.secondWind();
+}
+
+// The speed report (js/tour.js): plain text to copy and paste back.
+export function speedReport(text) {
+  const box = $('speedr');
+  if (!text) { box.style.display = 'none'; H.panel(false); return; }
+  $('speedt').value = text; box.style.display = 'block'; H.panel(true);
+  $('speedc').onclick = () => {
+    const t = $('speedt'); t.select();
+    const ok = () => { $('speedc').textContent = 'Copied'; setTimeout(() => { $('speedc').textContent = 'Copy'; }, 1500); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(ok, () => { document.execCommand('copy'); ok(); }); else { document.execCommand('copy'); ok(); }
+  };
+  $('speedx').onclick = () => speedReport(null);
 }

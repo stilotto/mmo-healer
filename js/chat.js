@@ -89,5 +89,8 @@ export function send(v) {
   }
   if (cmd === 'help') { for (const l of HELP) chat('c-sys', l); return H.help(); }
   if (cmd === 'graphics' || cmd === 'gfx') return H.graphics(arg.toLowerCase());
+  if (cmd === 'speedtest') return H.speedtest();
+  if (cmd === 'fpslog') return H.fpslog();
+  if (cmd === 'speedreport') return H.speedreport();
   chat('c-sys', `Unknown command /${cmd}. Type /help for a list.`);
 }

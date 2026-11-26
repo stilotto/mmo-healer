@@ -19,6 +19,7 @@ import * as Chat from './chat.js';
 import { Social } from './social.js';
 import { Fishing } from './fishing.js';
 import { Clock } from './clock.js';
+import { SpeedLog } from './tour.js';
 import { ripple, updateWater, SURFACE } from './water.js';
 
 const canvas = document.getElementById('view');
@@ -57,6 +58,7 @@ let mobs, dungeon, zoneNow = 'hub';
 const meUnit = { isMe: true, name: '', cls: 'Healer', level: 1, hp: 100, maxHp: 100, x: 0, z: 0, hots: [], dots: [], ward: null, dead: false, faded: 0, lastHit: -99 };
 let social, loot, emo = null;      // emo: the healer's emote animation
 let pit, recapT = 0, raid, raidNag = 0, clock, lastCast = -99, fishing, meal = null, splashT = 0, lastWater = '';
+let speedLog = null;      // the speed test and frame-rate log (tour.js)
 let drinking = 0, wardLock = new WeakMap(), ghost = false, corpse = null, cds = {};
 
 // Threat. Healing someone a monster is fighting adds to that monster's
@@ -458,11 +460,20 @@ function start(name) {
     if (it) { loot.drop(m.x, m.z, it); UI.chatHtml('c-loot', `Old Tusk falls. ${UI.itemLink(it)} lies where it fell.`); }
   };
   dressed();
+  speedLog = new SpeedLog({ player, chat: UI.chat, zone: () => zoneNow, gfx: () => look.quality + (look.notch ? '-' + look.notch : ''), figs: () => people.list.filter(p => p.fig.group.visible).length,
+    hold(on) { player.enabled = !on; player.keys.clear(); meUnit.faded = on ? 1e9 : 0; if (on) { casting = null; target = null; } },
+    device() {
+      const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info'), v = new THREE.Vector2(); renderer.getDrawingBufferSize(v);
+      return { w: innerWidth, h: innerHeight, sw: screen.width, sh: screen.height, dpr: devicePixelRatio, cw: v.x, ch: v.y, quality: look.quality, level: look.level, aa: gl.getContextAttributes().antialias,
+        gpu: (ext && gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) || gl.getParameter(gl.RENDERER) };
+    },
+    show(text) { try { localStorage.setItem('mmoHealerSpeed', text); } catch (e) {} UI.speedReport(text); UI.chat('c-sys', 'Speed report ready. Copy it and paste it to Claude. /speedreport shows it again.'); } });
+  addEventListener('keydown', e => { if (e.key === 'Escape' && speedLog.mode === 'tour') speedLog.end(true); });
   Chat.init(S, { say: (t, y) => social.talk(t, y), emote: doEmote, whisper: (n, t) => social.whisper(n, t), reply: t => social.reply(t), guild: t => social.guildSay(t),
     who: a => social.who(a), fame: () => social.fameInfo(), gquit: () => social.gquit(), act: a => social.act(a), changed: () => G.save(S),
     target: n => { const p = n && social.find(n, true); if (p) setTarget(p); else UI.err(n ? `No one called ${n} is here` : 'Usage: /target <name>'); },
-    roll: k => loot.choose(k), events: () => UI.toggleEvents(), help: () => { if (!UI.helpShown()) UI.toggleHelp(); }, graphics: m => setGraphics(m), opened: () => { player.keys.clear(); } });
-  UI.init(S, { leavePit, stayInPit, quality: () => look.quality, setQuality: m => setGraphics(m), clock: () => clock, targetUnit: u => setTarget(u), dressed, cast, fish, eat, secondWind, windReady: () => G.rank(S, 'wind') > 0 && (cds.wind || 0) <= T, release, returnToLife, drink: toggleDrink, self: () => setTarget(meUnit), pick: pickFrame, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
+    roll: k => loot.choose(k), events: () => UI.toggleEvents(), help: () => { if (!UI.helpShown()) UI.toggleHelp(); }, speedtest: () => speedTest(), fpslog: () => speedLog.on ? speedLog.end() : speedLog.start('free'), speedreport: () => { let t = ''; try { t = localStorage.getItem('mmoHealerSpeed') || ''; } catch (e) {} if (t) UI.speedReport(t); else UI.chat('c-sys', 'No speed report yet. Type /speedtest.'); }, graphics: m => setGraphics(m), opened: () => { player.keys.clear(); } });
+  UI.init(S, { speedtest: () => speedTest(), leavePit, stayInPit, quality: () => look.quality, setQuality: m => setGraphics(m), clock: () => clock, targetUnit: u => setTarget(u), dressed, cast, fish, eat, secondWind, windReady: () => G.rank(S, 'wind') > 0 && (cds.wind || 0) <= T, release, returnToLife, drink: toggleDrink, self: () => setTarget(meUnit), pick: pickFrame, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
     panel: open => { if (open) player.free(); else if (S.look) player.lock(); } });
   player.look = !!S.look; UI.setLook(player.look, false);
   player.enabled = true; G.save(S);
@@ -490,6 +501,11 @@ nameBox.addEventListener('keydown', e => { if (e.key === 'Enter') start(nameBox.
 if (new URLSearchParams(location.search).has('go')) start('Tester');
 
 const frameClock = new THREE.Clock(); let T = 0, lowNow = null;
+function speedTest() {
+  if (!speedLog || speedLog.on) return;
+  if (zoneNow === 'dungeon' || zoneNow === 'raid' || zoneNow === 'pvp' || meUnit.dead) return UI.err('Run the speed test from town or Greenhollow, alive');
+  speedLog.start('tour');
+}
 // Low graphics (chosen, or reached by stepping down) also draws less: people
 // in full detail and name plates only close by, less grass, fewer sparkles.
 function lowGfx(low) {
@@ -500,7 +516,7 @@ function lowGfx(low) {
 }
 function tick() {
   requestAnimationFrame(tick);
-  const dt = Math.min(0.05, frameClock.getDelta());
+  const raw = frameClock.getDelta(), dt = Math.min(0.05, raw);
   if (!started) {   // slow orbit behind the title
     T += dt; world.update(dt, T);
     camera.position.set(Math.sin(T * 0.08) * 46, 16, Math.cos(T * 0.08) * 46); camera.lookAt(0, 4, 0);
@@ -511,7 +527,10 @@ function tick() {
   for (let i = 0; i < SPEED; i++) step(dt);   // ?speed=N runs the world faster, for tests
   look.update(dt, player); mark('look');
   fx.update(dt, player); mark('fx');
+  const info = renderer.info.render; renderer.info.autoReset = false; if (!PROF) renderer.info.reset();
+  const c0 = info.calls, t0 = info.triangles;
   look.render(); mark('render');
+  if (speedLog && speedLog.on) speedLog.frame(raw, info.calls - c0, info.triangles - t0);
   if (PROF) profFrame(dt);
 }
 const SPEED = Math.max(1, Math.min(20, +new URLSearchParams(location.search).get('speed') || 1));

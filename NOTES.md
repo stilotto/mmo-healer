@@ -438,6 +438,16 @@ keeps it smooth.
 - HUD: `txt(el, v)` and `sty(el, prop, v)` in `ui.js` remember the last value
   and only write on change. Write those elements through them too, or the
   cache goes stale (`err` and `toast` do).
+- Speed log (`js/tour.js`, owner's ask): `/speedtest` (or the Help button)
+  carries the healer to ten spots and headings (`STOPS`), settles 2 s, takes
+  two 2-second samples each, then puts the healer back. `/fpslog` samples
+  every 2 s while you play, until typed again. Samples: fps, average and
+  worst frame, frames over 50 ms, draw calls, triangles, visible figures,
+  graphics level, position and heading. The report (`#speedr`, Copy button)
+  starts with window, screen, pixel ratio, drawing size and GPU; the last
+  one is kept in localStorage `mmoHealerSpeed` (`/speedreport`). While the
+  tour runs, input is off and the healer is faded; Esc stops it. Not inside
+  instances. `tools/tour.mjs` checks it.
 - Low graphics: antialiasing is chosen when the renderer is made (saved
   setting or `?quality`), so switching to Low drops it from the next load.
 
