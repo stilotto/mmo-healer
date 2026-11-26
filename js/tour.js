@@ -73,7 +73,7 @@ export class SpeedLog {
     const lines = [
       `MMO Healer speed ${mode === 'tour' ? 'test (tour)' : 'log (free play)'}${cancel ? ', stopped early' : ''}, ${new Date().toLocaleString()}`,
       `Window ${d.w}x${d.h}, screen ${d.sw}x${d.sh}, device pixel ratio ${d.dpr}, drawing at ${d.cw}x${d.ch} (${(d.cw * d.ch / 1e6).toFixed(2)} megapixels)`,
-      `Graphics ${d.quality}, now at ${d.level}. Antialias ${d.aa ? 'on' : 'off'}. GPU: ${d.gpu}`,
+      `Graphics ${d.quality}, now at ${d.level}. Render size ${d.render}. Antialias ${d.aa ? 'on' : 'off'}. GPU: ${d.gpu}`,
       all ? `Overall: ${f1(all.fps)} fps average, worst frame ${Math.round(all.worst)} ms, ${all.jank} frames over 50 ms` : 'No samples.',
       'gfx column: the setting, then steps turned down (-1 glow off, -2 shadows off, -3 lower resolution).',
       '',

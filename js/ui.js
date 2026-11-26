@@ -65,6 +65,7 @@ export function drawHelp() {
   $('helpbody').innerHTML = `
   <h4>Settings</h4>
   <div class="opt">Graphics: ${['auto', 'high', 'low'].map(m => `<button data-g="${m}" class="${gfx === m ? 'on' : ''}">${{ auto: 'Auto (turns down if slow)', high: 'High', low: 'Low (for Chromebooks)' }[m]}</button>`).join('')}</div>
+  <div class="opt">Render size: <button data-r="auto" class="${H.renderMode() === 'auto' ? 'on' : ''}">Auto</button><button data-r="full" class="${H.renderMode() === 'full' ? 'on' : ''}">Full</button> <span style="color:#999">Auto draws a smaller picture, stretched, if the game is still slow with glow and shadows off (big monitors). A smaller window stays sharp.</span></div>
   <div class="opt">Speed: <button data-st="1">Run the speed test</button> <span style="color:#999">About a minute: the game visits ten spots and measures the frame rate, then shows a report to copy.</span></div>
   <div class="opt">Mouse-look: <button data-l="1" class="${look ? 'on' : ''}">On</button><button data-l="0" class="${look ? '' : 'on'}">Off</button> <span style="color:#999">The mouse steers without holding a button; Esc frees the cursor.</span></div>
   <div class="cols"><div>
@@ -77,10 +78,11 @@ export function drawHelp() {
   <h4>Spells</h4>${rowsOf(spells)}
   <h4>Slash commands</h4>${rowsOf([['/s /y /w /r /g', 'Say, yell, whisper, reply, guild'], ['/wave /cheer /bow /dance /sit /laugh /thank', 'Emotes'], ['/who [name]', 'Who is here, or what someone remembers'],
     ['/target name', 'Target by name'], ['/need /greed /pass', 'Loot rolls'], ['/roll [max]', 'Roll a number'], ['/fame', 'Your fame'], ['/events', 'The events board'],
-    ['/graphics auto|high|low', 'Graphics quality'], ['/speedtest', 'Measure the frame rate on a tour of ten spots'], ['/fpslog', 'Log the frame rate as you play (again to stop)'], ['/speedreport', 'The last speed report'], ['/leave, /join general or zone', 'Chat channels'], ['/accept, /gquit', 'Guild invite, leave guild'], ['/help', 'This window']])}
+    ['/graphics auto|high|low', 'Graphics quality'], ['/render auto|full', 'Render size'], ['/speedtest', 'Measure the frame rate on a tour of ten spots'], ['/fpslog', 'Log the frame rate as you play (again to stop)'], ['/speedreport', 'The last speed report'], ['/leave, /join general or zone', 'Chat channels'], ['/accept, /gquit', 'Guild invite, leave guild'], ['/help', 'This window']])}
   <h4>Touch</h4>${rowsOf([['Stick', 'Move (bottom left)'], ['Drag', 'Look and steer'], ['Tap', 'Target'], ['Buttons', 'Spells and actions on the bar; double-tap a bag item to sell']])}
   </div></div>`;
   for (const b of $('helpbody').querySelectorAll('[data-g]')) b.onclick = () => { H.setQuality(b.dataset.g); drawHelp(); };
+  for (const b of $('helpbody').querySelectorAll('[data-r]')) b.onclick = () => { H.setRender(b.dataset.r); drawHelp(); };
   for (const b of $('helpbody').querySelectorAll('[data-st]')) b.onclick = () => { toggleHelp(); H.speedtest(); };
   for (const b of $('helpbody').querySelectorAll('[data-l]')) b.onclick = () => { if (!!S.look !== (b.dataset.l === '1')) H.look(); drawHelp(); };
 }

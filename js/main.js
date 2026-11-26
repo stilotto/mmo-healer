@@ -209,6 +209,10 @@ function doEmote(kind, arg) {
   social.emote(kind, arg, target);
   emo = { mode: kind === 'thank' ? 'bow' : kind === 'laugh' ? 'cheer' : kind, t: kind === 'sit' ? 1e9 : kind === 'dance' ? 8 : 2.2 };
 }
+function setRender(m) {
+  if (!['auto', 'full'].includes(m)) return UI.chat('c-sys', `Render size is ${look.size}. Use /render auto or full.`);
+  look.setSize(m); UI.chat('c-sys', m === 'auto' ? 'Render size: auto. If the game is still slow with glow and shadows off, it draws a smaller picture and stretches it to fill the window. A smaller window stays sharp.' : 'Render size: full. Always drawn at the window\'s full size.');
+}
 function setGraphics(m) {
   if (!['auto', 'high', 'low'].includes(m)) return UI.chat('c-sys', `Graphics are ${look.quality}. Use /graphics auto, high or low.`);
   look.setQuality(m); UI.chat('c-sys', { auto: 'Graphics: auto. Full quality, turning down on its own if the game runs slow.', high: 'Graphics: high. Full quality, never turned down.', low: 'Graphics: low. Glow, shadows and resolution turned down for a smooth game.' }[m]);
@@ -464,7 +468,7 @@ function start(name) {
     hold(on) { player.enabled = !on; player.keys.clear(); meUnit.faded = on ? 1e9 : 0; if (on) { casting = null; target = null; } },
     device() {
       const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info'), v = new THREE.Vector2(); renderer.getDrawingBufferSize(v);
-      return { w: innerWidth, h: innerHeight, sw: screen.width, sh: screen.height, dpr: devicePixelRatio, cw: v.x, ch: v.y, quality: look.quality, level: look.level, aa: gl.getContextAttributes().antialias,
+      return { w: innerWidth, h: innerHeight, sw: screen.width, sh: screen.height, dpr: devicePixelRatio, cw: v.x, ch: v.y, quality: look.quality, level: look.level, render: look.size, aa: gl.getContextAttributes().antialias,
         gpu: (ext && gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) || gl.getParameter(gl.RENDERER) };
     },
     show(text) { try { localStorage.setItem('mmoHealerSpeed', text); } catch (e) {} UI.speedReport(text); UI.chat('c-sys', 'Speed report ready. Copy it and paste it to Claude. /speedreport shows it again.'); } });
@@ -472,12 +476,12 @@ function start(name) {
   Chat.init(S, { say: (t, y) => social.talk(t, y), emote: doEmote, whisper: (n, t) => social.whisper(n, t), reply: t => social.reply(t), guild: t => social.guildSay(t),
     who: a => social.who(a), fame: () => social.fameInfo(), gquit: () => social.gquit(), act: a => social.act(a), changed: () => G.save(S),
     target: n => { const p = n && social.find(n, true); if (p) setTarget(p); else UI.err(n ? `No one called ${n} is here` : 'Usage: /target <name>'); },
-    roll: k => loot.choose(k), events: () => UI.toggleEvents(), help: () => { if (!UI.helpShown()) UI.toggleHelp(); }, speedtest: () => speedTest(), fpslog: () => speedLog.on ? speedLog.end() : speedLog.start('free'), speedreport: () => { let t = ''; try { t = localStorage.getItem('mmoHealerSpeed') || ''; } catch (e) {} if (t) UI.speedReport(t); else UI.chat('c-sys', 'No speed report yet. Type /speedtest.'); }, graphics: m => setGraphics(m), opened: () => { player.keys.clear(); } });
-  UI.init(S, { speedtest: () => speedTest(), leavePit, stayInPit, quality: () => look.quality, setQuality: m => setGraphics(m), clock: () => clock, targetUnit: u => setTarget(u), dressed, cast, fish, eat, secondWind, windReady: () => G.rank(S, 'wind') > 0 && (cds.wind || 0) <= T, release, returnToLife, drink: toggleDrink, self: () => setTarget(meUnit), pick: pickFrame, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
+    roll: k => loot.choose(k), events: () => UI.toggleEvents(), help: () => { if (!UI.helpShown()) UI.toggleHelp(); }, speedtest: () => speedTest(), fpslog: () => speedLog.on ? speedLog.end() : speedLog.start('free'), speedreport: () => { let t = ''; try { t = localStorage.getItem('mmoHealerSpeed') || ''; } catch (e) {} if (t) UI.speedReport(t); else UI.chat('c-sys', 'No speed report yet. Type /speedtest.'); }, graphics: m => setGraphics(m), render: m => setRender(m), opened: () => { player.keys.clear(); } });
+  UI.init(S, { speedtest: () => speedTest(), leavePit, stayInPit, quality: () => look.quality, setQuality: m => setGraphics(m), renderMode: () => look.size, setRender: m => setRender(m), clock: () => clock, targetUnit: u => setTarget(u), dressed, cast, fish, eat, secondWind, windReady: () => G.rank(S, 'wind') > 0 && (cds.wind || 0) <= T, release, returnToLife, drink: toggleDrink, self: () => setTarget(meUnit), pick: pickFrame, tab: () => tabTarget(), hurt: hurtTarget, view: () => player.toggleView(), look: toggleLook, changed: () => G.save(S),
     panel: open => { if (open) player.free(); else if (S.look) player.lock(); } });
   player.look = !!S.look; UI.setLook(player.look, false);
   player.enabled = true; G.save(S);
-  look.onLower = n => UI.chat('c-sys', ['', 'Graphics: soft glow turned off to keep things smooth.', 'Graphics: shadows turned off to keep things smooth.', 'Graphics: resolution lowered to keep things smooth.'][n]);
+  look.onLower = n => UI.chat('c-sys', ['', 'Graphics: soft glow turned off to keep things smooth.', 'Graphics: shadows turned off to keep things smooth.', 'Graphics: drawing a smaller picture to keep things smooth (a smaller window looks sharper; /render full turns this off).'][n]);
   window.game = { me: meUnit, get corpse() { return corpse; }, get casting() { return casting; }, S, people, mobs, dungeon, player, DUN, scene, renderer, cast, tabTarget, hurtTarget, toggleLook, UI, G, Chat, get social() { return social; }, get loot() { return loot; }, get fishing() { return fishing; }, get clock() { return clock; }, get raid() { return raid; }, get pit() { return pit; }, RAID, get meal() { return meal; }, eat, fish, secondWind, release, cds, get T() { return T; }, fig: me, dressed, get target() { return target; }, set target(p) { target = p; }, prof, look, world };
 }
 // ?prof: time each part of the frame (ms per frame, averaged each second),

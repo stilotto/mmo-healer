@@ -448,6 +448,15 @@ keeps it smooth.
   one is kept in localStorage `mmoHealerSpeed` (`/speedreport`). While the
   tour runs, input is off and the healer is faded; Esc stops it. Not inside
   instances. `tools/tour.mjs` checks it.
+- Render size (owner's ask, from the speed reports: a docked Chromebook with
+  a UHD 600 ran 34-59 fps on Low at 1.83 megapixels, 60 on its own screen at
+  0.46): the last step-down notch now caps the drawing at about 0.6
+  megapixels (`BUDGET` in `look.js`), stretched to fill the window; a window
+  already under it stays sharp. It replaced the old fixed 0.75 resolution
+  step, so Low uses it too and Auto reaches it only if still slow with glow
+  and shadows off. `look.size` 'auto' or 'full' (Help, `/render`, `?render=`,
+  localStorage `mmoHealerRender`); 'full' never caps. `tools/render.mjs`
+  checks it. An iPhone ran the tour at a steady 60 on full quality.
 - Low graphics: antialiasing is chosen when the renderer is made (saved
   setting or `?quality`), so switching to Low drops it from the next load.
 
